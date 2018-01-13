@@ -8,10 +8,11 @@ from symbols.rfcn_resnet50 import rfcn_resnet50
 from configs.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 from lib import metric,callback
+
 cfg = EasyDict()
 cfg.rec_path = 'train_list.rec'
 cfg.list_path = 'train_list.lst'
-cfg.batch_size = 1
+cfg.batch_size = 2
 cfg.PIXEL_MEANS = [103.06,115.90,123.15]
 cfg.external_cfg =  'configs/res50_rfcn_pascal.yml'
 if __name__=='__main__':
@@ -26,13 +27,14 @@ if __name__=='__main__':
 	sym = sym_inst.get_symbol_rfcn(config)
 	
 		
-
+	
 	# Creating the Logger
 	logging.getLogger().setLevel(logging.DEBUG) 
 
 	# Creating the module
+	context=[mx.gpu(0),mx.gpu(1)]
 	mod = mx.mod.Module(symbol=sym,
-                     context=mx.gpu(),
+                     context=context,
                      data_names=[k[0] for k in train_iter.provide_data_single],
                      label_names=[k[0] for k in train_iter.provide_label_single])
     # Bind data to moudle
@@ -69,4 +71,4 @@ if __name__=='__main__':
 
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
 		eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
-		batch_end_callback=mx.callback.Speedometer(1, 20), arg_params=arg_params,aux_params=aux_params)
+		batch_end_callback=mx.callback.Speedometer(2, 20), arg_params=arg_params,aux_params=aux_params)

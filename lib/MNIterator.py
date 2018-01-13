@@ -65,7 +65,7 @@ class MNIterator(mx.io.DataIter):
 			cur_label = mx.ndarray.slice(info,(0,0),(info.shape[0],1))
 			labels.append(cur_label.reshape((1,cur_label.shape[0])))
 			cur_rois = mx.ndarray.slice(info,(0,1),(info.shape[0],5))
-			cur_rois = mx.ndarray.concat(mx.ndarray.ones((cur_rois.shape[0],1))*i,cur_rois,dim=1)
+			cur_rois = mx.ndarray.concat(mx.ndarray.ones((cur_rois.shape[0],1))*0,cur_rois,dim=1)
 			cur_rois = cur_rois.reshape((1,cur_rois.shape[0],cur_rois.shape[1]))
 			rois.append(cur_rois)
 			cur_targets = mx.ndarray.slice(info,(0,5),(info.shape[0],5+self.bbox_len))
