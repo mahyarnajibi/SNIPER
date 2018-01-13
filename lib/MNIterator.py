@@ -1,7 +1,7 @@
 import mxnet as mx
 
 class MNIterator(mx.io.DataIter):
-	def __init__(self,im_rec_path,im_lst_path,pixel_mean,batch_size=4,label_pad=10000,bbox_len=8):
+	def __init__(self,im_rec_path,im_lst_path,pixel_mean,batch_size=4,label_pad=10000,bbox_len=8, threads=8):
 		super(MNIterator,self).__init__()
 		self.det_iter = mx.io.ImageDetRecordIter(
 	            path_imgrec     = im_rec_path,
@@ -13,6 +13,7 @@ class MNIterator(mx.io.DataIter):
 	            mean_r          = pixel_mean[2],
 	            mean_g          = pixel_mean[1],
 	            mean_b          = pixel_mean[0],
+	            preprocess_threads = threads,
 	            resize_mode     = 'force')
 		self.bbox_len = bbox_len
 		self.data_name = ['data','rois']
@@ -22,16 +23,16 @@ class MNIterator(mx.io.DataIter):
 
 	@property
 	def provide_data(self):
-		return [[(k, v.shape) for k, v in zip(self.data_name, self.batch.data[i])] for i in xrange(len(self.batch.data))]
+		return [(k, v.shape) for k, v in zip(self.data_name, self.batch.data)]
 	@property
 	def provide_label(self):
-		return [[(k, v.shape) for k, v in zip(self.label_name, self.batch.label[i])] for i in xrange(len(self.batch.data))]
+		return [(k, v.shape) for k, v in zip(self.label_name, self.batch.label)]
 	@property
 	def provide_data_single(self):
-		return [(k, v.shape) for k, v in zip(self.data_name, self.batch.data[0])]
+		return [(k, v.shape) for k, v in zip(self.data_name, self.batch.data)]
 	@property
 	def provide_label_single(self):
-		return [(k, v.shape) for k, v in zip(self.label_name, self.batch.label[0])]
+		return [(k, v.shape) for k, v in zip(self.label_name, self.batch.label)]
 	def reset(self):
 		self.det_iter.reset()
 	def iter_next(self):
@@ -51,18 +52,20 @@ class MNIterator(mx.io.DataIter):
 		labels = []
 		weights = []
 		clabel = self.batch.label[0]
-
+		# import pdb
+		# pdb.set_trace()
 		for i in range(clabel.shape[0]):
 			mxlen = int(clabel[i][3].asscalar())
 			header = int(clabel[i][4].asscalar())
 			objlen = int(clabel[i][5].asscalar())
+
 			n_objs = (mxlen-header)/objlen
+			#mxlen = (header + n_objs*objlen)
 			info = clabel[i][4+header:4+mxlen].reshape((n_objs,objlen))
 			cur_label = mx.ndarray.slice(info,(0,0),(info.shape[0],1))
 			labels.append(cur_label.reshape((1,cur_label.shape[0])))
 			cur_rois = mx.ndarray.slice(info,(0,1),(info.shape[0],5))
-
-			cur_rois = mx.ndarray.concat(mx.ndarray.ones((cur_rois.shape[0],1),mx.cpu(0))*i,cur_rois,dim=1)
+			cur_rois = mx.ndarray.concat(mx.ndarray.ones((cur_rois.shape[0],1))*i,cur_rois,dim=1)
 			cur_rois = cur_rois.reshape((1,cur_rois.shape[0],cur_rois.shape[1]))
 			rois.append(cur_rois)
 			cur_targets = mx.ndarray.slice(info,(0,5),(info.shape[0],5+self.bbox_len))
@@ -74,13 +77,14 @@ class MNIterator(mx.io.DataIter):
 		import pdb
 		pdb.set_trace()
 		self.batch.data.append(mx.ndarray.concat(*rois,dim=0))
-		self.batch.data = [self.batch.data]
-		self.batch.label = [[mx.ndarray.concat(*labels,dim=0),
+		self.batch.data = self.batch.data
+		self.batch.label = [mx.ndarray.concat(*labels,dim=0),
 					 mx.ndarray.concat(*targets,dim=0),
-					 mx.ndarray.concat(*weights,dim=0)]]
+					 mx.ndarray.concat(*weights,dim=0)]
 		# import pdb
 		# pdb.set_trace()
 		self.batch = mx.io.DataBatch(data=self.batch.data,label=self.batch.label,
 									pad=self.getpad(),index=self.getindex(),provide_data=self.provide_data,
 									provide_label=self.provide_label)
 		return True
+
