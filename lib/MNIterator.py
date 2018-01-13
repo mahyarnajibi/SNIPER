@@ -74,8 +74,8 @@ class MNIterator(mx.io.DataIter):
 			weights.append(cur_weights.reshape((1,cur_weights.shape[0],cur_weights.shape[1])))
 
 		
-		import pdb
-		pdb.set_trace()
+		# import pdb
+		# pdb.set_trace()
 		self.batch.data.append(mx.ndarray.concat(*rois,dim=0))
 		self.batch.data = self.batch.data
 		self.batch.label = [mx.ndarray.concat(*labels,dim=0),
