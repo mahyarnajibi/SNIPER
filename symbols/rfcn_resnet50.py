@@ -19,6 +19,9 @@ class rfcn_resnet50(Symbol):
         self.workspace = 512
         self.units = (3, 4, 23, 3)  # use for 101
         self.filter_list = [256, 512, 1024, 2048]
+        
+    def get_bbox_param_names(self):
+        return ['rfcn_bbox_weight', 'rfcn_bbox_bias']
 
     def get_resnet_v1_conv4(self, data):
         #pred1 = mx.sym.Deconvolution(data=data, kernel=(4, 4), stride=(2, 2), pad=(1, 1), num_filter=3, name='up')

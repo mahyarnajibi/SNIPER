@@ -1,4 +1,6 @@
+import mxnet as mx
 from lib.lr_scheduler import WarmupMultiFactorScheduler
+
 def get_optim_params(cfg,roidb_len,batch_size):
 
 	# Create scheduler
@@ -21,3 +23,50 @@ def get_optim_params(cfg,roidb_len,batch_size):
                         'lr_scheduler': lr_scheduler}
 
 	return optim_params
+
+def checkpoint_callback(bbox_param_names, prefix, means, stds):
+	def _callback(iter_no, sym, arg, aux):
+		weight = arg[bbox_param_names[0]]
+		bias = arg[bbox_param_names[1]]
+		repeat = bias.shape[0] / means.shape[0]
+
+		arg[bbox_param_names[0]+'_test'] = weight * mx.nd.repeat(mx.nd.array(stds), repeats=repeat).reshape((bias.shape[0], 1, 1, 1))
+		arg[bbox_param_names[1]+'_test'] = bias * mx.nd.repeat(mx.nd.array(stds), repeats=repeat) + mx.nd.repeat(mx.nd.array(means), repeats=repeat)
+		mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
+		arg.pop(bbox_param_names[0]+'_test')
+		arg.pop(bbox_param_names[1]+'_test')
+	return _callback
+
+def _convert_context(params, ctx):
+	"""
+	:param params: dict of str to NDArray
+	:param ctx: the context to convert to
+	:return: dict of str of NDArray with context ctx
+	"""
+	new_params = dict()
+	for k, v in params.items():
+		new_params[k] = v.as_in_context(ctx)
+	return new_params
+
+
+def load_param(prefix, epoch, convert=False, ctx=None, process=False):
+	"""
+	wrapper for load checkpoint
+	:param prefix: Prefix of model name.
+	:param epoch: Epoch number of model we would like to load.
+	:param convert: reference model should be converted to GPU NDArray first
+	:param ctx: if convert then ctx must be designated.
+	:param process: model should drop any test
+	:return: (arg_params, aux_params)
+	"""
+	arg_params, aux_params = load_checkpoint(prefix, epoch)
+	if convert:
+		if ctx is None:
+			ctx = mx.cpu()
+		arg_params = _convert_context(arg_params, ctx)
+		aux_params = _convert_context(aux_params, ctx)
+	if process:
+		tests = [k for k in arg_params.keys() if '_test' in k]
+		for test in tests:
+			arg_params[test.replace('_test', '')] = arg_params.pop(test)
+	return arg_params, aux_params

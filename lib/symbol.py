@@ -17,6 +17,12 @@ class Symbol:
     def symbol(self):
         return self.sym
 
+    def get_bbox_param_names(self):
+        """
+        return the names of the bbox_weight and bbox_bias params
+        """
+        raise NotImplementedError()
+
     def get_symbol(self, cfg, is_train=True):
         """
         return a generated symbol, it also need to be assigned to self.sym

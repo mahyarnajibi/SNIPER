@@ -1,6 +1,6 @@
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/rfcn_dcn/pascal_trainval_cls"
+output_path: "./output/pascal_crcnn"
 symbol: rfcn_resnet50
 gpus: '0'
 CLASS_AGNOSTIC: true
