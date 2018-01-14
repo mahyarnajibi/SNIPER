@@ -70,3 +70,20 @@ def load_param(prefix, epoch, convert=False, ctx=None, process=False):
 		for test in tests:
 			arg_params[test.replace('_test', '')] = arg_params.pop(test)
 	return arg_params, aux_params
+
+def get_fixed_param_names(fixed_param_prefix,sym):
+	"""
+	:param fixed_param_prefix: the prefix in param names to be fixed in the model
+	:param fixed_param_prefix: network symbol
+	:return: [fixed_param_names]
+	"""
+	fixed_param_names = []
+	if fixed_param_prefix is None:
+		return fixed_param_names
+
+	for name in sym.list_arguments():
+		for prefix in fixed_param_prefix:
+			if prefix in name:
+				fixed_param_names.append(name)
+	return fixed_param_names
+

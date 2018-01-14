@@ -9,7 +9,7 @@ from configs.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 from lib import metric,callback
 import numpy as np
-from lib.general_utils import get_optim_params,checkpoint_callback
+from lib.general_utils import get_optim_params,checkpoint_callback,get_fixed_param_names
 import os
 
 cfg = EasyDict()
@@ -44,11 +44,16 @@ if __name__=='__main__':
 	# Creating the Logger
 	logging.getLogger().setLevel(logging.DEBUG) 
 
+	# get list of fixed parameters
+	fixed_param_names = get_fixed_param_names(config.network.FIXED_PARAMS,sym)
+	print fixed_param_names
+
 	# Creating the module
 	mod = mx.mod.Module(symbol=sym,
 					context=context,
 					data_names=[k[0] for k in train_iter.provide_data_single],
-					label_names=[k[0] for k in train_iter.provide_label_single])
+					label_names=[k[0] for k in train_iter.provide_label_single],
+					fixed_param_names=fixed_param_names)
 	shape_dict = dict(train_iter.provide_data_single+train_iter.provide_label_single)
 	sym_inst.infer_shape(shape_dict)
 	arg_params, aux_params = load_param(config.network.pretrained,config.network.pretrained_epoch,convert=True)
@@ -77,6 +82,7 @@ if __name__=='__main__':
 	prefix = os.path.join(config.output_path,cfg.save_prefix)
 	epoch_end_callback = [mx.callback.module_checkpoint(mod, prefix, period=1, save_optimizer_states=True),
 		checkpoint_callback(sym_inst.get_bbox_param_names(),prefix, cfg.bbox_normalization_mean, cfg.bbox_normalization_stds)]
+
 
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
 		eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
