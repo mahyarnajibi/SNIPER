@@ -8,18 +8,22 @@ from symbols.rfcn_resnet50 import rfcn_resnet50
 from configs.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 from lib import metric,callback
-
+import numpy as np
 cfg = EasyDict()
 cfg.rec_path = 'train_list.rec'
 cfg.list_path = 'train_list.lst'
-cfg.batch_size = 2
+cfg.batch_size = 6
 cfg.PIXEL_MEANS = [103.06,115.90,123.15]
 cfg.external_cfg =  'configs/res50_rfcn_pascal.yml'
+cfg.bbox_normalization_mean = np.array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.])
+cfg.bbox_normalization_stds = np.array([ 0.1,  0.1,  0.2,  0.2,  0.1,  0.1,  0.2,  0.2])
+cfg.nGPUs = 2
+cfg.display = 20
 if __name__=='__main__':
 
-
+	context=[mx.gpu(i) for i in range(cfg.nGPUs)]
 	# Creating the iterator
-	train_iter = MNIterator(cfg.rec_path,cfg.list_path,cfg.PIXEL_MEANS,batch_size=cfg.batch_size)
+	train_iter = MNIterator(cfg.rec_path,cfg.list_path,cfg.PIXEL_MEANS,batch_size=cfg.batch_size,nGPUs=cfg.nGPUs)
 	train_iter.next()
 	# Creating the module
 	update_config(cfg.external_cfg)
@@ -32,7 +36,7 @@ if __name__=='__main__':
 	logging.getLogger().setLevel(logging.DEBUG) 
 
 	# Creating the module
-	context=[mx.gpu(0),mx.gpu(1)]
+
 	mod = mx.mod.Module(symbol=sym,
                      context=context,
                      data_names=[k[0] for k in train_iter.provide_data_single],
@@ -71,4 +75,4 @@ if __name__=='__main__':
 
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
 		eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
-		batch_end_callback=mx.callback.Speedometer(2, 20), arg_params=arg_params,aux_params=aux_params)
+		batch_end_callback=mx.callback.Speedometer(cfg.batch_size, cfg.display), arg_params=arg_params,aux_params=aux_params)
