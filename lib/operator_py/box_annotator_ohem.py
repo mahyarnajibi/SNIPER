@@ -30,21 +30,29 @@ class BoxAnnotatorOHEMOperator(mx.operator.CustomOp):
         bbox_targets = in_data[3]
         bbox_weights = in_data[4]
 
-        per_roi_loss_cls = mx.nd.SoftmaxActivation(cls_score) + 1e-14
-        per_roi_loss_cls = per_roi_loss_cls.asnumpy()
-        per_roi_loss_cls = per_roi_loss_cls[np.arange(per_roi_loss_cls.shape[0], dtype='int'), labels.astype('int')]
+        labels_ohem = labels.copy()
+        bbox_weights_ohem = bbox_weights.asnumpy().copy()
+        batch_size = np.shape(labels)[0]
+        num_rois = np.shape(labels)[1]
+        
+        for i in range(batch_size):
+            per_roi_loss_cls = mx.nd.SoftmaxActivation(cls_score[i]) + 1e-14
+            per_roi_loss_cls = per_roi_loss_cls.asnumpy()
+            vids = np.where(labels[i] >= 0)[0]
+            padding = np.zeros(num_rois - len(vids), dtype=np.float32)
+            per_roi_loss_cls = per_roi_loss_cls[vids, labels[i][vids].astype('int')]
+            per_roi_loss_cls = -1 * np.log(per_roi_loss_cls)
 
-        per_roi_loss_cls = -1 * np.log(per_roi_loss_cls)
-        per_roi_loss_cls = np.reshape(per_roi_loss_cls, newshape=(-1,))
+            if len(padding) > 0:
+                per_roi_loss_cls = np.hstack((per_roi_loss_cls, padding))
 
-        per_roi_loss_bbox = bbox_weights * mx.nd.smooth_l1((bbox_pred - bbox_targets), scalar=1.0)
-        per_roi_loss_bbox = mx.nd.sum(per_roi_loss_bbox, axis=1).asnumpy()
+            per_roi_loss_bbox = bbox_weights[i] * mx.nd.smooth_l1((bbox_pred[i] - bbox_targets[i]), scalar=1.0)
+            per_roi_loss_bbox = mx.nd.sum(per_roi_loss_bbox, axis=1).asnumpy()
 
-        top_k_per_roi_loss = np.argsort(per_roi_loss_cls + per_roi_loss_bbox)
-        labels_ohem = labels
-        labels_ohem[top_k_per_roi_loss[::-1][self._roi_per_img:]] = -1
-        bbox_weights_ohem = bbox_weights.asnumpy()
-        bbox_weights_ohem[top_k_per_roi_loss[::-1][self._roi_per_img:]] = 0
+            top_k_per_roi_loss = np.argsort(per_roi_loss_cls + per_roi_loss_bbox)
+
+            labels_ohem[i][top_k_per_roi_loss[::-1][self._roi_per_img:]] = -1
+            bbox_weights_ohem[i][top_k_per_roi_loss[::-1][self._roi_per_img:]] = 0
 
         labels_ohem = mx.nd.array(labels_ohem)
         bbox_weights_ohem = mx.nd.array(bbox_weights_ohem)
@@ -75,7 +83,9 @@ class BoxAnnotatorOHEMProp(mx.operator.CustomOpProp):
     def infer_shape(self, in_shape):
         labels_shape = in_shape[2]
         bbox_weights_shape = in_shape[4]
-
+        #print "quack"
+        #print labels_shape
+        #print in_shape
         return in_shape, \
                [labels_shape, bbox_weights_shape]
 

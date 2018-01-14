@@ -393,11 +393,11 @@ class rfcn_resnet50(Symbol):
             
             # reshape input
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
-            label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
-            bbox_target = mx.symbol.Reshape(data=bbox_target, shape=(-1, 4 * num_reg_classes),
-                                            name='bbox_target_reshape')
-            bbox_weight = mx.symbol.Reshape(data=bbox_weight, shape=(-1, 4 * num_reg_classes),
-                                            name='bbox_weight_reshape')
+            #label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
+            #bbox_target = mx.symbol.Reshape(data=bbox_target, shape=(-1, 4 * num_reg_classes),
+            #                                name='bbox_target_reshape')
+            #bbox_weight = mx.symbol.Reshape(data=bbox_weight, shape=(-1, 4 * num_reg_classes),
+            #                                name='bbox_weight_reshape')
         else:
             data = mx.sym.Variable(name="data")
             rois = mx.symbol.Variable(name='rois')
@@ -465,17 +465,29 @@ class rfcn_resnet50(Symbol):
                                    global_pool=True, kernel=(7, 7))
         bbox_pred = mx.sym.Pooling(name='ave_bbox_pred_rois', data=psroipooled_loc_rois, pool_type='avg',
                                    global_pool=True, kernel=(7, 7))
-        cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1, num_classes))
-        bbox_pred = mx.sym.Reshape(name='bbox_pred_reshape', data=bbox_pred, shape=(-1, 4 * num_reg_classes))
+        cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1,300, num_classes))
+        bbox_pred = mx.sym.Reshape(name='bbox_pred_reshape', data=bbox_pred, shape=(-1, 300,4 * num_reg_classes))
         if is_train:
             if cfg.TRAIN.ENABLE_OHEM:
+
                 labels_ohem, bbox_weights_ohem = mx.sym.Custom(op_type='BoxAnnotatorOHEM', num_classes=num_classes,
                                                                num_reg_classes=num_reg_classes,
                                                                roi_per_img=cfg.TRAIN.BATCH_ROIS_OHEM,
                                                                cls_score=cls_score, bbox_pred=bbox_pred, labels=label,
                                                                bbox_targets=bbox_target, bbox_weights=bbox_weight)
+
+                cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1, num_classes))
+                labels_ohem = mx.symbol.Reshape(data=labels_ohem, shape=(-1,), name='label_reshape')
+                cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1, num_classes))
+                bbox_pred = mx.sym.Reshape(name='bbox_pred_reshape', data=bbox_pred, shape=(-1, 4 * num_reg_classes))
+                bbox_weights_ohem = mx.symbol.Reshape(data=bbox_weights_ohem, shape=(-1, 4 * num_reg_classes),
+                                            name='bbox_weight_reshape')
+                bbox_target = mx.symbol.Reshape(data=bbox_target, shape=(-1, 4 * num_reg_classes),
+                                           name='bbox_target_reshape')
+
                 cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=labels_ohem,
                                                 normalization='valid', use_ignore=True, ignore_label=-1)
+
                 bbox_loss_ = bbox_weights_ohem * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                                   data=(bbox_pred - bbox_target))
                 bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_,
