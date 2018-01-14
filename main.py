@@ -9,6 +9,8 @@ from configs.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 from lib import metric,callback
 import numpy as np
+from lib.general_utils import get_optim_params
+
 cfg = EasyDict()
 cfg.rec_path = 'train_list.rec'
 cfg.list_path = 'train_list.lst'
@@ -19,6 +21,7 @@ cfg.bbox_normalization_mean = np.array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.])
 cfg.bbox_normalization_stds = np.array([ 0.1,  0.1,  0.2,  0.2,  0.1,  0.1,  0.2,  0.2])
 cfg.nGPUs = 2
 cfg.display = 20
+
 if __name__=='__main__':
 
 	context=[mx.gpu(i) for i in range(cfg.nGPUs)]
@@ -67,11 +70,8 @@ if __name__=='__main__':
 	eval_metrics.add(cls_metric)
 	eval_metrics.add(bbox_metric)
 
-	optimizer_params = {'momentum': config.TRAIN.momentum,
-                        'wd': config.TRAIN.wd,
-                        'learning_rate': 0.0001,
-                        'rescale_grad': 1.0,
-                        'clip_gradient': None}
+	optimizer_params = get_optim_params(config,roidb_len=10022,batch_size=cfg.batch_size)
+	print ('Optimizer params: {}'.format(optimizer_params))
 
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
 		eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
