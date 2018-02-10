@@ -73,11 +73,11 @@ class MNIterator(mx.io.DataIter):
         inds[:-extra] = np.reshape(inds_[row_perm, :], (-1,))
         self.inds = inds
 
-    def getpad(self):
-        if self.cur_i + self.batch_size > self.size:
-            return self.cur_i + self.batch_size - self.size
-        else:
-            return 0
+    # def getpad(self):
+    #     if self.cur_i + self.batch_size > self.size:
+    #         return self.cur_i + self.batch_size - self.size
+    #     else:
+    #         return 0
 
     def iter_next(self):
         return self.get_batch()
@@ -91,11 +91,10 @@ class MNIterator(mx.io.DataIter):
         if self.cur_i >= self.size:
             return False
         # Form cur roidb
-        end = min(self.cur_i+self.batch_size,self.size)
-        cur_roidbs = [self.roidb[self.inds[i]] for i in range(self.cur_i, end)]
+        cur_roidbs = [self.roidb[self.inds[i%self.size]] for i in range(self.cur_i, self.cur_i+self.batch_size)]
         
         # Process cur roidb
-        self.batch = self.get_rcnn_batch(cur_roidbs)
+        self.batch = self._get_batch(cur_roidbs)
         self.cur_i += self.batch_size
         return True
 
@@ -162,8 +161,9 @@ class MNIterator(mx.io.DataIter):
 
         return {'rois':rois_array_this_image,'labels':labels,
         'bbox_weights':bbox_weights,'bbox_targets':bbox_targets}
-        
-    def get_rcnn_batch(self,roidb):
+    def get_index(self):
+        return self.cur_i/self.batch_size
+    def _get_batch(self,roidb):
         """
         return a dict of multiple images
         :param roidb: a list of dict, whose length controls batch size
@@ -198,7 +198,6 @@ class MNIterator(mx.io.DataIter):
 
         self.data = [im_tensor,rois]
         self.label = [labels,bbox_targets,bbox_weights]
-
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(), provide_data=self.provide_data, provide_label=self.provide_label)
 
 
