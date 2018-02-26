@@ -1,52 +1,69 @@
-from lib.MNIterator import MNIterator
-from easydict import EasyDict
-from lib.load_model import load_param
-import sys
-import logging
-sys.path.insert(0,'lib')
-from symbols.rfcn_resnet50 import rfcn_resnet50
-from configs.default_configs import config,update_config,get_opt_params
-import mxnet as mx
-from lib import metric,callback
-import numpy as np
-from lib.general_utils import get_optim_params,checkpoint_callback,get_fixed_param_names
 import os
+os.environ['PYTHONUNBUFFERED'] = '1'
+os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
+os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
+import init
+from iterators.MNIteratorFaster import MNIteratorFaster
+from load_model import load_param
+import sys
+sys.path.insert(0,'lib')
+from symbols.faster.resnet_v1_50_fast import resnet_v1_50_fast,checkpoint_callback
+from configs.faster.default_configs import config,update_config,get_opt_params
+import mxnet as mx
+import metric,callback
+import numpy as np
+from general_utils import get_optim_params,get_fixed_param_names,create_logger
 
-cfg = EasyDict()
-cfg.rec_path = 'train_list.rec'
-cfg.list_path = 'train_list.lst'
-cfg.batch_size = 4
-cfg.PIXEL_MEANS = [103.06,115.90,123.15]
-cfg.external_cfg =  'configs/res50_rfcn_pascal.yml'
-cfg.bbox_normalization_mean = np.array([ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.])
-cfg.bbox_normalization_stds = np.array([ 0.1,  0.1,  0.2,  0.2,  0.1,  0.1,  0.2,  0.2])
-cfg.nGPUs = 2
-cfg.display = 20
-cfg.save_prefix = 'CRCNN'
+from PrefetchingIter import PrefetchingIter
+from load_data import load_proposal_roidb,merge_roidb,filter_roidb
+from bbox.bbox_regression import add_bbox_regression_targets
+from argparse import ArgumentParser
 
+def parser():
+	arg_parser = ArgumentParser('Faster R-CNN training module')
+	arg_parser.add_argument('--cfg',dest='cfg',help='Path to the config file',
+                        default='configs/faster/res50_coco.yml',type=str) 
+	arg_parser.add_argument('--display',dest='display',help='Number of epochs between displaying loss info',
+                        default=100,type=int) 
+	arg_parser.add_argument('--save_prefix',dest='save_prefix',help='Prefix used for snapshotting the network',
+                        default='CRCNN',type=str) 
+
+	return arg_parser.parse_args()
 
 if __name__=='__main__':
-
-	update_config(cfg.external_cfg)
-	context=[mx.gpu(i) for i in range(cfg.nGPUs)]
+	args = parser()
+	update_config(args.cfg)
+	context=[mx.gpu(int(gpu)) for gpu in config.gpus.split(',')]
+	nGPUs = len(context)
+	batch_size = nGPUs * config.TRAIN.BATCH_IMAGES
+	
 	if not os.path.isdir(config.output_path):
 		os.mkdir(config.output_path)
 
+
+	# Create roidb
+	image_sets = [iset for iset in config.dataset.image_set.split('+')]
+	roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path, config.dataset.dataset_path,
+								  proposal=config.dataset.proposal, append_gt=True, flip=True, result_path=config.output_path)
+			  for image_set in image_sets]
+	roidb = merge_roidb(roidbs)
+	roidb = filter_roidb(roidb, config)
+	bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+
 	# Creating the iterator
-	train_iter = MNIterator(cfg.rec_path,cfg.list_path,cfg.PIXEL_MEANS,batch_size=cfg.batch_size,nGPUs=cfg.nGPUs)
-	train_iter.next()
+	print('Creating Iterator with {} Images'.format(len(roidb)))
+	train_iter = MNIteratorFaster(roidb=roidb,config=config,batch_size=batch_size,nGPUs=nGPUs,threads=batch_size)
 
 	# Creating the module
-	
-	sym_inst = rfcn_resnet50()
-	sym = sym_inst.get_symbol_rfcn(config)
+	print('Initializing the model...')
+	sym_inst = resnet_v1_50_fast()
+	sym = sym_inst.get_symbol_rcnn(config)
 	
 	# Creating the Logger
-	logging.getLogger().setLevel(logging.DEBUG) 
+	logger, output_path = create_logger(config.output_path, args.cfg, config.dataset.image_set)
 
 	# get list of fixed parameters
 	fixed_param_names = get_fixed_param_names(config.network.FIXED_PARAMS,sym)
-	print fixed_param_names
 
 	# Creating the module
 	mod = mx.mod.Module(symbol=sym,
@@ -57,7 +74,7 @@ if __name__=='__main__':
 	shape_dict = dict(train_iter.provide_data_single+train_iter.provide_label_single)
 	sym_inst.infer_shape(shape_dict)
 	arg_params, aux_params = load_param(config.network.pretrained,config.network.pretrained_epoch,convert=True)
-	sym_inst.init_weight(config,arg_params,aux_params)
+	sym_inst.init_weight_rcnn(config,arg_params,aux_params)
 
 
 	# Creating the metrics
@@ -75,16 +92,18 @@ if __name__=='__main__':
 	eval_metrics.add(cls_metric)
 	eval_metrics.add(bbox_metric)
 
-	optimizer_params = get_optim_params(config,roidb_len=10022,batch_size=cfg.batch_size)
+	optimizer_params = get_optim_params(config,len(roidb),batch_size)
 	print ('Optimizer params: {}'.format(optimizer_params))
 
 	# Checkpointing
-	prefix = os.path.join(config.output_path,cfg.save_prefix)
+	prefix = os.path.join(output_path,args.save_prefix)
+	batch_end_callback = mx.callback.Speedometer(batch_size, args.display)
 	epoch_end_callback = [mx.callback.module_checkpoint(mod, prefix, period=1, save_optimizer_states=True),
-		checkpoint_callback(sym_inst.get_bbox_param_names(),prefix, cfg.bbox_normalization_mean, cfg.bbox_normalization_stds)]
+		checkpoint_callback(sym_inst.get_bbox_param_names(),prefix, bbox_means, bbox_stds)]
 
-
+	train_iter = PrefetchingIter(train_iter)
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
-		eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
-		batch_end_callback=mx.callback.Speedometer(cfg.batch_size, cfg.display),
-		epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params)
+			eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
+			batch_end_callback=batch_end_callback,
+			epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params)
+	
