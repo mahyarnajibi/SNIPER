@@ -1,5 +1,25 @@
 import mxnet as mx
-from lib.lr_scheduler import WarmupMultiFactorScheduler
+from lib.lr_scheduler import WarmupMultiBatchScheduler
+import os
+import logging
+import time
+
+def get_optim_params_single_epoch(cfg):
+
+	# Create scheduler
+	base_lr = cfg.TRAIN.lr
+	lr_factor = cfg.TRAIN.lr_factor
+	lr_iters = [162855]
+	lr_scheduler = WarmupMultiFactorScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
+
+	optim_params = {'momentum': cfg.TRAIN.momentum,
+                        'wd': cfg.TRAIN.wd,
+                        'learning_rate': base_lr,
+                        'rescale_grad': 1.0,
+                        'clip_gradient': None,
+                        'lr_scheduler': lr_scheduler}
+
+	return optim_params
 
 def get_optim_params(cfg,roidb_len,batch_size):
 
@@ -13,7 +33,7 @@ def get_optim_params(cfg,roidb_len,batch_size):
 	lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
 	lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
 	lr_iters = [int(epoch * roidb_len / batch_size) for epoch in lr_epoch_diff]
-	lr_scheduler = WarmupMultiFactorScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
+	lr_scheduler = WarmupMultiBatchScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
 
 	optim_params = {'momentum': cfg.TRAIN.momentum,
                         'wd': cfg.TRAIN.wd,
@@ -23,7 +43,6 @@ def get_optim_params(cfg,roidb_len,batch_size):
                         'lr_scheduler': lr_scheduler}
 
 	return optim_params
-
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
 	def _callback(iter_no, sym, arg, aux):
 		weight = arg[bbox_param_names[0]]
@@ -87,3 +106,41 @@ def get_fixed_param_names(fixed_param_prefix,sym):
 				fixed_param_names.append(name)
 	return fixed_param_names
 
+
+def create_logger(root_output_path, cfg, image_set):
+    # set up logger
+	if not os.path.exists(root_output_path):
+		os.makedirs(root_output_path)
+	assert os.path.exists(root_output_path), '{} does not exist'.format(root_output_path)
+
+	cfg_name = os.path.basename(cfg).split('.')[0]
+	config_output_path = os.path.join(root_output_path, '{}'.format(cfg_name))
+	if not os.path.exists(config_output_path):
+		os.makedirs(config_output_path)
+
+	image_sets = [iset for iset in image_set.split('+')]
+	final_output_path = os.path.join(config_output_path, '{}'.format('_'.join(image_sets)))
+	if not os.path.exists(final_output_path):
+		os.makedirs(final_output_path)
+
+	log_file = '{}_{}.log'.format(cfg_name, time.strftime('%Y-%m-%d-%H-%M'))
+	head = '%(asctime)-15s %(message)s'
+	logging.basicConfig(filename=os.path.join(final_output_path, log_file), format=head)
+	logger = logging.getLogger()
+	logger.setLevel(logging.DEBUG)
+
+	return logger, final_output_path
+
+
+def tic():
+    import time
+    global startTime_for_tictoc
+    startTime_for_tictoc = time.time()
+    return startTime_for_tictoc
+
+def toc():
+    if 'startTime_for_tictoc' in globals():
+        endTime = time.time()
+        return endTime - startTime_for_tictoc
+    else:
+        return None
