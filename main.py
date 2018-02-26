@@ -14,7 +14,7 @@ import metric,callback
 import numpy as np
 from general_utils import get_optim_params,get_fixed_param_names,create_logger
 
-from PrefetchingIter import PrefetchingIter
+from iterators.PrefetchingIter import PrefetchingIter
 from load_data import load_proposal_roidb,merge_roidb,filter_roidb
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser
