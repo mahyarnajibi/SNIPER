@@ -14,8 +14,7 @@ class MNIteratorBase(mx.io.DataIter):
         self.pixel_mean = config.network.PIXEL_MEANS
 
         self.thread_pool = ThreadPool(threads)
-        self.data_name = ['data', 'rois']
-        self.label_name = ['label', 'bbox_target', 'bbox_weight']
+
         self.n_per_gpu = batch_size / nGPUs
         self.batch = None
         

@@ -7,6 +7,8 @@ from MNIteratorBase import MNIteratorBase
 
 class MNIteratorFaster(MNIteratorBase):
     def __init__(self, roidb, config, batch_size = 4,  threads = 8, nGPUs = 1, pad_rois_to=900,single_size_change=False):
+        self.data_name = ['data', 'rois']
+        self.label_name = ['label', 'bbox_target', 'bbox_weight']
         super(MNIteratorFaster,self).__init__(roidb,config,batch_size,threads,nGPUs,pad_rois_to,single_size_change)
 
 
