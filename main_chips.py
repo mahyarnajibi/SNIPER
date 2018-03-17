@@ -3,11 +3,11 @@ os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
 os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
 import init
-from iterators.MNIteratorChips import MNIteratorChips
+from iterators.MNIteratorChipsV2 import MNIteratorChips
 from load_model import load_param
 import sys
 sys.path.insert(0,'lib')
-from symbols.faster.resnet_v1_50_fast_crcnn import resnet_v1_50_fast,checkpoint_callback
+from symbols.faster.resnet_v1_50_msfast import resnet_v1_50_msfast,checkpoint_callback
 from configs.faster.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 import metric,callback
@@ -18,16 +18,18 @@ from iterators.PrefetchingIter import PrefetchingIter
 from load_data import load_proposal_roidb,merge_roidb,filter_roidb,add_chip_data,remove_small_boxes
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser
-
+import pickle
 
 def parser():
 	arg_parser = ArgumentParser('Faster R-CNN training module')
 	arg_parser.add_argument('--cfg',dest='cfg',help='Path to the config file',
-                        default='configs/faster/res50_coco_crcnn.yml',type=str) 
+						default='configs/faster/res50_real_ms_fast.yml',type=str) 
 	arg_parser.add_argument('--display',dest='display',help='Number of epochs between displaying loss info',
-                        default=20,type=int) 
+						default=20,type=int) 
 	arg_parser.add_argument('--save_prefix',dest='save_prefix',help='Prefix used for snapshotting the network',
-                        default='CRCNN',type=str) 
+						default='CRCNN',type=str) 
+	arg_parser.add_argument('--threadid',dest='threadid',help='Prefix used for snapshotting the network',
+						type=int) 
 
 	return arg_parser.parse_args()
 
@@ -48,21 +50,42 @@ if __name__=='__main__':
 								  proposal=config.dataset.proposal, append_gt=True, flip=True, result_path=config.output_path,
 								  proposal_path=config.proposal_path)
 			  for image_set in image_sets]
+
+
 	roidb = merge_roidb(roidbs)
 	roidb = remove_small_boxes(roidb,max_scale=3,min_size=10)
 	roidb = filter_roidb(roidb, config)
 	bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
 
-	# Add chip meta data
-	add_chip_data(roidb, 'chip_meta_data_{}_{}.pkl'.format(config.dataset.dataset,config.dataset.image_set))
+	# #Add chip meta data
+	# add_chip_data(roidb, 'chip_meta_data_{}_{}.pkl'.format(config.dataset.dataset,config.dataset.image_set))
+
+
+	# totalrois = len(roidb)
+	# perdb = (totalrois/5)+1
+	# startpos = args.threadid*perdb
+	# endpos = min(totalrois, (args.threadid+1)*perdb)
+
+
+	# with open('minimini.pkl', 'rb') as file:
+	# 	roidb = pickle.load(file)
+	# bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+
 
 	# Creating the iterator
 	print('Creating Iterator with {} Images'.format(len(roidb)))
 	train_iter = MNIteratorChips(roidb=roidb,config=config,batch_size=batch_size,nGPUs=nGPUs,threads=16,pad_rois_to=400)
 	print('The Iterator has {} samples!'.format(len(train_iter)))
+
+	# for i,batch in enumerate(train_iter):
+	# 	if i % 1 == 0:
+	# 		print str(i) 
+	# exit(0)
+
+
 	# Creating the module
 	print('Initializing the model...')
-	sym_inst = resnet_v1_50_fast(n_proposals=400)
+	sym_inst = resnet_v1_50_msfast(n_proposals=400)
 	sym = sym_inst.get_symbol_rcnn(config)
 	
 	# Creating the Logger
@@ -81,22 +104,31 @@ if __name__=='__main__':
 	shape_dict = dict(train_iter.provide_data_single+train_iter.provide_label_single)
 	sym_inst.infer_shape(shape_dict)
 	arg_params, aux_params = load_param(config.network.pretrained,config.network.pretrained_epoch,convert=True)
+
+	narg_params = {}
+	naux_params = {}
+	for name in arg_params:
+		narg_params['f_' + name] = arg_params[name]
+	for name in aux_params:
+		naux_params['f_' + name] = aux_params[name]
+
+	arg_params = dict(arg_params.items() + narg_params.items())
+	aux_params = dict(aux_params.items() + naux_params.items())
+ 
+
 	sym_inst.init_weight_rcnn(config,arg_params,aux_params)
 
 	# Creating the metrics
 	eval_metric = metric.RCNNAccMetric(config)
 	cls_metric  = metric.RCNNLogLossMetric(config)
 	bbox_metric = metric.RCNNL1LossCRCNNMetric(config)
+	vis_metric = metric.VisMetric(config)
 	eval_metrics = mx.metric.CompositeEvalMetric()
+
 	eval_metrics.add(eval_metric)
 	eval_metrics.add(cls_metric)
 	eval_metrics.add(bbox_metric) 
-
-
-	eval_metrics = mx.metric.CompositeEvalMetric()
-	eval_metrics.add(eval_metric)
-	eval_metrics.add(cls_metric)
-	eval_metrics.add(bbox_metric)
+	eval_metrics.add(vis_metric)
 
 	optimizer_params = get_optim_params(config,len(train_iter),batch_size)
 	print ('Optimizer params: {}'.format(optimizer_params))
@@ -111,5 +143,5 @@ if __name__=='__main__':
 	mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
 			eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
 			batch_end_callback=batch_end_callback,
-			epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params)
+			epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params,prefix='chip_fast')
 	
