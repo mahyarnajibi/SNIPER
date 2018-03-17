@@ -25,6 +25,7 @@ class BoxAnnotatorOHEMOperator(mx.operator.CustomOp):
         self.get_fg_labels = get_fg_labels
 
     def forward(self, is_train, req, in_data, out_data, aux):
+        
         cls_score    = in_data[0]
         bbox_pred    = in_data[1]
         labels       = in_data[2].asnumpy()
