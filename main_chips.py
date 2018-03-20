@@ -1,7 +1,7 @@
 import os
 os.environ['PYTHONUNBUFFERED'] = '1'
-os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
-os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
+os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
+#os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
 import init
 from iterators.MNIteratorChipsV3 import MNIteratorChips
 from load_model import load_param
@@ -25,7 +25,7 @@ def parser():
     arg_parser.add_argument('--cfg',dest='cfg',help='Path to the config file',
                         default='configs/faster/res50_coco_chips.yml',type=str) 
     arg_parser.add_argument('--display',dest='display',help='Number of epochs between displaying loss info',
-                        default=20,type=int) 
+                        default=100,type=int) 
     arg_parser.add_argument('--save_prefix',dest='save_prefix',help='Prefix used for snapshotting the network',
                         default='CRCNN',type=str) 
     arg_parser.add_argument('--threadid',dest='threadid',help='Prefix used for snapshotting the network',
@@ -129,7 +129,7 @@ if __name__=='__main__':
     eval_metrics.add(eval_metric)
     eval_metrics.add(cls_metric)
     eval_metrics.add(bbox_metric) 
-    eval_metrics.add(vis_metric)
+    #eval_metrics.add(vis_metric)
 
     optimizer_params = get_optim_params(config,len(train_iter),batch_size)
     print ('Optimizer params: {}'.format(optimizer_params))
@@ -144,4 +144,4 @@ if __name__=='__main__':
     mod.fit(train_iter,optimizer='sgd',optimizer_params=optimizer_params,
             eval_metric=eval_metrics,num_epoch=config.TRAIN.end_epoch,kvstore=config.default.kvstore,
             batch_end_callback=batch_end_callback,
-            epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params,prefix='chip_fast')
+            epoch_end_callback=epoch_end_callback, arg_params=arg_params,aux_params=aux_params)

@@ -10,6 +10,7 @@ import mxnet as mx
 from lib.symbol import Symbol
 #from operator_py.debug import *
 from operator_py.box_annotator_ohem import *
+from operator_py.debug_data import *
 
 
 
@@ -397,9 +398,9 @@ class resnet_v1_50_fast(Symbol):
             bbox_weight = mx.symbol.Variable(name='bbox_weight')
             # reshape input
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
-            #label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
-            #bbox_target = mx.symbol.Reshape(data=bbox_target, shape=(-1, 4 * num_reg_classes), name='bbox_target_reshape')
-            #bbox_weight = mx.symbol.Reshape(data=bbox_weight, shape=(-1, 4 * num_reg_classes), name='bbox_weight_reshape')
+            label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
+            bbox_target = mx.symbol.Reshape(data=bbox_target, shape=(-1, 4 * num_reg_classes), name='bbox_target_reshape')
+            bbox_weight = mx.symbol.Reshape(data=bbox_weight, shape=(-1, 4 * num_reg_classes), name='bbox_weight_reshape')
         else:
             data = mx.sym.Variable(name="data")
             rois = mx.symbol.Variable(name='rois')
@@ -407,13 +408,14 @@ class resnet_v1_50_fast(Symbol):
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
 
         # shared convolutional layers
+        data = mx.sym.Cast(data=data, dtype=np.float16)        
         conv_feat = self.get_resnet_v1_conv4(data)
         # res5
         relu1 = self.get_resnet_v1_conv5(conv_feat)
 
         conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
         conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
-
+        conv_new_1_relu = mx.sym.Cast(data=conv_new_1_relu, dtype=np.float32)
         offset_t = mx.contrib.sym.DeformablePSROIPooling(name='offset_t', data=conv_new_1_relu, rois=rois, group_size=1, pooled_size=7,
                                                          sample_per_part=4, no_trans=True, part_size=7, output_dim=256, spatial_scale=0.0625)
         offset = mx.sym.FullyConnected(name='offset', data=offset_t, num_hidden=7 * 7 * 2, lr_mult=0.01)
@@ -422,7 +424,7 @@ class resnet_v1_50_fast(Symbol):
         deformable_roi_pool = mx.contrib.sym.DeformablePSROIPooling(name='deformable_roi_pool', data=conv_new_1_relu, rois=rois,
                                                                     trans=offset_reshape, group_size=1, pooled_size=7, sample_per_part=4,
                                                                     no_trans=False, part_size=7, output_dim=256, spatial_scale=0.0625, trans_std=0.1)
-
+        deformable_roi_pool = mx.sym.Cast(data=deformable_roi_pool, dtype=np.float16)
         # 2 fc
         fc_new_1 = mx.sym.FullyConnected(name='fc_new_1', data=deformable_roi_pool, num_hidden=1024)
         fc_new_1_relu = mx.sym.Activation(data=fc_new_1, act_type='relu', name='fc_new_1_relu')
@@ -430,13 +432,16 @@ class resnet_v1_50_fast(Symbol):
         fc_new_2 = mx.sym.FullyConnected(name='fc_new_2', data=fc_new_1_relu, num_hidden=1024)
         fc_new_2_relu = mx.sym.Activation(data=fc_new_2, act_type='relu', name='fc_new_2_relu')
 
+        fc_new_2_relu = mx.sym.Cast(data=fc_new_2_relu, dtype=np.float32)
+        
         # cls_score/bbox_pred
         cls_score = mx.sym.FullyConnected(name='cls_score', data=fc_new_2_relu, num_hidden=num_classes)
         bbox_pred = mx.sym.FullyConnected(name='bbox_pred', data=fc_new_2_relu, num_hidden=num_reg_classes * 4)
-        cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1,self.n_proposals, num_classes))
-        bbox_pred = mx.sym.Reshape(name='bbox_pred_reshape', data=bbox_pred, shape=(-1, self.n_proposals,4 * num_reg_classes))
+        
+        #cls_score = mx.sym.Reshape(name='cls_score_reshape', data=cls_score, shape=(-1,self.n_proposals, num_classes))
+        #bbox_pred = mx.sym.Reshape(name='bbox_pred_reshape', data=bbox_pred, shape=(-1, self.n_proposals,4 * num_reg_classes))
         if is_train:
-            if cfg.TRAIN.ENABLE_OHEM:
+            if False:
                 labels_ohem, bbox_weights_ohem = mx.sym.Custom(op_type='BoxAnnotatorOHEM', num_classes=num_classes,
                                                                num_reg_classes=num_reg_classes,
                                                                roi_per_img=cfg.TRAIN.BATCH_ROIS_OHEM,
@@ -459,11 +464,12 @@ class resnet_v1_50_fast(Symbol):
                                             grad_scale=1.0 / (cfg.TRAIN.BATCH_ROIS_OHEM*cfg.TRAIN.BATCH_IMAGES))
                 rcnn_label = labels_ohem
             else:
-                cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid',
+                #cls_score = mx.sym.Custom(op_type='debug_data', datai1=cls_score, datai2=label, datai3=bbox_pred, datai4=bbox_target)
+                cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
                                                 grad_scale=1.0)
                 bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                             data=(bbox_pred - bbox_target))
-                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / (cfg.TRAIN.BATCH_ROIS*cfg.TRAIN.BATCH_IMAGES))
+                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / (188*16))
                 rcnn_label = label
 
             # reshape output

@@ -185,5 +185,5 @@ def roidb_worker(data):
     rois_array_this_image = np.hstack((batch_index, rois))
     if rois_array_this_image.shape[0]==0:
         print 'Something Wrong2'
-    rval = [mx.nd.array(rois_array_this_image), mx.nd.array(labels), mx.nd.array(bbox_weights), mx.nd.array(bbox_targets)]
+    rval = [mx.nd.array(rois_array_this_image), mx.nd.array(labels), mx.nd.array(bbox_targets), mx.nd.array(bbox_weights)]
     return rval

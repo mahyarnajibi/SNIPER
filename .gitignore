@@ -1,0 +1,7 @@
+*.so
+*~
+*.pyc
+output
+proposals
+data
+build/
