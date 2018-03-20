@@ -23,7 +23,7 @@ import pickle
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg',dest='cfg',help='Path to the config file',
-                        default='configs/faster/res50_coco_chips.yml',type=str) 
+                        default='configs/faster/res50_coco_chips_bn.yml',type=str) 
     arg_parser.add_argument('--display',dest='display',help='Number of epochs between displaying loss info',
                         default=100,type=int) 
     arg_parser.add_argument('--save_prefix',dest='save_prefix',help='Prefix used for snapshotting the network',
