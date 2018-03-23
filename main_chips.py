@@ -3,11 +3,11 @@ os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 #os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
 import init
-from iterators.MNIteratorChipsV3 import MNIteratorChips
+from iterators.MNIteratorChipsV3Neg import MNIteratorChips
 from load_model import load_param
 import sys
 sys.path.insert(0,'lib')
-from symbols.faster.resnet_v1_50_fast import resnet_v1_50_fast,checkpoint_callback
+from symbols.faster.resnet_v1_50_fast import resnet_v1_50_fast, checkpoint_callback
 from configs.faster.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 import metric,callback
@@ -23,7 +23,7 @@ import pickle
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg',dest='cfg',help='Path to the config file',
-                        default='configs/faster/res50_coco_chips_bn.yml',type=str) 
+                        default='configs/faster/res50_coco_chips.yml',type=str) 
     arg_parser.add_argument('--display',dest='display',help='Number of epochs between displaying loss info',
                         default=100,type=int) 
     arg_parser.add_argument('--save_prefix',dest='save_prefix',help='Prefix used for snapshotting the network',
@@ -53,7 +53,7 @@ if __name__=='__main__':
 
 
     roidb = merge_roidb(roidbs)
-    roidb = remove_small_boxes(roidb,max_scale=3,min_size=10)
+    #roidb = remove_small_boxes(roidb,max_scale=3,min_size=2)
     roidb = filter_roidb(roidb, config)
     bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
 
@@ -105,17 +105,6 @@ if __name__=='__main__':
     shape_dict = dict(train_iter.provide_data_single+train_iter.provide_label_single)
     sym_inst.infer_shape(shape_dict)
     arg_params, aux_params = load_param(config.network.pretrained,config.network.pretrained_epoch,convert=True)
-
-    narg_params = {}
-    naux_params = {}
-    for name in arg_params:
-        narg_params['f_' + name] = arg_params[name]
-    for name in aux_params:
-        naux_params['f_' + name] = aux_params[name]
-
-    arg_params = dict(arg_params.items() + narg_params.items())
-    aux_params = dict(aux_params.items() + naux_params.items())
- 
 
     #sym_inst.init_weight_rcnn(config,arg_params,aux_params)
 

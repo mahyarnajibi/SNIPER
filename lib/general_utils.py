@@ -39,7 +39,7 @@ def get_optim_params(cfg,roidb_len,batch_size):
                         'wd': cfg.TRAIN.wd,
                         'learning_rate': base_lr,
                         'rescale_grad': 1.0,
-                        'multi_precision': True,
+                        #'multi_precision': True,
                         'clip_gradient': None,
                         'lr_scheduler': lr_scheduler}
 

@@ -29,10 +29,6 @@ network:
   - bn_conv1
   - res2
   - bn2
-  - f_conv1
-  - f_bn_conv1
-  - f_res2
-  - f_bn2
   - gamma
   - beta
   FIXED_PARAMS_SHARED:
@@ -59,7 +55,7 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: minival2014 #train2014+val2014
+  image_set: train2014+val2014
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn

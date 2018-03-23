@@ -42,10 +42,14 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
         labels=None, overlaps=None, bbox_targets=None, gt_boxes=None, scale_sd=1):
     if labels is None:
         #overlaps = bbox_overlaps(rois[:, 1:].astype(np.float), gt_boxes[:, :4].astype(np.float)
-        overlaps = bbox_overlaps(rois.astype(np.float), gt_boxes[:, :4].astype(np.float))
-        gt_assignment = overlaps.argmax(axis=1)
-        overlaps = overlaps.max(axis=1)
-        labels = gt_boxes[gt_assignment, 4]
+		if len(gt_boxes) > 0:
+		    overlaps = bbox_overlaps(rois.astype(np.float), gt_boxes[:, :4].astype(np.float))
+		    gt_assignment = overlaps.argmax(axis=1)
+		    overlaps = overlaps.max(axis=1)
+		    labels = gt_boxes[gt_assignment, 4]
+		else:
+			return rois, np.zeros((len(rois))), np.zeros((len(rois), 8)), np.zeros((len(rois), 8))
+        
 
     thresh = 0.5
 
@@ -126,6 +130,8 @@ def roidb_worker(data):
         gt_boxes = gt_boxes[ids]
         gt_labs = gt_labs[ids]                
         gt_boxes = np.hstack((gt_boxes, gt_labs.reshape(len(gt_labs), 1)))
+    else:
+        gt_boxes = np.zeros((0, 5))
 
 
     #crois = new_rec['boxes'].copy()
@@ -148,12 +154,12 @@ def roidb_worker(data):
     if len(ids) > 0:            
         rois = rois[ids, :]
 
-    overlaps = ignore_overlaps(rois.astype(np.float), gt_boxes.astype(np.float))
-    mov = np.max(overlaps)
+    #overlaps = ignore_overlaps(rois.astype(np.float), gt_boxes.astype(np.float))
+    #mov = np.max(overlaps)
 
-    if mov < 1:
-        print 'Something Wrong 1'
-        import pdb;pdb.set_trace()
+    #if mov < 1:
+    #    print 'Something Wrong 1'
+    #    import pdb;pdb.set_trace()
 
     fg_rois_per_image = len(rois)
     rois_per_image = fg_rois_per_image
