@@ -41,9 +41,9 @@ def chip_worker(r):
     area = np.sqrt(ws * hs)
     ms = np.maximum(ws, hs)
 
-    ids1 = np.where((area < 80) & (ms < 450.0/3) & (ws >= 3) & (hs >= 3))[0]
-    ids2 = np.where((area >= 32) & (ms < 450.0/1.667) & (area < 150))[0]
-    ids3 = np.where((area >= 120))[0]
+    ids1 = np.where((ms < 450.0/3) & (ws >= 3) & (hs >= 3))[0]
+    ids2 = np.where((area >= 32) & (ms < 450.0/1.667))[0]
+    ids3 = np.where((area >= 50))[0]
 
     chips1 = genchips(int(r['width'] * im_scale_1), int(r['height'] * im_scale_1), gt_boxes[ids1, :] * im_scale_1, 512)
     chips2 = genchips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), gt_boxes[ids2, :] * im_scale_2, 512)
@@ -79,9 +79,9 @@ def props_in_chip_worker(r):
     im_scale_3 = 512.0 / float(im_size_max)
 
     area = np.sqrt(widths * heights)
-    sids = np.where((area < 80) & (max_sizes < 450.0/3) & (widths >= 3) & (heights >= 3))[0]
-    mids = np.where((area >= 32) & (max_sizes < 450.0/1.667) & (area < 150))[0]
-    bids = np.where(area >= 120)[0]
+    sids = np.where((max_sizes < 450.0/3) & (widths >= 3) & (heights >= 3))[0]
+    mids = np.where((area >= 32) & (max_sizes < 450.0/1.667))[0]
+    bids = np.where(area >= 50)[0]
 
     chips1, chips2, chips3 = [], [], []
     chip_ids1, chip_ids2, chip_ids3 = [], [], []
@@ -121,7 +121,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 3 and y2 - y1 >= 3):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 props_in_chips[chip_ids1[cid]].append(sids[pi])
                 small_covered[pi] = True
             #else:
@@ -137,7 +137,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 5 and y2 - y1 >= 5):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 props_in_chips[chip_ids2[cid]].append(mids[pi])
                 med_covered[pi] = True
             #else:
@@ -153,7 +153,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 10 and y2 - y1 >= 10):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 props_in_chips[chip_ids3[cid]].append(bids[pi])
                 big_covered[pi] = True
             #else:
@@ -188,7 +188,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 3 and y2 - y1 >= 3):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 neg_props_in_chips[chip_ids1[cid]].append(neg_sids[pi])
 
     if neg_chips2.shape[0] > 0:
@@ -201,7 +201,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 5 and y2 - y1 >= 5):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 neg_props_in_chips[chip_ids2[cid]].append(neg_mids[pi])
 
     if neg_chips3.shape[0] > 0:
@@ -214,7 +214,7 @@ def props_in_chip_worker(r):
             x2 = min(cur_chip[2], cur_box[2])
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
-            if (x2 - x1 >= 10 and y2 - y1 >= 10):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
                 neg_props_in_chips[chip_ids3[cid]].append(neg_bids[pi])
 
     neg_chips = []
