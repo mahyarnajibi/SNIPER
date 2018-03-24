@@ -245,7 +245,7 @@ class MNIteratorChips(MNIteratorBase):
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
         self.data_name = ['data', 'rois']
         self.label_name = ['label', 'bbox_target', 'bbox_weight']
-        self.pool = Pool(16)
+        self.pool = Pool(32)
         self.context_size = 320
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
@@ -454,102 +454,6 @@ class MNIteratorChips(MNIteratorBase):
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(),
                                provide_data=self.provide_data, provide_label=self.provide_label)
 
-    def roidb_worker(self, data):
-        # import pdb;pdb.set_trace()
-
-        roidb = data[0]
-        new_rec = roidb.copy()
-        im_i = data[1]
-        cropid = data[2]
-
-        im_info = roidb['im_info']
-        # get rois
-        cur_crop = roidb['crops'][cropid][0]
-        im_scale = roidb['crops'][cropid][1]
-
-        nids = roidb['props_in_chips'][cropid]
-
-        gtids = np.where(new_rec['max_overlaps'] == 1)[0]
-
-        gt_boxes = new_rec['boxes'][gtids, :].copy()
-        gt_labs = new_rec['max_classes'][gtids]
-
-        gt_boxes[:, 0] = gt_boxes[:, 0] - cur_crop[0]
-        gt_boxes[:, 2] = gt_boxes[:, 2] - cur_crop[0]
-        gt_boxes[:, 1] = gt_boxes[:, 1] - cur_crop[1]
-        gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
-
-        gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
-        ids = filter_boxes(gt_boxes, 10)
-        if len(ids) > 0:
-            gt_boxes = gt_boxes[ids]
-            gt_labs = gt_labs[ids]
-
-        gt_boxes = np.hstack((gt_boxes, gt_labs.reshape(len(gt_labs), 1)))
-
-        crois = new_rec['boxes'].copy()
-
-        crois[:, 0] = crois[:, 0] - cur_crop[0]
-        crois[:, 2] = crois[:, 2] - cur_crop[0]
-        crois[:, 1] = crois[:, 1] - cur_crop[1]
-        crois[:, 3] = crois[:, 3] - cur_crop[1]
-
-        new_rec['boxes'] = clip_boxes(np.round(crois * im_scale), im_info[:2])
-
-        ids = filter_boxes(new_rec['boxes'], 10)
-        tids = np.intersect1d(ids, nids)
-        if len(nids) > 0:
-            ids = tids
-        else:
-            ids = nids
-
-        if len(ids) > 0:
-            new_rec['boxes'] = new_rec['boxes'][ids, :]
-            new_rec['max_overlaps'] = new_rec['max_overlaps'][ids]
-            new_rec['max_classes'] = new_rec['max_classes'][ids]
-            new_rec['bbox_targets'] = new_rec['bbox_targets'][ids, :]
-            new_rec['gt_overlaps'] = new_rec['gt_overlaps'][ids]
-
-        new_rec['im_info'] = im_info
-        new_rec['gt_boxes'] = gt_boxes
-
-        # infer num_classes from gt_overlaps
-        num_classes = new_rec['gt_overlaps'].shape[1]
-
-        # label = class RoI has max overlap with
-        rois = new_rec['boxes']
-        gt_boxes = new_rec['gt_boxes']
-
-        overlaps = ignore_overlaps(rois.astype(np.float), gt_boxes.astype(np.float))
-        mov = np.max(overlaps)
-
-        if mov < 1:
-            print 'Something Wrong 1'
-            import pdb;
-            pdb.set_trace()
-        fg_rois_per_image = len(rois)
-        rois_per_image = fg_rois_per_image
-        rois, labels, bbox_targets, bbox_weights = self.sample_rois(rois, fg_rois_per_image, rois_per_image,
-                                                                    num_classes, self.cfg, gt_boxes=gt_boxes)
-
-        if rois.shape[0] > self.n_expected_roi:
-            rois = rois[0:self.n_expected_roi, :]
-            bbox_weights = bbox_weights[0:self.n_expected_roi, :]
-            bbox_targets = bbox_targets[0:self.n_expected_roi, :]
-            labels = labels[0:self.n_expected_roi]
-        elif rois.shape[0] < self.n_expected_roi:
-            n_pad = self.n_expected_roi - rois.shape[0]
-            rois = np.vstack((rois, np.repeat(self.pad_roi, n_pad, axis=0)))
-            labels = np.hstack((labels, np.repeat(self.pad_label, n_pad, axis=0)))
-            bbox_weights = np.vstack((bbox_weights, np.repeat(self.pad_weights, n_pad, axis=0)))
-            bbox_targets = np.vstack((bbox_targets, np.repeat(self.pad_targets, n_pad, axis=0)))
-
-        batch_index = im_i * np.ones((rois.shape[0], 1))
-        rois_array_this_image = np.hstack((batch_index, rois))
-        if rois_array_this_image.shape[0] == 0:
-            print 'Something Wrong2'
-        return {'rois': rois_array_this_image, 'labels': labels,
-                'bbox_weights': bbox_weights, 'bbox_targets': bbox_targets, 'gt_boxes': gt_boxes}
 
     def visualize(self, im_tensor, boxes, labels): # , bbox_targets, bbox_weights):
         # import pdb;pdb.set_trace()
@@ -577,70 +481,3 @@ class MNIteratorChips(MNIteratorBase):
             plt.cla()
             plt.clf()
             plt.close()
-
-
-    def sample_rois(self, rois, fg_rois_per_image, rois_per_image, num_classes, cfg,
-                    labels=None, overlaps=None, bbox_targets=None, gt_boxes=None, scale_sd=1):
-
-        if labels is None:
-            # overlaps = bbox_overlaps(rois[:, 1:].astype(np.float), gt_boxes[:, :4].astype(np.float)
-            overlaps = bbox_overlaps(rois.astype(np.float), gt_boxes[:, :4].astype(np.float))
-            gt_assignment = overlaps.argmax(axis=1)
-            overlaps = overlaps.max(axis=1)
-            labels = gt_boxes[gt_assignment, 4]
-
-        thresh = 0.5
-        # foreground RoI with FG_THRESH overlap
-        if scale_sd == 0.5:
-            thresh = 0.6
-
-        if scale_sd == 0.25:
-            thresh = 0.7
-
-        fg_indexes = np.where(overlaps >= thresh)[0]
-
-        # guard against the case when an image has fewer than fg_rois_per_image foreground RoIs
-        fg_rois_per_this_image = np.minimum(fg_rois_per_image, fg_indexes.size)
-        # Sample foreground regions without replacement
-        if len(fg_indexes) > fg_rois_per_this_image:
-            fg_indexes = npr.choice(fg_indexes, size=fg_rois_per_this_image, replace=False)
-
-        # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
-        bg_indexes = np.where((overlaps < cfg.TRAIN.BG_THRESH_HI) & (overlaps >= cfg.TRAIN.BG_THRESH_LO))[0]
-        # Compute number of background RoIs to take from this image (guarding against there being fewer than desired)
-        bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
-        bg_rois_per_this_image = np.minimum(bg_rois_per_this_image, bg_indexes.size)
-        # Sample foreground regions without replacement
-        if len(bg_indexes) > bg_rois_per_this_image:
-            bg_indexes = npr.choice(bg_indexes, size=bg_rois_per_this_image, replace=False)
-
-        # indexes selected
-        keep_indexes = np.append(fg_indexes, bg_indexes)
-
-        # pad more to ensure a fixed minibatch size
-        while keep_indexes.shape[0] < rois_per_image:
-            gap = np.minimum(len(rois), rois_per_image - keep_indexes.shape[0])
-            gap_indexes = npr.choice(range(len(rois)), size=gap, replace=False)
-            keep_indexes = np.append(keep_indexes, gap_indexes)
-
-        # select labels
-        labels = labels[keep_indexes]
-        # set labels of bg_rois to be 0
-        labels[fg_rois_per_this_image:] = 0
-        rois = rois[keep_indexes]
-
-        # load or compute bbox_target
-        if bbox_targets is not None:
-            bbox_target_data = bbox_targets[keep_indexes, :]
-        else:
-            # targets = bbox_transform(rois[:, 1:], gt_boxes[gt_assignment[keep_indexes], :4])
-            targets = bbox_transform(rois, gt_boxes[gt_assignment[keep_indexes], :4])
-            if cfg.TRAIN.BBOX_NORMALIZATION_PRECOMPUTED:
-                targets = ((targets - np.array(cfg.TRAIN.BBOX_MEANS))
-                           / (np.array(cfg.TRAIN.BBOX_STDS) * scale_sd))
-            bbox_target_data = np.hstack((labels[:, np.newaxis], targets))
-
-        bbox_targets, bbox_weights = \
-            expand_bbox_regression_targets(bbox_target_data, num_classes, cfg)
-
-        return rois, labels, bbox_targets, bbox_weights
