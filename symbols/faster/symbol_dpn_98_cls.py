@@ -307,11 +307,15 @@ class symbol_dpn_98_cls(Symbol):
                 rcnn_label = labels_ohem
             else:
                 #cls_score = mx.sym.Custom(op_type='debug_data', datai1=cls_score, datai2=label, datai3=bbox_pred, datai4=bbox_target)
+                if cfg.TRAIN.fp16 == True:
+                    grad_scale = 100.0
+                else:
+                    grad_scale = 1.0
                 cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
-                                                grad_scale=100.0)
+                                                grad_scale=grad_scale)
                 bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                             data=(bbox_pred - bbox_target))
-                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=100.0 / (188*16))
+                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188*16))
                 rcnn_label = label
 
             # reshape output

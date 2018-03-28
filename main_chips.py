@@ -8,6 +8,7 @@ from load_model import load_param
 import sys
 sys.path.insert(0,'lib')
 from symbols.faster.resnet_v1_50_fast import resnet_v1_50_fast, checkpoint_callback
+#from symbols.faster.symbol_dpn_98_cls import symbol_dpn_98_cls, checkpoint_callback
 from configs.faster.default_configs import config,update_config,get_opt_params
 import mxnet as mx
 import metric,callback

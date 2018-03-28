@@ -60,6 +60,7 @@ config.TRAIN.warmup_lr = 0
 config.TRAIN.warmup_step = 0
 config.TRAIN.momentum = 0.9
 config.TRAIN.wd = 0.0005
+config.TRAIN.fp16 = False
 config.TRAIN.begin_epoch = 0
 config.TRAIN.end_epoch = 0
 config.TRAIN.model_prefix = ''

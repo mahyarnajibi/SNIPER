@@ -35,11 +35,19 @@ def get_optim_params(cfg,roidb_len,batch_size):
 	lr_iters = [int(epoch * roidb_len / batch_size) for epoch in lr_epoch_diff]
 	lr_scheduler = WarmupMultiBatchScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
 
-	optim_params = {'momentum': cfg.TRAIN.momentum,
+        if cfg.TRAIN.fp16 == True:
+                optim_params = {'momentum': cfg.TRAIN.momentum,
+                        'wd': cfg.TRAIN.wd*100,
+                        'learning_rate': base_lr*0.01,
+                        'rescale_grad': 1.0,
+                        'multi_precision': True,
+                        'clip_gradient': None,
+                        'lr_scheduler': lr_scheduler}
+        else:
+                optim_params = {'momentum': cfg.TRAIN.momentum,
                         'wd': cfg.TRAIN.wd,
                         'learning_rate': base_lr,
                         'rescale_grad': 1.0,
-                        #'multi_precision': True,
                         'clip_gradient': None,
                         'lr_scheduler': lr_scheduler}
 

@@ -408,14 +408,17 @@ class resnet_v1_50_fast(Symbol):
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
 
         # shared convolutional layers
-        #data = mx.sym.Cast(data=data, dtype=np.float16)        
+        if cfg.TRAIN.fp16:
+            data = mx.sym.Cast(data=data, dtype=np.float16)        
         conv_feat = self.get_resnet_v1_conv4(data)
         # res5
         relu1 = self.get_resnet_v1_conv5(conv_feat)
 
         conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
         conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
-        #conv_new_1_relu = mx.sym.Cast(data=conv_new_1_relu, dtype=np.float32)
+
+        if cfg.TRAIN.fp16:
+            conv_new_1_relu = mx.sym.Cast(data=conv_new_1_relu, dtype=np.float32)
         offset_t = mx.contrib.sym.DeformablePSROIPooling(name='offset_t', data=conv_new_1_relu, rois=rois, group_size=1, pooled_size=7,
                                                          sample_per_part=4, no_trans=True, part_size=7, output_dim=256, spatial_scale=0.0625)
         offset = mx.sym.FullyConnected(name='offset', data=offset_t, num_hidden=7 * 7 * 2, lr_mult=0.01)
@@ -465,11 +468,16 @@ class resnet_v1_50_fast(Symbol):
                 rcnn_label = labels_ohem
             else:
                 #cls_score = mx.sym.Custom(op_type='debug_data', datai1=cls_score, datai2=label, datai3=bbox_pred, datai4=bbox_target)
+                if cfg.TRAIN.fp16 == True:
+                    grad_scale = 100.0
+                else:
+                    grad_scale = 1.0
+
                 cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
-                                                grad_scale=1.0)
+                                                grad_scale=grad_scale)
                 bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                             data=(bbox_pred - bbox_target))
-                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / (188*16))
+                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188*16))
                 rcnn_label = label
 
             # reshape output
