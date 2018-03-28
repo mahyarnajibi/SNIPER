@@ -42,8 +42,8 @@ def chip_worker(r):
     area = np.sqrt(ws * hs)
     ms = np.maximum(ws, hs)
 
-    ids1 = np.where((area < 80) & (ms < 450.0/3) & (ws >= 2) & (hs >= 2))[0]
-    ids2 = np.where((area >= 32) & (area < 150) & (ms < 450.0/1.667))[0]
+    ids1 = np.where((area < 80) & (ms < 450.0/im_scale_1) & (ws >= 2) & (hs >= 2))[0]
+    ids2 = np.where((area >= 32) & (area < 150) & (ms < 450.0/im_scale_2))[0]
     ids3 = np.where((area >= 120))[0]
 
     chips1 = genchips(int(r['width'] * im_scale_1), int(r['height'] * im_scale_1), gt_boxes[ids1, :] * im_scale_1, 512)
@@ -55,9 +55,9 @@ def chip_worker(r):
 
     chip_ar = []
     for chip in chips1:
-        chip_ar.append([chip, 3])
+        chip_ar.append([chip, im_scale_1])
     for chip in chips2:
-        chip_ar.append([chip, 1.667])
+        chip_ar.append([chip, im_scale_2])
     for chip in chips3:
         chip_ar.append([chip, im_scale_3])
 
@@ -65,6 +65,37 @@ def chip_worker(r):
 
     # return (np.array(chips1),np.array(chips2).np.array(chips3),im_scale_3)
 
+
+def chip_worker_two_scales(r):
+    width = r['width']
+    height = r['height']
+    im_size_max = max(width, height)
+    im_size_min = min(width, height)
+    im_scale_2 = 800.0 / im_size_min
+    im_scale_3 = 512.0 / float(im_size_max)
+
+    gt_boxes = r['boxes'][np.where(r['max_overlaps'] == 1)[0], :]
+
+    ws = (gt_boxes[:, 2] - gt_boxes[:, 0]).astype(np.int32)
+    hs = (gt_boxes[:, 3] - gt_boxes[:, 1]).astype(np.int32)
+    area = np.sqrt(ws * hs)
+    ms = np.maximum(ws, hs)
+
+    ids2 = np.where((area < 150) & (ms < 450.0/im_scale_2))[0]
+    ids3 = np.where((area >= 120))[0]
+
+    chips2 = genchips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), gt_boxes[ids2, :] * im_scale_2, 512)
+    chips3 = genchips(int(r['width'] * im_scale_3), int(r['height'] * im_scale_3), gt_boxes[ids3, :] * im_scale_3, 512)
+    chips2 = np.array(chips2) / im_scale_2
+    chips3 = np.array(chips3) / im_scale_3
+
+    chip_ar = []
+    for chip in chips2:
+        chip_ar.append([chip, im_scale_2])
+    for chip in chips3:
+        chip_ar.append([chip, im_scale_3])
+
+    return chip_ar
 
 def props_in_chip_worker(r):
     props_in_chips = [[] for _ in range(len(r['crops']))]
@@ -75,23 +106,25 @@ def props_in_chip_worker(r):
     width = r['width']
     height = r['height']
     im_size_max = max(width, height)
+    im_size_min = min(width, height)
+
     im_scale_1 = 3
     im_scale_2 = 1.667
     im_scale_3 = 512.0 / float(im_size_max)
 
     area = np.sqrt(widths * heights)
 
-    sids = np.where((area < 80) & (max_sizes < 450.0/3) & (widths >= 2) & (heights >= 2))[0]
-    mids = np.where((area >= 32) & (area < 150) & (max_sizes < 450.0/1.667))[0]
+    sids = np.where((area < 80) & (max_sizes < 450.0/im_scale_1) & (widths >= 2) & (heights >= 2))[0]
+    mids = np.where((area >= 32) & (area < 150) & (max_sizes < 450.0/im_scale_2))[0]
     bids = np.where((area >= 120))[0]
 
     chips1, chips2, chips3 = [], [], []
     chip_ids1, chip_ids2, chip_ids3 = [], [], []
     for ci, crop in enumerate(r['crops']):
-        if crop[1] == 3:
+        if crop[1] == im_scale_1:
             chips1.append(crop[0])
             chip_ids1.append(ci)
-        elif crop[1] == 1.667:
+        elif crop[1] == im_scale_2:
             chips2.append(crop[0])
             chip_ids2.append(ci)
         else:
@@ -228,7 +261,7 @@ def props_in_chip_worker(r):
     neg_chips = []
     final_neg_props_in_chips = []
     chip_counter = 0
-    for chips, cscale in zip([neg_chips1, neg_chips2, neg_chips3], [3, 1.667, im_scale_3]):
+    for chips, cscale in zip([neg_chips1, neg_chips2, neg_chips3], [im_scale_1, im_scale_2, im_scale_3]):
         for chip in chips:
             if len(neg_props_in_chips[chip_counter]) > 40:
                 final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
@@ -245,6 +278,142 @@ def props_in_chip_worker(r):
     return props_in_chips,neg_chips,final_neg_props_in_chips
 
 
+
+def props_in_chip_worker_two_scales(r):
+    props_in_chips = [[] for _ in range(len(r['crops']))]
+    widths = (r['boxes'][:, 2] - r['boxes'][:, 0]).astype(np.int32)
+    heights = (r['boxes'][:, 3] - r['boxes'][:, 1]).astype(np.int32)
+    max_sizes = np.maximum(widths, heights)
+
+    width = r['width']
+    height = r['height']
+    im_size_max = max(width, height)
+    im_size_min = min(width, height)
+
+    im_scale_2 = 800.0 / im_size_min
+    im_scale_3 = 512.0 / float(im_size_max)
+
+    area = np.sqrt(widths * heights)
+
+    mids = np.where((area < 150) & (max_sizes < 450.0/im_scale_2))[0]
+    bids = np.where((area >= 120))[0]
+
+    chips2, chips3 = [], [], []
+    chip_ids2, chip_ids3 = [], [], []
+    for ci, crop in enumerate(r['crops']):
+        if crop[1] == im_scale_2:
+            chips2.append(crop[0])
+            chip_ids2.append(ci)
+        else:
+            chips3.append(crop[0])
+            chip_ids3.append(ci)
+
+    chips2 = np.array(chips2, dtype=np.float)
+    chips3 = np.array(chips3, dtype=np.float)
+    chip_ids2 = np.array(chip_ids2)
+    chip_ids3 = np.array(chip_ids3)
+
+    med_boxes = r['boxes'][mids].astype(np.float)
+    big_boxes = r['boxes'][bids].astype(np.float)
+
+    med_covered = np.zeros(med_boxes.shape[0], dtype=bool)
+    big_covered = np.zeros(big_boxes.shape[0], dtype=bool)
+
+    if chips2.shape[0] > 0:
+        overlaps = ignore_overlaps(chips2, med_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = chips2[cid]
+            cur_box = med_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            area = math.sqrt(abs((x2-x1)*(y2-y1)))
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area <= 150):
+                props_in_chips[chip_ids2[cid]].append(mids[pi])
+                med_covered[pi] = True
+            #else:
+            #    print ('quack 2')
+
+    if chips3.shape[0] > 0:
+        overlaps = ignore_overlaps(chips3, big_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = chips3[cid]
+            cur_box = big_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            area = math.sqrt(abs((x2-x1)*(y2-y1)))
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 120):
+                props_in_chips[chip_ids3[cid]].append(bids[pi])
+                big_covered[pi] = True
+            #else:
+            #    print ('quack 3')
+
+    rem_med_boxes = med_boxes[np.where(med_covered == False)[0]]
+    neg_mids = mids[np.where(med_covered == False)[0]]
+    rem_big_boxes = big_boxes[np.where(big_covered == False)[0]]
+    neg_bids = bids[np.where(big_covered == False)[0]]
+
+    neg_chips2 = genchips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), rem_med_boxes * im_scale_2, 512)
+    neg_chips2 = np.array(neg_chips2, dtype=np.float) / im_scale_2
+    chip_ids2 = np.arange(len(neg_chips2))
+    neg_chips3 = genchips(int(r['width'] * im_scale_3), int(r['height'] * im_scale_3), rem_big_boxes * im_scale_3, 512)
+    neg_chips3 = np.array(neg_chips3, dtype=np.float) / im_scale_3
+    chip_ids3 = np.arange(len(neg_chips2), len(neg_chips2) + len(neg_chips3))
+
+    neg_props_in_chips = [[] for _ in range(len(neg_chips2) + len(neg_chips3))]
+
+    if neg_chips2.shape[0] > 0:
+        overlaps = ignore_overlaps(neg_chips2, rem_med_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = neg_chips2[cid]
+            cur_box = rem_med_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            area = math.sqrt(abs((x2-x1)*(y2-y1)))
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area < 150):
+                neg_props_in_chips[chip_ids2[cid]].append(neg_mids[pi])
+
+    if neg_chips3.shape[0] > 0:
+        overlaps = ignore_overlaps(neg_chips3, rem_big_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = neg_chips3[cid]
+            cur_box = rem_big_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            area = math.sqrt(abs((x2-x1)*(y2-y1)))
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 120):
+                neg_props_in_chips[chip_ids3[cid]].append(neg_bids[pi])
+
+    neg_chips = []
+    final_neg_props_in_chips = []
+    chip_counter = 0
+    for chips, cscale in zip([neg_chips2, neg_chips3], [im_scale_2, im_scale_3]):
+        for chip in chips:
+            if len(neg_props_in_chips[chip_counter]) > 50:
+                final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
+                neg_chips.append([chip, cscale])
+            chip_counter += 1
+
+    # import pdb;pdb.set_trace()
+    r['neg_chips'] = neg_chips
+    r['neg_props_in_chips'] = final_neg_props_in_chips
+
+    for j in range(len(props_in_chips)):
+        props_in_chips[j] = np.array(props_in_chips[j], dtype=np.int32)
+
+    return props_in_chips,neg_chips,final_neg_props_in_chips
+
 class MNIteratorChips(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
         self.crop_size = crop_size
@@ -255,15 +424,17 @@ class MNIteratorChips(MNIteratorBase):
         self.label_name = ['label', 'bbox_target', 'bbox_weight']
         self.pool = Pool(32)
         self.context_size = 320
+        self.epiter = 0
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
     def reset(self):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
-
-        chips = self.pool.map(chip_worker, self.roidb)
-
+        if self.epiter > 2:
+            chips = self.pool.map(chip_worker, self.roidb)
+        else:
+            chips = self.pool.map(chip_worker_two_scales, self.roidb)
         #chipindex = []
         chip_count = 0
         for i, r in enumerate(self.roidb):
@@ -277,7 +448,11 @@ class MNIteratorChips(MNIteratorBase):
         #for r in self.roidb:
         #    tmp.append(props_in_chip_worker(r))
 
-        all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
+        if self.epiter > 2:
+            all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
+        else:
+            all_props_in_chips = self.pool.map(props_in_chip_worker_two_scales, self.roidb)
+
         for (props_in_chips, neg_chips, neg_props_in_chips), cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = props_in_chips
             cur_roidb['neg_crops'] = neg_chips
@@ -312,6 +487,7 @@ class MNIteratorChips(MNIteratorBase):
         for r in self.roidb:
             r['chip_order'] = np.random.permutation(np.arange(len(r['crops'])))
 
+        self.epiter = self.epiter + 1
         self.size = len(self.inds)
         print 'Done!'
 
