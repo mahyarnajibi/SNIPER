@@ -298,8 +298,8 @@ def props_in_chip_worker_two_scales(r):
     mids = np.where((area < 150) & (max_sizes < 450.0/im_scale_2))[0]
     bids = np.where((area >= 120))[0]
 
-    chips2, chips3 = [], [], []
-    chip_ids2, chip_ids3 = [], [], []
+    chips2, chips3 = [], []
+    chip_ids2, chip_ids3 = [], []
     for ci, crop in enumerate(r['crops']):
         if crop[1] == im_scale_2:
             chips2.append(crop[0])
@@ -444,9 +444,9 @@ class MNIteratorChips(MNIteratorBase):
             #for j in range(len(cs)):
             #    chipindex.append(i)
 
-        #tmp = []
-        #for r in self.roidb:
-        #    tmp.append(props_in_chip_worker(r))
+        """tmp = []
+        for r in self.roidb:
+            tmp.append(props_in_chip_worker_two_scales(r))"""
 
         if self.epiter > 2:
             all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
