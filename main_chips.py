@@ -3,7 +3,7 @@ os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 #os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
 import init
-from iterators.MNIteratorChipsV3Neg import MNIteratorChips
+from iterators.MNIteratorChipsV3NegR2 import MNIteratorChips
 from load_model import load_param
 import sys
 sys.path.insert(0,'lib')
@@ -106,7 +106,7 @@ if __name__=='__main__':
     sym_inst.infer_shape(shape_dict)
     arg_params, aux_params = load_param(config.network.pretrained,config.network.pretrained_epoch,convert=True)
 
-    #sym_inst.init_weight_rcnn(config,arg_params,aux_params)
+    sym_inst.init_weight_rcnn(config,arg_params,aux_params)
 
     # Creating the metrics
     eval_metric = metric.RCNNAccMetric(config)
