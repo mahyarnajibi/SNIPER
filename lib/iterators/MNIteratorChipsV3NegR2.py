@@ -10,7 +10,7 @@ from bbox.bbox_regression import expand_bbox_regression_targets
 from MNIteratorBase import MNIteratorBase
 from bbox.bbox_transform import bbox_overlaps, bbox_pred, bbox_transform, clip_boxes, filter_boxes, ignore_overlaps
 from bbox.bbox_regression import compute_bbox_regression_targets
-from chips import genchips
+from chips import genchips, genchipsones
 from multiprocessing import Pool
 import time
 from HelperV3 import im_worker, roidb_worker
@@ -65,7 +65,6 @@ def chip_worker(r):
 
     # return (np.array(chips1),np.array(chips2).np.array(chips3),im_scale_3)
 
-
 def chip_worker_two_scales(r):
     width = r['width']
     height = r['height']
@@ -94,6 +93,28 @@ def chip_worker_two_scales(r):
         chip_ar.append([chip, im_scale_2])
     for chip in chips3:
         chip_ar.append([chip, im_scale_3])
+
+    return chip_ar
+
+
+def chip_worker_one_scale(r):
+    width = r['width']
+    height = r['height']
+    im_size_max = max(width, height)
+    im_size_min = min(width, height)
+    im_scale_2 = 800.0 / im_size_min
+
+    gt_boxes = r['boxes'][np.where(r['max_overlaps'] == 1)[0], :]
+
+    ws = (gt_boxes[:, 2] - gt_boxes[:, 0]).astype(np.int32)
+    hs = (gt_boxes[:, 3] - gt_boxes[:, 1]).astype(np.int32)
+
+    chips2 = genchipsones(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), gt_boxes * im_scale_2, 512)
+    chips2 = np.array(chips2) / im_scale_2
+
+    chip_ar = []
+    for chip in chips2:
+        chip_ar.append([chip, im_scale_2])
 
     return chip_ar
 
@@ -277,8 +298,6 @@ def props_in_chip_worker(r):
 
     return props_in_chips,neg_chips,final_neg_props_in_chips
 
-
-
 def props_in_chip_worker_two_scales(r):
     props_in_chips = [[] for _ in range(len(r['crops']))]
     widths = (r['boxes'][:, 2] - r['boxes'][:, 0]).astype(np.int32)
@@ -414,6 +433,90 @@ def props_in_chip_worker_two_scales(r):
 
     return props_in_chips,neg_chips,final_neg_props_in_chips
 
+def props_in_chip_worker_one_scale(r):
+    props_in_chips = [[] for _ in range(len(r['crops']))]
+    widths = (r['boxes'][:, 2] - r['boxes'][:, 0]).astype(np.int32)
+    heights = (r['boxes'][:, 3] - r['boxes'][:, 1]).astype(np.int32)
+    max_sizes = np.maximum(widths, heights)
+
+    width = r['width']
+    height = r['height']
+
+    im_size_min = min(width, height)
+    mids = np.where(widths > -1)[0]
+    im_scale_2 = 800.0 / im_size_min
+
+    chips2 = []
+    chip_ids2 = []
+    for ci, crop in enumerate(r['crops']):
+        chips2.append(crop[0])
+        chip_ids2.append(ci)
+
+    chips2 = np.array(chips2, dtype=np.float)
+    chip_ids2 = np.array(chip_ids2)
+
+    med_boxes = r['boxes'].astype(np.float)
+
+    med_covered = np.zeros(med_boxes.shape[0], dtype=bool)
+
+    if chips2.shape[0] > 0:
+        overlaps = ignore_overlaps(chips2, med_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = chips2[cid]
+            cur_box = med_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
+                props_in_chips[chip_ids2[cid]].append(mids[pi])
+                med_covered[pi] = True
+            #else:
+            #    print ('quack 2')
+
+
+    rem_med_boxes = med_boxes[np.where(med_covered == False)[0]]
+    neg_mids = mids[np.where(med_covered == False)[0]]
+
+    neg_chips2 = genchipsones(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), rem_med_boxes * im_scale_2, 512)
+    neg_chips2 = np.array(neg_chips2, dtype=np.float) / im_scale_2
+    chip_ids2 = np.arange(len(neg_chips2))
+
+    neg_props_in_chips = [[] for _ in range(len(neg_chips2))]
+
+    if neg_chips2.shape[0] > 0:
+        overlaps = ignore_overlaps(neg_chips2, rem_med_boxes)
+        max_ids = overlaps.argmax(axis=0)
+        for pi, cid in enumerate(max_ids):
+            cur_chip = neg_chips2[cid]
+            cur_box = rem_med_boxes[pi]
+            x1 = max(cur_chip[0], cur_box[0])
+            x2 = min(cur_chip[2], cur_box[2])
+            y1 = max(cur_chip[1], cur_box[1])
+            y2 = min(cur_chip[3], cur_box[3])
+            if (x2 - x1 >= 1 and y2 - y1 >= 1):
+                neg_props_in_chips[chip_ids2[cid]].append(neg_mids[pi])
+
+    neg_chips = []
+    final_neg_props_in_chips = []
+    chip_counter = 0
+    for chips, cscale in zip([neg_chips2], [im_scale_2]):
+        for chip in chips:
+            if len(neg_props_in_chips[chip_counter]) > 40:
+                final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
+                neg_chips.append([chip, cscale])
+            chip_counter += 1
+
+    # import pdb;pdb.set_trace()
+    r['neg_chips'] = neg_chips
+    r['neg_props_in_chips'] = final_neg_props_in_chips
+
+    for j in range(len(props_in_chips)):
+        props_in_chips[j] = np.array(props_in_chips[j], dtype=np.int32)
+
+    return props_in_chips,neg_chips,final_neg_props_in_chips
+
 class MNIteratorChips(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
         self.crop_size = crop_size
@@ -431,10 +534,12 @@ class MNIteratorChips(MNIteratorBase):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
+        print self.epiter
+
         if self.epiter > 2:
             chips = self.pool.map(chip_worker, self.roidb)
         else:
-            chips = self.pool.map(chip_worker_two_scales, self.roidb)
+            chips = self.pool.map(chip_worker_one_scale, self.roidb)
         #chipindex = []
         chip_count = 0
         for i, r in enumerate(self.roidb):
@@ -444,14 +549,10 @@ class MNIteratorChips(MNIteratorBase):
             #for j in range(len(cs)):
             #    chipindex.append(i)
 
-        """tmp = []
-        for r in self.roidb:
-            tmp.append(props_in_chip_worker_two_scales(r))"""
-
         if self.epiter > 2:
             all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
         else:
-            all_props_in_chips = self.pool.map(props_in_chip_worker_two_scales, self.roidb)
+            all_props_in_chips = self.pool.map(props_in_chip_worker_one_scale, self.roidb)
 
         for (props_in_chips, neg_chips, neg_props_in_chips), cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = props_in_chips
@@ -598,3 +699,4 @@ class MNIteratorChips(MNIteratorBase):
             plt.cla()
             plt.clf()
             plt.close()
+

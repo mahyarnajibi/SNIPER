@@ -28,7 +28,6 @@ class MNIteratorBase(mx.io.DataIter):
         self.single_size_change = single_size_change
         self.reset()
         self.get_batch()
-        self.reset()
 
     def __len__(self):
         return len(self.inds)

@@ -1,6 +1,6 @@
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_v4"
+output_path: "./output/chips_v4_1s"
 proposal_path: "proposals"
 symbol: resnet_v1_50_fast
 gpus: '0,1,2,3,4,5,6,7'
@@ -61,13 +61,13 @@ dataset:
   proposal: rpn
 TRAIN:
   lr: 0.002 #0.002 #0.0005
-  lr_step: '4.33'
+  lr_step: '5.33'
   warmup: true
   warmup_lr: 0.00005 #0.00005
   # typically we will use 4000 warmup step for single GPU on VOC
   warmup_step: 100 #4000 #1000
   begin_epoch: 0
-  end_epoch: 6 #9
+  end_epoch: 7 #9
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false
