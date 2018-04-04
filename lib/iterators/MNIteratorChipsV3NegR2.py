@@ -568,9 +568,9 @@ class MNIteratorChips(MNIteratorBase):
                 if len(cs) > self.n_neg_per_im:
                     sel_inds = np.random.permutation(sel_inds)[0:self.n_neg_per_im]
                 for ind in sel_inds:
-                   chip_count = chip_count + 1
-                r['crops'].append(r['neg_crops'][ind])
-                r['props_in_chips'].append(r['neg_props_in_chips'][ind].astype(np.int32))
+                    chip_count = chip_count + 1
+                    r['crops'].append(r['neg_crops'][ind])
+                    r['props_in_chips'].append(r['neg_props_in_chips'][ind].astype(np.int32))
             all_crops = r['crops']
             for j in range(len(all_crops)):
                 chipindex.append(i)
