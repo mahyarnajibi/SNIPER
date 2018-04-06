@@ -10,7 +10,7 @@ from bbox.bbox_regression import expand_bbox_regression_targets
 from MNIteratorBase import MNIteratorBase
 from bbox.bbox_transform import bbox_overlaps, bbox_pred, bbox_transform, clip_boxes, filter_boxes, ignore_overlaps
 from bbox.bbox_regression import compute_bbox_regression_targets
-from chips import genchips, genchipsones
+from chips import genchips, genchipsones, genscorechips
 from multiprocessing import Pool
 import time
 from HelperV3 import im_worker, roidb_worker
@@ -160,8 +160,11 @@ def props_in_chip_worker(r):
     chip_ids3 = np.array(chip_ids3)
 
     small_boxes = r['boxes'][sids].astype(np.float)
+    score_small_boxes = r['proposal_scores'][sids].astype(np.float)
     med_boxes = r['boxes'][mids].astype(np.float)
+    score_med_boxes = r['proposal_scores'][mids].astype(np.float)    
     big_boxes = r['boxes'][bids].astype(np.float)
+    score_big_boxes = r['proposal_scores'][bids].astype(np.float)        
 
     small_covered = np.zeros(small_boxes.shape[0], dtype=bool)
     med_covered = np.zeros(med_boxes.shape[0], dtype=bool)
@@ -220,18 +223,21 @@ def props_in_chip_worker(r):
 
     rem_small_boxes = small_boxes[np.where(small_covered == False)[0]]
     neg_sids = sids[np.where(small_covered == False)[0]]
+    score_sids = score_small_boxes[np.where(small_covered == False)[0]]
     rem_med_boxes = med_boxes[np.where(med_covered == False)[0]]
     neg_mids = mids[np.where(med_covered == False)[0]]
+    score_mids = score_med_boxes[np.where(med_covered == False)[0]]    
     rem_big_boxes = big_boxes[np.where(big_covered == False)[0]]
     neg_bids = bids[np.where(big_covered == False)[0]]
+    score_bids = score_big_boxes[np.where(big_covered == False)[0]]    
 
     neg_chips1 = genchips(int(r['width'] * im_scale_1), int(r['height'] * im_scale_1), rem_small_boxes * im_scale_1, 512)
     neg_chips1 = np.array(neg_chips1, dtype=np.float) / im_scale_1
     chip_ids1 = np.arange(0, len(neg_chips1))
-    neg_chips2 = genchips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), rem_med_boxes * im_scale_2, 512)
+    neg_chips2 = genscorechips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), rem_med_boxes * im_scale_2, 512, score_mids)
     neg_chips2 = np.array(neg_chips2, dtype=np.float) / im_scale_2
     chip_ids2 = np.arange(len(neg_chips1), len(neg_chips2) + len(neg_chips1))
-    neg_chips3 = genchips(int(r['width'] * im_scale_3), int(r['height'] * im_scale_3), rem_big_boxes * im_scale_3, 512)
+    neg_chips3 = genscorechips(int(r['width'] * im_scale_3), int(r['height'] * im_scale_3), rem_big_boxes * im_scale_3, 512, score_bids)
     neg_chips3 = np.array(neg_chips3, dtype=np.float) / im_scale_3
     chip_ids3 = np.arange(len(neg_chips2) + len(neg_chips1), len(neg_chips1) + len(neg_chips2) + len(neg_chips3))
 
@@ -536,7 +542,7 @@ class MNIteratorChips(MNIteratorBase):
         self.crop_idx = [0] * len(self.roidb)
         print self.epiter
 
-        if self.epiter > 2:
+        if self.epiter > -1:
             chips = self.pool.map(chip_worker, self.roidb)
         else:
             chips = self.pool.map(chip_worker_one_scale, self.roidb)
@@ -549,7 +555,7 @@ class MNIteratorChips(MNIteratorBase):
             #for j in range(len(cs)):
             #    chipindex.append(i)
 
-        if self.epiter > 2:
+        if self.epiter > -1:
             all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
         else:
             all_props_in_chips = self.pool.map(props_in_chip_worker_one_scale, self.roidb)

@@ -44,7 +44,6 @@ if __name__=='__main__':
     if not os.path.isdir(config.output_path):
         os.mkdir(config.output_path)
 
-
     # Create roidb
     image_sets = [iset for iset in config.dataset.image_set.split('+')]
     roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path, config.dataset.dataset_path,

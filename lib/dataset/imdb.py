@@ -124,6 +124,7 @@ class IMDB(object):
             print('Reading cached proposals after ***NMS**** from {}'.format(nms_cache_file))
             with open(nms_cache_file,'rb') as file:
                 [boxes,maps] = cPickle.load(file)
+
             print('Done!')
         else:
             print rpn_file
@@ -137,10 +138,11 @@ class IMDB(object):
             maps = []
             print 'Applying NMS...'
             nms = py_nms_wrapper(0.7)
-            
+
             for i in range(len(box_list)):
                 tboxes = np.array(box_list[i])
                 ttboxes.append(tboxes)
+
             p = Pool(32)
             keeps = p.map(nmsp, ttboxes)
             print('Done!')
@@ -149,7 +151,7 @@ class IMDB(object):
             p.close()
             print('Caching proposals after NMS to {}'.format(nms_cache_file))
             with open(nms_cache_file,'wb') as file:
-                cPickle.dump([boxes,maps],file,cPickle.HIGHEST_PROTOCOL) 
+                cPickle.dump([boxes,maps],file,cPickle.HIGHEST_PROTOCOL)
             print('Done!')
         return boxes, maps
 
@@ -195,8 +197,11 @@ class IMDB(object):
             roi_rec['height'] = gt_roidb[i]['height']
             roi_rec['width'] = gt_roidb[i]['width']
             boxes = box_list[i]
+
             if boxes.shape[1] == 5:
+                scores = boxes[:, -1]
                 boxes = boxes[:, :4]
+
             #if gt_roidb[i]['boxesc'].size > 0:
             #    dc_boxes = gt_roidb[i]['boxesc']
             #    dc_overlaps = ignore_overlaps(boxes.astype(np.float), dc_boxes.astype(np.float))
@@ -215,7 +220,7 @@ class IMDB(object):
                 # for each box in n boxes, select only maximum overlap (must be greater than zero)
                 argmaxes = gt_overlaps.argmax(axis=1)
                 maxes = gt_overlaps.max(axis=1)
-                I = np.where(maxes > 0)[0]                
+                I = np.where(maxes > 0)[0]
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
                 #import pdb
                 #pdb.set_trace()
@@ -230,7 +235,8 @@ class IMDB(object):
                             'gt_overlaps': overlaps,
                             'max_classes': overlaps.argmax(axis=1),
                             'max_overlaps': overlaps.max(axis=1),
-                            'flipped': False})
+                            'flipped': False,
+                            'proposal_scores': scores})
 
             # background roi => background class
             zero_indexes = np.where(roi_rec['max_overlaps'] == 0)[0]
@@ -303,7 +309,8 @@ class IMDB(object):
                      'gt_overlaps': roidb[i]['gt_overlaps'],
                      'max_classes': roidb[i]['max_classes'],
                      'max_overlaps': roidb[i]['max_overlaps'],
-                     'flipped': True}
+                     'flipped': True,
+                     'proposal_scores': roidb[i]['proposal_scores']}
 
             # if roidb has mask
             if 'cache_seg_inst' in roi_rec:
@@ -449,9 +456,14 @@ class IMDB(object):
         """
         assert len(a) == len(b)
         for i in range(len(a)):
+            if 'proposal_scores' not in a[i]:
+                a[i]['proposal_scores'] = 10*np.ones(a[i]['boxes'].shape[0])
+            if 'proposal_scores' not in b[i]:
+                b[i]['proposal_scores'] = 10*np.ones(b[i]['boxes'].shape[0])
             a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
             a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'], b[i]['gt_classes']))
             a[i]['gt_overlaps'] = np.vstack((a[i]['gt_overlaps'], b[i]['gt_overlaps']))
             a[i]['max_classes'] = np.hstack((a[i]['max_classes'], b[i]['max_classes']))
             a[i]['max_overlaps'] = np.hstack((a[i]['max_overlaps'], b[i]['max_overlaps']))
+            a[i]['proposal_scores'] = np.hstack((a[i]['proposal_scores'], b[i]['proposal_scores']))
         return a
