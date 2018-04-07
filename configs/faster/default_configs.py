@@ -54,6 +54,7 @@ config.TRAIN = edict()
 
 config.TRAIN.lr = 0
 config.TRAIN.lr_step = ''
+config.TRAIN.scale = 10
 config.TRAIN.lr_factor = 0.1
 config.TRAIN.warmup = False
 config.TRAIN.warmup_lr = 0

@@ -744,7 +744,7 @@ class MNIteratorChips(MNIteratorBase):
             #for j in range(len(cs)):
             #    chipindex.append(i)
 
-        if self.epiter % 2 == 1:
+        if self.epiter < 3:
             all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
         else:
             all_props_in_chips = self.pool.map(props_in_chip_worker_late, self.roidb)

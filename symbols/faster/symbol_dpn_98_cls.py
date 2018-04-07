@@ -40,19 +40,21 @@ inc_sec= {  2: 16, \
 def BK(data):
     return mx.symbol.BlockGrad(data=data)
 
-bn_momentum = 0.9
 # - - - - - - - - - - - - - - - - - - - - - - -
 # Fundamental Elements
-def BN(data, fix_gamma=False, momentum=0.9, name=None):
-    bn     = mx.symbol.BatchNorm( data=data, fix_gamma=fix_gamma, momentum = 0.95, name=('%s__bn'%name))
+def BN(data, fix_gamma=False, momentum=0.95, name=None):
+    if momentum == -1:
+        bn     = mx.symbol.BatchNorm( data=data, fix_gamma=fix_gamma, use_global_stats=True, name=('%s__bn'%name))
+    else:
+        bn     = mx.symbol.BatchNorm( data=data, fix_gamma=fix_gamma, momentum = momentum, name=('%s__bn'%name))
     return bn
 
 def AC(data, act_type='relu', name=None):
     act    = mx.symbol.Activation(data=data, act_type=act_type, name=('%s__%s' % (name, act_type)))
     return act
 
-def BN_AC(data, momentum=bn_momentum, name=None):
-    bn     = BN(data=data, name=name, fix_gamma=False)
+def BN_AC(data, momentum=0.95, name=None):
+    bn     = BN(data=data, name=name, fix_gamma=False, momentum=momentum)
     bn_ac  = AC(data=bn,   name=name)
     return bn_ac
 
@@ -77,20 +79,20 @@ def Conv(data, num_filter, kernel, stride=(1,1), pad=(0, 0), name=None, no_bias=
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # Standard Common functions < CVPR >
-def Conv_BN(   data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1):
+def Conv_BN(   data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1, momentum=0.95):
     cov    = Conv(   data=data,   num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr)
-    cov_bn = BN(     data=cov,    name=('%s__bn' % name))
+    cov_bn = BN(     data=cov,    name=('%s__bn' % name), momentum=momentum)
     return cov_bn
 
-def Conv_BN_AC(data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1):
-    cov_bn = Conv_BN(data=data,   num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr)
+def Conv_BN_AC(data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1, momentum=0.95):
+    cov_bn = Conv_BN(data=data,   num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr, momentum=momentum)
     cov_ba = AC(     data=cov_bn, name=('%s__ac' % name))
     return cov_ba
 
 # - - - - - - - - - - - - - - - - - - - - - - -
 # Standard Common functions < ECCV >
-def BN_Conv(   data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1):
-    bn     = BN(     data=data,   name=('%s__bn' % name))
+def BN_Conv(   data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1, momentum=0.95):
+    bn     = BN(     data=data,   name=('%s__bn' % name), momentum=momentum)
     bn_cov = Conv(   data=bn,     num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr)
     return bn_cov
 
@@ -99,13 +101,13 @@ def AC_Conv(   data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, 
     ac_cov = Conv(   data=ac,     num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr, dconv=dconv)
     return ac_cov
 
-def BN_AC_Conv(data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1, dconv=False):
-    bn     = BN(     data=data,   name=('%s__bn' % name))
+def BN_AC_Conv(data, num_filter,  kernel, pad, stride=(1,1), name=None, w=None, b=None, no_bias=True, attr=None, num_group=1, dconv=False, momentum=0.95):
+    bn     = BN(     data=data,   name=('%s__bn' % name), momentum=momentum)
     ba_cov = AC_Conv(data=bn,     num_filter=num_filter, num_group=num_group, kernel=kernel, pad=pad, stride=stride, name=name, w=w, b=b, no_bias=no_bias, attr=attr, dconv=dconv)
     return ba_cov
 
 
-def DualPathFactory(data, num_1x1_a, num_3x3_b, num_1x1_c, name, inc, G, _type='normal', ndflag=True):
+def DualPathFactory(data, num_1x1_a, num_3x3_b, num_1x1_c, name, inc, G, _type='normal', ndflag=True, momentum=0.95):
     kw = 3
     kh = 3
     pw = (kw - 1) / 2
@@ -137,7 +139,7 @@ def DualPathFactory(data, num_1x1_a, num_3x3_b, num_1x1_c, name, inc, G, _type='
 
     if has_proj:
         c1x1_w = BN_AC_Conv(data=data_in, num_filter=(num_1x1_c + 2 * inc), kernel=(1, 1),
-                            stride=(key_stride, key_stride), name=('%s_c1x1-w(s/%d)' % (name, key_name)), pad=(0, 0))
+                            stride=(key_stride, key_stride), name=('%s_c1x1-w(s/%d)' % (name, key_name)), pad=(0, 0), momentum=momentum)
         data_o1 = mx.symbol.slice_axis(data=c1x1_w, axis=1, begin=0, end=num_1x1_c,
                                        name=('%s_c1x1-w(s/%d)-split1' % (name, key_name)))
         data_o2 = mx.symbol.slice_axis(data=c1x1_w, axis=1, begin=num_1x1_c, end=(num_1x1_c + 2 * inc),
@@ -148,10 +150,10 @@ def DualPathFactory(data, num_1x1_a, num_3x3_b, num_1x1_c, name, inc, G, _type='
 
     # MAIN
 
-    c1x1_a = BN_AC_Conv(data=data_in, num_filter=num_1x1_a, kernel=(1, 1), pad=(0, 0), name=('%s_c1x1-a' % name))
+    c1x1_a = BN_AC_Conv(data=data_in, num_filter=num_1x1_a, kernel=(1, 1), pad=(0, 0), name=('%s_c1x1-a' % name), momentum=momentum)
     c3x3_b = BN_AC_Conv(data=c1x1_a, num_filter=num_3x3_b, kernel=(kw, kh), pad=(pw, ph),
-                            name=('%s_c%dx%d-b' % (name, kw, kh)), stride=(key_stride, key_stride), num_group=G, dconv=not ndflag)
-    c1x1_c = BN_AC_Conv(data=c3x3_b, num_filter=(num_1x1_c + inc), kernel=(1, 1), pad=(0, 0), name=('%s_c1x1-c' % name))
+                            name=('%s_c%dx%d-b' % (name, kw, kh)), stride=(key_stride, key_stride), num_group=G, dconv=not ndflag, momentum=momentum)
+    c1x1_c = BN_AC_Conv(data=c3x3_b, num_filter=(num_1x1_c + inc), kernel=(1, 1), pad=(0, 0), name=('%s_c1x1-c' % name), momentum=momentum)
 
     c1x1_c1 = mx.symbol.slice_axis(data=c1x1_c, axis=1, begin=0, end=num_1x1_c, name=('%s_c1x1-c-split1' % name))
     c1x1_c2 = mx.symbol.slice_axis(data=c1x1_c, axis=1, begin=num_1x1_c, end=(num_1x1_c + inc),
@@ -164,12 +166,13 @@ def DualPathFactory(data, num_1x1_a, num_3x3_b, num_1x1_c, name, inc, G, _type='
     return [summ, dense]
 
 class symbol_dpn_98_cls(Symbol):
-    def __init__(self, n_proposals=400):
+    def __init__(self, n_proposals=400, momentum=0.95):
         """
         Use __init__ to define parameter network needs
         """
         self.eps = 2e-5
         self.n_proposals = n_proposals
+        self.momentum = momentum
 
     def get_bbox_param_names(self):
         return ['bbox_pred_weight', 'bbox_pred_bias']
@@ -178,46 +181,46 @@ class symbol_dpn_98_cls(Symbol):
 
         # conv1
         conv1_x_1 = Conv(data=data, num_filter=96, kernel=(7, 7), name='conv1_x_1', pad=(3, 3), stride=(2, 2))
-        conv1_x_1 = BN_AC(conv1_x_1, name='conv1_x_1__relu-sp')
+	conv1_x_1 = mx.sym.Cast(data=conv1_x_1, dtype=np.float16)        
+        conv1_x_1 = BN_AC(conv1_x_1, name='conv1_x_1__relu-sp', momentum=-1)        
         conv1_x_x = mx.symbol.Pooling(data=conv1_x_1, pool_type="max", kernel=(3, 3), pad=(1, 1), stride=(2, 2),
                                       name="pool1")
-
         # conv2
         bw = 256
         inc = inc_sec[2]
         R = (k_R * bw) / 256
-        conv2_x_x = DualPathFactory(conv1_x_x, R, R, bw, 'conv2_x__1', inc, G, 'proj')
+        conv2_x_x = DualPathFactory(conv1_x_x, R, R, bw, 'conv2_x__1', inc, G, 'proj', momentum=-1)
         for i_ly in range(2, k_sec[2] + 1):
-            conv2_x_x = DualPathFactory(conv2_x_x, R, R, bw, ('conv2_x__%d' % i_ly), inc, G, 'normal')
+            conv2_x_x = DualPathFactory(conv2_x_x, R, R, bw, ('conv2_x__%d' % i_ly), inc, G, 'normal', momentum=-1)
 
         # conv3
         bw = 512
         inc = inc_sec[3]
         R = (k_R * bw) / 256
-        conv3_x_x = DualPathFactory(conv2_x_x, R, R, bw, 'conv3_x__1', inc, G, 'down')
+        conv3_x_x = DualPathFactory(conv2_x_x, R, R, bw, 'conv3_x__1', inc, G, 'down', momentum=self.momentum)
         for i_ly in range(2, k_sec[3] + 1):
-            conv3_x_x = DualPathFactory(conv3_x_x, R, R, bw, ('conv3_x__%d' % i_ly), inc, G, 'normal')
+            conv3_x_x = DualPathFactory(conv3_x_x, R, R, bw, ('conv3_x__%d' % i_ly), inc, G, 'normal', momentum=self.momentum)
 
         # conv4
         bw = 1024
         inc = inc_sec[4]
         R = (k_R * bw) / 256
-        conv4_x_x = DualPathFactory(conv3_x_x, R, R, bw, 'conv4_x__1', inc, G, 'down')
+        conv4_x_x = DualPathFactory(conv3_x_x, R, R, bw, 'conv4_x__1', inc, G, 'down', momentum=self.momentum)
         for i_ly in range(2, k_sec[4] + 1):
-            conv4_x_x = DualPathFactory(conv4_x_x, R, R, bw, ('conv4_x__%d' % i_ly), inc, G, 'normal')
+            conv4_x_x = DualPathFactory(conv4_x_x, R, R, bw, ('conv4_x__%d' % i_ly), inc, G, 'normal', momentum=self.momentum)
         return conv4_x_x
 
     def get_conv5(self, conv4_x_x):
         bw = 2048
         inc = inc_sec[5]
         R = (k_R * bw) / 256
-        conv5_x_x = DualPathFactory(conv4_x_x, R, R, bw, 'conv5_x__1', inc, G, 'proj', ndflag=False)
+        conv5_x_x = DualPathFactory(conv4_x_x, R, R, bw, 'conv5_x__1', inc, G, 'proj', ndflag=False, momentum=self.momentum)
         for i_ly in range(2, k_sec[5] + 1):
-            conv5_x_x = DualPathFactory(conv5_x_x, R, R, bw, ('conv5_x__%d' % i_ly), inc, G, 'normal', ndflag=False)
+            conv5_x_x = DualPathFactory(conv5_x_x, R, R, bw, ('conv5_x__%d' % i_ly), inc, G, 'normal', ndflag=False, momentum=self.momentum)
 
         # output: concat
         conv5_x_x = mx.symbol.Concat(*[conv5_x_x[0], conv5_x_x[1]], name='conv5_x_x_cat-final')
-        conv5_x_x = BN_AC(conv5_x_x, name='conv5_x_x__relu-sp')
+        conv5_x_x = BN_AC(conv5_x_x, name='conv5_x_x__relu-sp', momentum=self.momentum)
         return conv5_x_x
 
 
@@ -244,16 +247,13 @@ class symbol_dpn_98_cls(Symbol):
             # reshape input
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
 
-        if is_train:
-	    data = mx.sym.Cast(data=data, dtype=np.float16)
         conv_feat = self.get_conv4(data)
         # res5
         relu1 = self.get_conv5(conv_feat)
 
         # conv_new_1
-        conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=1024, name="conv_new_1", lr_mult=3.0)
-	conv_new_1_bn = mx.symbol.BatchNorm(name='conv_new_1_bn', data=conv_new_1, momentum=0.95, fix_gamma=False, eps=self.eps)
-        conv_new_1_relu = mx.sym.Activation(data=conv_new_1_bn, act_type='relu', name='relu1')
+        conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
+        conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='relu1')
 
         if is_train:        
 	    conv_new_1_relu = mx.sym.Cast(data=conv_new_1_relu, dtype=np.float32)
@@ -308,7 +308,7 @@ class symbol_dpn_98_cls(Symbol):
             else:
                 #cls_score = mx.sym.Custom(op_type='debug_data', datai1=cls_score, datai2=label, datai3=bbox_pred, datai4=bbox_target)
                 if cfg.TRAIN.fp16 == True:
-                    grad_scale = 100.0
+                    grad_scale = cfg.TRAIN.scale
                 else:
                     grad_scale = 1.0
                 cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
@@ -336,10 +336,10 @@ class symbol_dpn_98_cls(Symbol):
         return group
 
     def init_weight_rcnn(self, cfg, arg_params, aux_params):
-	arg_params['conv_new_1_bn_beta'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bn_beta'])
+	"""arg_params['conv_new_1_bn_beta'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bn_beta'])
         arg_params['conv_new_1_bn_gamma'] = mx.nd.ones(shape=self.arg_shape_dict['conv_new_1_bn_gamma'])
         aux_params['conv_new_1_bn_moving_mean'] = mx.nd.zeros(shape=self.aux_shape_dict['conv_new_1_bn_moving_mean'])
-        aux_params['conv_new_1_bn_moving_var'] = mx.nd.ones(shape=self.aux_shape_dict['conv_new_1_bn_moving_var'])
+        aux_params['conv_new_1_bn_moving_var'] = mx.nd.ones(shape=self.aux_shape_dict['conv_new_1_bn_moving_var'])"""
         
         arg_params['conv5_x__1_c3x3-b__offset_weight'] = mx.nd.zeros(
             shape=self.arg_shape_dict['conv5_x__1_c3x3-b__offset_weight'])

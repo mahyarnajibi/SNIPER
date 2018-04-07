@@ -15,8 +15,8 @@ default:
   kvstore: device
 network:
   deform: true
-  pretrained: "./data/pretrained_model/dpn98"
-  pretrained_epoch: 0
+  pretrained: "./data/pretrained_model/CRCNN"
+  pretrained_epoch: 4
   PIXEL_MEANS:
   - 103.06
   - 115.90
@@ -56,15 +56,16 @@ dataset:
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
-  lr: 0.015 #0.002 #0.0005
-  lr_step: '5'
-  warmup: true
+  lr: 0.0015 #0.002 #0.0005
+  lr_step: '2'
+  warmup: false
   fp16: true
+  scale: 100
   warmup_lr: 0.0005 #0.00005
   # typically we will use 4000 warmup step for single GPU on VOC
   warmup_step: 1500 #4000 #1000
   begin_epoch: 0
-  end_epoch: 4 #9
+  end_epoch: 2 #9
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false

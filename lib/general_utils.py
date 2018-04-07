@@ -37,8 +37,8 @@ def get_optim_params(cfg,roidb_len,batch_size):
 
         if cfg.TRAIN.fp16 == True:
                 optim_params = {'momentum': cfg.TRAIN.momentum,
-                        'wd': cfg.TRAIN.wd*100,
-                        'learning_rate': base_lr*0.01,
+                        'wd': cfg.TRAIN.wd*cfg.TRAIN.scale,
+                        'learning_rate': base_lr/cfg.TRAIN.scale,
                         'rescale_grad': 1.0,
                         'multi_precision': True,
                         'clip_gradient': None,

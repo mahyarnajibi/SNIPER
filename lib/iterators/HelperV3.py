@@ -32,9 +32,9 @@ def im_worker(data):
     rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
     d1m = min(im.shape[0], crop_size)
     d2m = min(im.shape[1], crop_size)
-    rim[0, :d1m, :d2m] = im[:d1m, :d2m, 2] - 123.15
-    rim[1, :d1m, :d2m] = im[:d1m, :d2m, 1] - 115.90
-    rim[2, :d1m, :d2m] = im[:d1m, :d2m, 0] - 103.06
+    rim[0, :d1m, :d2m] = (im[:d1m, :d2m, 2] - 124)*0.0167
+    rim[1, :d1m, :d2m] = (im[:d1m, :d2m, 1] - 117)*0.0167
+    rim[2, :d1m, :d2m] = (im[:d1m, :d2m, 0] - 104)*0.0167
     return mx.nd.array(rim, dtype='float32')
 
 
