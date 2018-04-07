@@ -720,7 +720,7 @@ class MNIteratorChips(MNIteratorBase):
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
         self.data_name = ['data', 'rois']
         self.label_name = ['label', 'bbox_target', 'bbox_weight']
-        self.pool = Pool(32)
+        self.pool = Pool(64)
         self.context_size = 320
         self.epiter = 0
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
