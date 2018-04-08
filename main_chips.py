@@ -47,24 +47,26 @@ if __name__=='__main__':
         os.mkdir(config.output_path)
 
     # Create roidb
-    image_sets = [iset for iset in config.dataset.image_set.split('+')]
-    roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path, config.dataset.dataset_path,
-                                  proposal=config.dataset.proposal, append_gt=True, flip=True, result_path=config.output_path,
-                                  proposal_path=config.proposal_path)
-              for image_set in image_sets]
+    config.debug = True
+    if config.debug == False:
+        image_sets = [iset for iset in config.dataset.image_set.split('+')]
+        roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path, config.dataset.dataset_path,
+                                      proposal=config.dataset.proposal, append_gt=True, flip=True, result_path=config.output_path,
+                                      proposal_path=config.proposal_path)
+                  for image_set in image_sets]
 
 
-    roidb = merge_roidb(roidbs)
-    #roidb = remove_small_boxes(roidb,max_scale=3,min_size=2)
-    roidb = filter_roidb(roidb, config)
-    bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+        roidb = merge_roidb(roidbs)
+        #roidb = remove_small_boxes(roidb,max_scale=3,min_size=2)
+        roidb = filter_roidb(roidb, config)
+        bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+    else:
+        args.display = 20        
+        with open('/home/ubuntu/bigminival2014.pkl', 'rb') as file:
+            roidb = cPickle.load(file)
+        bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
 
-    """with open('/home/ubuntu/bigminival2014.pkl', 'rb') as file:
-       roidb = cPickle.load(file)
-    bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)"""
 
-
-    # Creating the iterator
     print('Creating Iterator with {} Images'.format(len(roidb)))
     train_iter = MNIteratorChips(roidb=roidb,config=config,batch_size=batch_size,nGPUs=nGPUs,threads=32,pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))

@@ -730,31 +730,32 @@ class MNIteratorChips(MNIteratorBase):
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
         print self.epiter
-
-        """import cPickle
-        with open('chips.pkl', 'r') as f:
-            chips = cPickle.load(f)
-        with open('props.pkl', 'r') as f:
-            all_props_in_chips = cPickle.load(f)
-        print ('done')"""
-        
-        if self.epiter > -1:
-            chips = self.pool.map(chip_worker, self.roidb)
+        if self.cfg.debug == True:
+            import cPickle
+            with open('chips.pkl', 'r') as f:
+                chips = cPickle.load(f)
+            chip_count = 0                
+            for i, r in enumerate(self.roidb):
+                cs = chips[i]
+                chip_count += len(cs)
+                r['crops'] = cs                
+            with open('props.pkl', 'r') as f:
+                all_props_in_chips = cPickle.load(f)
+            print ('done')
         else:
-            chips = self.pool.map(chip_worker_one_scale, self.roidb)
-        #chipindex = []
-        chip_count = 0
-        for i, r in enumerate(self.roidb):
-            cs = chips[i]
-            chip_count += len(cs)
-            r['crops'] = cs
-            #for j in range(len(cs)):
-            #    chipindex.append(i)
-
-        if self.epiter < 3:
-            all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
-        else:
-            all_props_in_chips = self.pool.map(props_in_chip_worker_late, self.roidb)
+            if self.epiter > -1:
+                chips = self.pool.map(chip_worker, self.roidb)
+            else:
+                chips = self.pool.map(chip_worker_one_scale, self.roidb)
+            chip_count = 0
+            for i, r in enumerate(self.roidb):
+                cs = chips[i]
+                chip_count += len(cs)
+                r['crops'] = cs
+            if self.epiter < 3:
+                all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
+            else:
+                all_props_in_chips = self.pool.map(props_in_chip_worker_late, self.roidb)
 
         """import cPickle
         with open('chips.pkl', 'wb') as f:
