@@ -253,7 +253,8 @@ class symbol_dpn_98_cls(Symbol):
 
         # conv_new_1
         conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
-        conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='relu1')
+        #conv_new_1_bn = mx.symbol.BatchNorm(name='conv_new_1_bn', data=conv_new_1, momentum=0.95, fix_gamma=False, eps=self.eps)        
+        conv_new_1_relu = mx.sym.Activation(data=conv_new_1,  act_type='relu', name='relu1')
 
         if is_train:        
 	    conv_new_1_relu = mx.sym.Cast(data=conv_new_1_relu, dtype=np.float32)
@@ -336,10 +337,10 @@ class symbol_dpn_98_cls(Symbol):
         return group
 
     def init_weight_rcnn(self, cfg, arg_params, aux_params):
-	"""arg_params['conv_new_1_bn_beta'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bn_beta'])
+	'''arg_params['conv_new_1_bn_beta'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bn_beta'])
         arg_params['conv_new_1_bn_gamma'] = mx.nd.ones(shape=self.arg_shape_dict['conv_new_1_bn_gamma'])
         aux_params['conv_new_1_bn_moving_mean'] = mx.nd.zeros(shape=self.aux_shape_dict['conv_new_1_bn_moving_mean'])
-        aux_params['conv_new_1_bn_moving_var'] = mx.nd.ones(shape=self.aux_shape_dict['conv_new_1_bn_moving_var'])"""
+        aux_params['conv_new_1_bn_moving_var'] = mx.nd.ones(shape=self.aux_shape_dict['conv_new_1_bn_moving_var'])'''
         
         arg_params['conv5_x__1_c3x3-b__offset_weight'] = mx.nd.zeros(
             shape=self.arg_shape_dict['conv5_x__1_c3x3-b__offset_weight'])

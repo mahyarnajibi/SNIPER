@@ -33,6 +33,8 @@ def get_optim_params(cfg,roidb_len,batch_size):
 	lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
 	lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
 	lr_iters = [int(epoch * roidb_len / batch_size) for epoch in lr_epoch_diff]
+	if cfg.TRAIN.fp16:
+		cfg.TRAIN.warmup_lr /= cfg.TRAIN.scale
 	lr_scheduler = WarmupMultiBatchScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
 
         if cfg.TRAIN.fp16 == True:

@@ -19,7 +19,7 @@ from iterators.PrefetchingIter import PrefetchingIter
 from load_data import load_proposal_roidb,merge_roidb,filter_roidb,add_chip_data,remove_small_boxes
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser
-import pickle
+import cPickle
 
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
@@ -59,19 +59,9 @@ if __name__=='__main__':
     roidb = filter_roidb(roidb, config)
     bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
 
-    # #Add chip meta data
-    # add_chip_data(roidb, 'chip_meta_data_{}_{}.pkl'.format(config.dataset.dataset,config.dataset.image_set))
-
-
-    # totalrois = len(roidb)
-    # perdb = (totalrois/5)+1
-    # startpos = args.threadid*perdb
-    # endpos = min(totalrois, (args.threadid+1)*perdb)
-
-
-    # with open('minimini.pkl', 'rb') as file:
-    #   roidb = pickle.load(file)
-    # bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+    """with open('/home/ubuntu/bigminival2014.pkl', 'rb') as file:
+       roidb = cPickle.load(file)
+    bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)"""
 
 
     # Creating the iterator
@@ -88,7 +78,7 @@ if __name__=='__main__':
 
 
     print('Initializing the model...')
-    sym_inst = symbol_dpn_98_cls(n_proposals=400, momentum=args.momentum)
+    sym_inst = symbol_dpn_98_cls(n_proposals=400)
     sym = sym_inst.get_symbol_rcnn(config)
     
     # Creating the Logger

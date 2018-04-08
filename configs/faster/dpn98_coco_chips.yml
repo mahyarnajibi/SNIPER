@@ -60,9 +60,11 @@ TRAIN:
   lr_step: '5'
   warmup: true
   fp16: true
-  warmup_lr: 0.0005 #0.00005
+  warmup_lr: 0.00005 #0.00005
+  wd: 0.0001
+  scale: 100
   # typically we will use 4000 warmup step for single GPU on VOC
-  warmup_step: 1500 #4000 #1000
+  warmup_step: 9000 #4000 #1000
   begin_epoch: 0
   end_epoch: 4 #9
   model_prefix: 'rcnn'

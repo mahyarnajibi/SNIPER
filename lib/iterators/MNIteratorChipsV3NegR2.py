@@ -731,6 +731,13 @@ class MNIteratorChips(MNIteratorBase):
         self.crop_idx = [0] * len(self.roidb)
         print self.epiter
 
+        """import cPickle
+        with open('chips.pkl', 'r') as f:
+            chips = cPickle.load(f)
+        with open('props.pkl', 'r') as f:
+            all_props_in_chips = cPickle.load(f)
+        print ('done')"""
+        
         if self.epiter > -1:
             chips = self.pool.map(chip_worker, self.roidb)
         else:
@@ -749,6 +756,13 @@ class MNIteratorChips(MNIteratorBase):
         else:
             all_props_in_chips = self.pool.map(props_in_chip_worker_late, self.roidb)
 
+        """import cPickle
+        with open('chips.pkl', 'wb') as f:
+            cPickle.dump(chips, f, cPickle.HIGHEST_PROTOCOL)
+        with open('props.pkl', 'wb') as f:
+            cPickle.dump(all_props_in_chips, f, cPickle.HIGHEST_PROTOCOL)
+        print ('done')"""
+                                                        
         for (props_in_chips, neg_chips, neg_props_in_chips), cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = props_in_chips
             cur_roidb['neg_crops'] = neg_chips
