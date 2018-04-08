@@ -309,7 +309,7 @@ class symbol_dpn_98_cls(Symbol):
             else:
                 #cls_score = mx.sym.Custom(op_type='debug_data', datai1=cls_score, datai2=label, datai3=bbox_pred, datai4=bbox_target)
                 if cfg.TRAIN.fp16 == True:
-                    grad_scale = cfg.TRAIN.scale
+                    grad_scale = float(cfg.TRAIN.scale)
                 else:
                     grad_scale = 1.0
                 cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
