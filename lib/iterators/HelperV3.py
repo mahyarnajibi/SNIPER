@@ -3,39 +3,50 @@ import mxnet as mx
 import numpy as np
 from bbox.bbox_transform import *
 from bbox.bbox_regression import expand_bbox_regression_targets
+class im_worker(object):
+    def __init__(self,cfg,crop_size):
+        self.cfg = cfg
+        self.crop_size = crop_size
 
-def im_worker(data):
-    imp = data[0]
-    crop = data[1]
-    flipped = data[2]
-    crop_size = data[3]
-    im = cv2.imread(imp, cv2.IMREAD_COLOR)
-    
-    # Crop the image
-    crop_scale = crop[1]
-    if flipped:
-        im = im[:, ::-1, :]
-    
-    origim = im[int(crop[0][1]):int(crop[0][3]),int(crop[0][0]):int(crop[0][2]),:]
-    
-    # Scale the image
-    crop_scale = crop[1]
-    
-    # Resize the crop
-    if int(origim.shape[0]*0.625)==0 or int(origim.shape[1]*0.625)==0:
-        print 'Something wrong3'
-    try:
-        im = cv2.resize(origim, None, None, fx=crop_scale, fy=crop_scale, interpolation=cv2.INTER_LINEAR)
-    except:
-        print 'Something wrong4'
-    
-    rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
-    d1m = min(im.shape[0], crop_size)
-    d2m = min(im.shape[1], crop_size)
-    rim[0, :d1m, :d2m] = (im[:d1m, :d2m, 2] - 124)*0.0167
-    rim[1, :d1m, :d2m] = (im[:d1m, :d2m, 1] - 117)*0.0167
-    rim[2, :d1m, :d2m] = (im[:d1m, :d2m, 0] - 104)*0.0167
-    return mx.nd.array(rim, dtype='float32')
+    def worker(self,data):
+        imp = data[0]
+        crop = data[1]
+        flipped = data[2]
+        crop_size = self.crop_size
+        pixel_means = self.config.network.PIXEL_MEANS
+
+        im = cv2.imread(imp, cv2.IMREAD_COLOR)
+        
+        # Crop the image
+        crop_scale = crop[1]
+        if flipped:
+            im = im[:, ::-1, :]
+        
+        origim = im[int(crop[0][1]):int(crop[0][3]),int(crop[0][0]):int(crop[0][2]),:]
+        
+        # Scale the image
+        crop_scale = crop[1]
+        
+        # Resize the crop
+        if int(origim.shape[0]*0.625)==0 or int(origim.shape[1]*0.625)==0:
+            print 'Something wrong3'
+        try:
+            im = cv2.resize(origim, None, None, fx=crop_scale, fy=crop_scale, interpolation=cv2.INTER_LINEAR)
+        except:
+            print 'Something wrong4'
+        
+        rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
+        d1m = min(im.shape[0], crop_size)
+        d2m = min(im.shape[1], crop_size)
+        if not self.cfg.IS_DPN:
+            for j in range(3):
+                rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2-j] - pixel_means[2-j]
+        else:
+            for j in range(3):
+                rim[j, :d1m, :d2m] = (im[:d1m, :d2m, 2-j] - pixel_means[2-j]) * 0.0167
+
+
+        return mx.nd.array(rim, dtype='float32')
 
 
 def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,

@@ -1,11 +1,12 @@
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_v4_1s"
+output_path: "./output/chips_alternating_neg"
 proposal_path: "proposals"
 symbol: resnet_v1_50_fast
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
 startMSTR: 9
+IS_DPN: false
 SCALES:
 - !!python/tuple [800,1280]
 - !!python/tuple [800,1280]
@@ -60,12 +61,12 @@ dataset:
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
-  lr: 0.002 #0.002 #0.0005
-  lr_step: '5.33'
+  lr: 0.015 #0.002 #0.0005
+  lr_step: '4,6'
   warmup: true
-  warmup_lr: 0.00005 #0.00005
+  warmup_lr: 0.00001 #0.00005
   # typically we will use 4000 warmup step for single GPU on VOC
-  warmup_step: 100 #4000 #1000
+  warmup_step: 1500 #4000 #1000
   begin_epoch: 0
   end_epoch: 7 #9
   model_prefix: 'rcnn'

@@ -6,6 +6,7 @@ symbol: symbol_dpn_98_cls
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
 startMSTR: 9
+IS_DPN: true
 SCALES:
 - !!python/tuple [800,1280]
 - !!python/tuple [800,1280]
@@ -18,9 +19,9 @@ network:
   pretrained: "./data/pretrained_model/dpn98"
   pretrained_epoch: 0
   PIXEL_MEANS:
-  - 103.06
-  - 115.90
-  - 123.15
+  - 104
+  - 117
+  - 124
   IMAGE_STRIDE: 0
   RCNN_FEAT_STRIDE: 16
   RPN_FEAT_STRIDE: 16

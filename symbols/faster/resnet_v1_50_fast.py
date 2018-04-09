@@ -477,7 +477,7 @@ class resnet_v1_50_fast(Symbol):
                                                 grad_scale=grad_scale)
                 bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                             data=(bbox_pred - bbox_target))
-                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188*16))
+                bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188.0*16.0))
                 rcnn_label = label
 
             # reshape output
