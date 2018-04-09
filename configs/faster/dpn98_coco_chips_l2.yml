@@ -61,7 +61,7 @@ TRAIN:
   warmup: false
   fp16: true
   wd: 0.0001
-  scale: 100
+  scale: 100.0
   warmup_lr: 0.0005 #0.00005
   # typically we will use 4000 warmup step for single GPU on VOC
   warmup_step: 1500 #4000 #1000
