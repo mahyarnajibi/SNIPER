@@ -13,7 +13,7 @@ class im_worker(object):
         crop = data[1]
         flipped = data[2]
         crop_size = self.crop_size
-        pixel_means = self.config.network.PIXEL_MEANS
+        pixel_means = self.cfg.network.PIXEL_MEANS
 
         im = cv2.imread(imp, cv2.IMREAD_COLOR)
         
