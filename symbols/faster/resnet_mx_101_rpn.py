@@ -19,7 +19,7 @@ def checkpoint_callback(bbox_param_names, prefix, means, stds):
     return _callback
 
 
-class resnet_mx_101(Symbol):
+class resnet_mx_101_rpn(Symbol):
     def __init__(self, n_proposals=400, momentum=0.95, fix_bn=False):
         """
         Use __init__ to define parameter network needs
@@ -161,19 +161,20 @@ class resnet_mx_101(Symbol):
         # input init
         if is_train:
             data = mx.sym.Variable(name="data")
-            im_info = mx.sym.Variable(name="im_info")
             rpn_label = mx.sym.Variable(name='label')
             rpn_bbox_target = mx.sym.Variable(name='bbox_target')
             rpn_bbox_weight = mx.sym.Variable(name='bbox_weight')
         else:
             data = mx.sym.Variable(name="data")
-            im_info = mx.sym.Variable(name="im_info")
 
         # shared convolutional layers
         conv_feat = self.resnetc4(data, fp16=cfg.TRAIN.fp16)
         # res5
         relut = self.resnetc5(conv_feat, deform=True)
         relu1 = mx.symbol.Concat(*[conv_feat, relut], name='cat4')
+        if cfg.TRAIN.fp16:
+            relu1 = mx.sym.Cast(data=relu1, dtype=np.float32)
+
         rpn_cls_score, rpn_bbox_pred = self.get_rpn(relu1, num_anchors)
 
         if is_train:
@@ -186,10 +187,10 @@ class resnet_mx_101(Symbol):
                                                 name="rpn_cls_prob")
 
             # bounding box regression
-            rpn_bbox_loss_ = rpn_bbox_weight * mx.sym.smooth_l1(name='rpn_bbox_loss_', scalar=3.0,
+            rpn_bbox_loss_ = rpn_bbox_weight * mx.sym.smooth_l1(name='rpn_bbox_loss_', scalar=1.0,
                                                                 data=(rpn_bbox_pred - rpn_bbox_target))
             rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
-                                            grad_scale=1.0 / cfg.TRAIN.BATCH_IMAGES*cfg.TRAIN.RPN_BATCH_SIZE)
+                                            grad_scale=1.0 / float(cfg.TRAIN.BATCH_IMAGES*cfg.TRAIN.RPN_BATCH_SIZE))
             group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss])
         else:
             # ROI Proposal
@@ -272,18 +273,6 @@ class resnet_mx_101(Symbol):
         arg_params['stage4_unit2_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_bias'])
         arg_params['stage4_unit3_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit3_offset_weight'])
         arg_params['stage4_unit3_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit3_offset_bias'])
-        arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
-        arg_params['conv_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bias'])
-        arg_params['offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_weight'])
-        arg_params['offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_bias'])
-        arg_params['fc_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_1_weight'])
-        arg_params['fc_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_1_bias'])
-        arg_params['fc_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_2_weight'])
-        arg_params['fc_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_2_bias'])
-        arg_params['cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['cls_score_weight'])
-        arg_params['cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['cls_score_bias'])
-        arg_params['bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['bbox_pred_weight'])
-        arg_params['bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['bbox_pred_bias'])
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_conv_3x3_weight'])
         arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_conv_3x3_bias'])

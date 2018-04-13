@@ -9,15 +9,15 @@ from load_model import load_param
 import sys
 
 sys.path.insert(0, 'lib')
-from symbols.faster.resnet_v1_50_fast import resnet_v1_50_fast, checkpoint_callback
+from symbols.faster.resnet_mx_101_rpn import resnet_mx_101_rpn, checkpoint_callback
 #from symbols.faster.symbol_dpn_98_cls import symbol_dpn_98_cls, checkpoint_callback
 from configs.faster.default_configs import config, update_config, get_opt_params
 import mxnet as mx
 import metric, callback
 import numpy as np
 from general_utils import get_optim_params, get_fixed_param_names, create_logger
-
-from iterators.MNIteratorChipsRPN import PrefetchingIter
+from iterators.PrefetchingIter import PrefetchingIter
+from iterators.MNIteratorChipsRPN import MNIteratorChips
 from load_data import load_proposal_roidb, merge_roidb, filter_roidb, add_chip_data, remove_small_boxes
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser
@@ -76,16 +76,19 @@ if __name__ == '__main__':
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
-    # for data in train_iter:
+    #for data in train_iter:
     # 	print 'Yes'
-    # for i,batch in enumerate(train_iter):
-    #   if i % 1 == 0:
-    #       print str(i)
+    import time
+    t1 = time.time()
+    for i,batch in enumerate(train_iter):
+        t2 = time.time() - t1
+        print 128.0 / t2
+        t1 = time.time()
     # exit(0)
 
 
     print('Initializing the model...')
-    sym_inst = resnet_v1_50_fast(n_proposals=400)
+    sym_inst = resnet_mx_101_rpn(n_proposals=400)
     sym = sym_inst.get_symbol_rcnn(config)
 
     # Creating the Logger
@@ -109,9 +112,9 @@ if __name__ == '__main__':
         sym_inst.init_weight_rcnn(config, arg_params, aux_params)
 
     # Creating the metrics
-    eval_metric = metric.RPNAccMetric(config)
-    cls_metric = metric.RPNLogLossMetric(config)
-    bbox_metric = metric.RPNL1LossMetric(config)
+    eval_metric = metric.RPNAccMetric()
+    cls_metric = metric.RPNLogLossMetric()
+    bbox_metric = metric.RPNL1LossMetric()
 
     eval_metrics = mx.metric.CompositeEvalMetric()
 
