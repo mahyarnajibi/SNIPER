@@ -539,10 +539,10 @@ class MNIteratorChips(MNIteratorBase):
 
         t2 = time.time()
 
-        print 'q1 ' + str(t2 - t1)
+        #print 'q1 ' + str(t2 - t1)
         all_labels = self.pool.map(roidb_anchor_worker, worker_data)
         t3 = time.time()
-        print 'q2 ' + str(t3 - t2)
+        #print 'q2 ' + str(t3 - t2)
         A = 21
         feat_height = 32
         feat_width = 32
@@ -557,19 +557,19 @@ class MNIteratorChips(MNIteratorBase):
                 bbox_targets[i][pids[0], pids[1], pids[2]] = all_labels[i][1]
                 bbox_weights[i][pids[0], pids[1], pids[2]] = 1.0
         t4 = time.time()
-        print 'q3 ' + str(t4 - t3)            
+        #print 'q3 ' + str(t4 - t3)            
         
         im_tensor = mx.nd.zeros((n_batch, 3, self.crop_size[0], self.crop_size[1]), dtype=np.float32)
         processed_list = processed_list.get()
         for i in range(len(processed_list)):
             im_tensor[i] = processed_list[i]
         t5 = time.time()
-        print 'q4 ' + str(t5 - t4)            
+        #print 'q4 ' + str(t5 - t4)            
         #self.visualize(im_tensor, rois, labels)
         self.data = [im_tensor]
         self.label = [labels, bbox_targets, bbox_weights]
         t6 = time.time()
-        print 'convert ' + str(t6 - t5)            
+        #print 'convert ' + str(t6 - t5)            
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(),
                                provide_data=self.provide_data, provide_label=self.provide_label)
 

@@ -58,12 +58,12 @@ dataset:
   proposal: rpn 
 TRAIN:
   lr: 0.015 #0.002 #0.0005
-  lr_step: '3'
+  lr_step: '4'
   warmup: true
   fp16: true
   warmup_lr: 0.0005 #0.00005
   wd: 0.0001
-  scale: 10.0
+  scale: 100.0
   warmup_step: 9000 #4000 #1000
   begin_epoch: 0
   end_epoch: 5 #9
@@ -104,8 +104,8 @@ TRAIN:
   RPN_BATCH_SIZE: 256
   # rpn anchors sampling params
   RPN_FG_FRACTION: 0.5
-  RPN_POSITIVE_OVERLAP: 0.7
-  RPN_NEGATIVE_OVERLAP: 0.3
+  RPN_POSITIVE_OVERLAP: 0.5
+  RPN_NEGATIVE_OVERLAP: 0.4
   RPN_CLOBBER_POSITIVES: false
   # rpn bounding box regression params
   RPN_BBOX_WEIGHTS:

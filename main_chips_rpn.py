@@ -31,7 +31,7 @@ def parser():
     							default='configs/faster/rpn_res101_mx_bn1.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
-    arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.95, type=float)
+    arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
                             default='CRCNN', type=str)
     arg_parser.add_argument('--threadid', dest='threadid', help='Prefix used for snapshotting the network',
@@ -78,12 +78,12 @@ if __name__ == '__main__':
 
     #for data in train_iter:
     # 	print 'Yes'
-    import time
-    t1 = time.time()
-    for i,batch in enumerate(train_iter):
-        t2 = time.time() - t1
-        print 128.0 / t2
-        t1 = time.time()
+    #import time
+    #t1 = time.time()
+    #for i,batch in enumerate(train_iter):
+    #    t2 = time.time() - t1
+    #    print 128.0 / t2
+    #    t1 = time.time()
     # exit(0)
 
 
@@ -108,8 +108,7 @@ if __name__ == '__main__':
     sym_inst.infer_shape(shape_dict)
     arg_params, aux_params = load_param(config.network.pretrained, config.network.pretrained_epoch, convert=True)
 
-    if args.momentum == 0.95:
-        sym_inst.init_weight_rcnn(config, arg_params, aux_params)
+    sym_inst.init_weight_rcnn(config, arg_params, aux_params)
 
     # Creating the metrics
     eval_metric = metric.RPNAccMetric()
