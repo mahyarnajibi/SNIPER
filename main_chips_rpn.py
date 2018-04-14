@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
 
     print('Initializing the model...')
-    sym_inst = resnet_mx_101_rpn(n_proposals=400)
+    sym_inst = resnet_mx_101_rpn(n_proposals=400, momentum=args.momentum)
     sym = sym_inst.get_symbol_rcnn(config)
 
     # Creating the Logger
