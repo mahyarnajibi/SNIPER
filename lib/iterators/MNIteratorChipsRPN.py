@@ -422,7 +422,7 @@ class MNIteratorChips(MNIteratorBase):
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
         self.data_name = ['data']
         self.label_name = ['label', 'bbox_target', 'bbox_weight']
-        self.pool = Pool(64)
+        self.pool = Pool(32)
         self.context_size = 320
         self.epiter = 0
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
@@ -498,6 +498,8 @@ class MNIteratorChips(MNIteratorBase):
         ['images', 'flipped'] + ['gt_boxes', 'boxes', 'gt_overlap'] => ['bbox_targets']
         :return: data, label
         """
+        import time
+        t1 = time.time()
 
         cur_from = self.cur_i
         cur_to = self.cur_i + self.batch_size
@@ -512,19 +514,15 @@ class MNIteratorChips(MNIteratorBase):
         for i in range(cur_from, cur_to):
             self.crop_idx[self.inds[i]] = self.crop_idx[self.inds[i]] + 1
 
-        processed_list = self.thread_pool.map(im_worker, ims)
         # im_tensor, roidb = self.im_process(roidb,cropids)
         processed_roidb = []
-        import time
-        t1 = time.time()
         for i in range(len(roidb)):
             tmp = roidb[i].copy()
             scale = roidb[i]['crops'][cropids[i]][1]
             tmp['im_info'] = [self.crop_size[0], self.crop_size[1], scale]
             processed_roidb.append(tmp)
-        im_tensor = mx.nd.zeros((n_batch, 3, self.crop_size[0], self.crop_size[1]), dtype=np.float32)
-        for i in range(len(processed_list)):
-            im_tensor[i] = processed_list[i]
+
+        processed_list = self.thread_pool.map_async(im_worker, ims)
 
         worker_data = []
         for i in range(len(processed_roidb)):
@@ -540,11 +538,11 @@ class MNIteratorChips(MNIteratorBase):
             worker_data.append(argw)
 
         t2 = time.time()
+
         print 'q1 ' + str(t2 - t1)
         all_labels = self.pool.map(roidb_anchor_worker, worker_data)
         t3 = time.time()
         print 'q2 ' + str(t3 - t2)
-        #all_labels = self.pool.map(roidb_worker, worker_data)
         A = 21
         feat_height = 32
         feat_width = 32
@@ -554,13 +552,24 @@ class MNIteratorChips(MNIteratorBase):
 
         for i in range(len(all_labels)):
             labels[i] = all_labels[i][0][0]
-            bbox_targets[i] = all_labels[i][1][0]
-            bbox_weights[i] = all_labels[i][2][0]
+            pids = all_labels[i][2]
+            if len(pids[0]) > 0:
+                bbox_targets[i][pids[0], pids[1], pids[2]] = all_labels[i][1]
+                bbox_weights[i][pids[0], pids[1], pids[2]] = 1.0
         t4 = time.time()
         print 'q3 ' + str(t4 - t3)            
+        
+        im_tensor = mx.nd.zeros((n_batch, 3, self.crop_size[0], self.crop_size[1]), dtype=np.float32)
+        processed_list = processed_list.get()
+        for i in range(len(processed_list)):
+            im_tensor[i] = processed_list[i]
+        t5 = time.time()
+        print 'q4 ' + str(t5 - t4)            
         #self.visualize(im_tensor, rois, labels)
         self.data = [im_tensor]
         self.label = [labels, bbox_targets, bbox_weights]
+        t6 = time.time()
+        print 'convert ' + str(t6 - t5)            
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(),
                                provide_data=self.provide_data, provide_label=self.provide_label)
 

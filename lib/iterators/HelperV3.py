@@ -6,7 +6,7 @@ from bbox.bbox_transform import *
 from bbox.bbox_regression import expand_bbox_regression_targets
 from generate_anchor import generate_anchors
 
-scales = np.array([2, 4, 7, 10, 13, 16, 32], dtype=np.float32)
+scales = np.array([2, 4, 7, 10, 13, 16, 24], dtype=np.float32)
 ratios = (0.5, 1, 2)
 feat_stride = 16
 base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=list(scales))
@@ -255,14 +255,14 @@ def roidb_anchor_worker(data):
     bbox_weights = _unmap(bbox_weights, total_anchors, inds_inside, fill=0)
 
     labels = labels.reshape((1, feat_height, feat_width, A)).transpose(0, 3, 1, 2)
-    labels = labels.reshape((1, A * feat_height * feat_width))
-    bbox_targets = bbox_targets.reshape((1, feat_height, feat_width, A * 4)).transpose(0, 3, 1, 2)
-    bbox_weights = bbox_weights.reshape((1, feat_height, feat_width, A * 4)).transpose((0, 3, 1, 2))
+    labels = labels.reshape((1, A * feat_height * feat_width)).astype(np.float16)
+    bbox_targets = bbox_targets.reshape((feat_height, feat_width, A * 4)).transpose(2, 0, 1)
+    bbox_weights = bbox_weights.reshape((feat_height, feat_width, A * 4)).transpose((2, 0, 1))
+    pids = np.where(bbox_weights == 1)
+    bbox_targets = bbox_targets[pids]
 
-    rval = [mx.nd.array(labels), mx.nd.array(bbox_targets), mx.nd.array(bbox_weights)]
+    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids)]
     return rval
-
-
 
 def roidb_worker(data):
     im_i = data[0]
