@@ -179,18 +179,23 @@ class resnet_mx_101_rpn(Symbol):
 
         if is_train:
             # prepare rpn data
+            if cfg.TRAIN.fp16 == True:
+                grad_scale = float(cfg.TRAIN.scale)
+            else:
+                grad_scale = 1.0
+            
             rpn_cls_score_reshape = mx.sym.Reshape(data=rpn_cls_score, shape=(0, 2, -1, 0),
                                                    name="rpn_cls_score_reshape")
             # classification
             rpn_cls_prob = mx.sym.SoftmaxOutput(data=rpn_cls_score_reshape, label=rpn_label, multi_output=True,
                                                 normalization='valid', use_ignore=True, ignore_label=-1,
-                                                name="rpn_cls_prob")
+                                                name="rpn_cls_prob", grad_scale=grad_scale)
 
             # bounding box regression
             rpn_bbox_loss_ = rpn_bbox_weight * mx.sym.smooth_l1(name='rpn_bbox_loss_', scalar=1.0,
                                                                 data=(rpn_bbox_pred - rpn_bbox_target))
             rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
-                                            grad_scale=1.0 / float(cfg.TRAIN.BATCH_IMAGES*cfg.TRAIN.RPN_BATCH_SIZE))
+                                            grad_scale=3*grad_scale / float(cfg.TRAIN.BATCH_IMAGES*cfg.TRAIN.RPN_BATCH_SIZE))
             group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss])
         else:
             # ROI Proposal
