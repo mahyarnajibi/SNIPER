@@ -1,6 +1,8 @@
 import numpy as np
 import mxnet as mx
 from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor
+
 class MNIteratorBase(mx.io.DataIter):
 
     def __init__(self, roidb, config, batch_size,  threads, nGPUs, pad_rois_to, single_size_change):
@@ -14,6 +16,7 @@ class MNIteratorBase(mx.io.DataIter):
         self.pixel_mean = config.network.PIXEL_MEANS
 
         self.thread_pool = ThreadPool(threads)
+        self.executor_pool = ThreadPoolExecutor(threads)
 
         self.n_per_gpu = batch_size / nGPUs
         self.batch = None

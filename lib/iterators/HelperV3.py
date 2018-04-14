@@ -1,52 +1,59 @@
 import cv2
 import mxnet as mx
 import numpy as np
+import numpy.random as npr
 from bbox.bbox_transform import *
 from bbox.bbox_regression import expand_bbox_regression_targets
-class im_worker(object):
-    def __init__(self,cfg,crop_size):
-        self.cfg = cfg
-        self.crop_size = crop_size
+from generate_anchor import generate_anchors
 
-    def worker(self,data):
-        imp = data[0]
-        crop = data[1]
-        flipped = data[2]
-        crop_size = self.crop_size
-        pixel_means = self.cfg.network.PIXEL_MEANS
+scales = np.array([2, 4, 7, 10, 13, 16, 24], dtype=np.float32)
+ratios = (0.5, 1, 2)
+feat_stride = 16
+base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=list(scales))
+num_anchors = base_anchors.shape[0]
+feat_width = 32
+feat_height = 32
+shift_x = np.arange(0, feat_width) * feat_stride
+shift_y = np.arange(0, feat_height) * feat_stride
+shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
+A = num_anchors
+K = shifts.shape[0]
+all_anchors = base_anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+all_anchors = all_anchors.reshape((K * A, 4))
 
-        im = cv2.imread(imp, cv2.IMREAD_COLOR)
-        
-        # Crop the image
-        crop_scale = crop[1]
-        if flipped:
-            im = im[:, ::-1, :]
-        
-        origim = im[int(crop[0][1]):int(crop[0][3]),int(crop[0][0]):int(crop[0][2]),:]
-        
-        # Scale the image
-        crop_scale = crop[1]
-        
-        # Resize the crop
-        if int(origim.shape[0]*0.625)==0 or int(origim.shape[1]*0.625)==0:
-            print 'Something wrong3'
-        try:
-            im = cv2.resize(origim, None, None, fx=crop_scale, fy=crop_scale, interpolation=cv2.INTER_LINEAR)
-        except:
-            print 'Something wrong4'
-        
-        rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
-        d1m = min(im.shape[0], crop_size)
-        d2m = min(im.shape[1], crop_size)
-        if not self.cfg.IS_DPN:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2-j] - pixel_means[2-j]
-        else:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = (im[:d1m, :d2m, 2-j] - pixel_means[2-j]) * 0.0167
-
-
-        return mx.nd.array(rim, dtype='float32')
+def im_worker(data):
+    imp = data[0]
+    crop = data[1]
+    flipped = data[2]
+    crop_size = data[3]
+    im = cv2.imread(imp, cv2.IMREAD_COLOR)
+    
+    # Crop the image
+    crop_scale = crop[1]
+    if flipped:
+        im = im[:, ::-1, :]
+    
+    origim = im[int(crop[0][1]):int(crop[0][3]),int(crop[0][0]):int(crop[0][2]),:]
+    
+    # Scale the image
+    crop_scale = crop[1]
+    
+    # Resize the crop
+    if int(origim.shape[0]*0.625)==0 or int(origim.shape[1]*0.625)==0:
+        print 'Something wrong3'
+    try:
+        im = cv2.resize(origim, None, None, fx=crop_scale, fy=crop_scale, interpolation=cv2.INTER_LINEAR)
+    except:
+        print 'Something wrong4'
+    
+    rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
+    d1m = min(im.shape[0], crop_size)
+    d2m = min(im.shape[1], crop_size)
+    rim[0, :d1m, :d2m] = im[:d1m, :d2m, 2] - 123.15
+    rim[1, :d1m, :d2m] = im[:d1m, :d2m, 1] - 115.90
+    rim[2, :d1m, :d2m] = im[:d1m, :d2m, 0] - 103.06
+    return mx.nd.array(rim, dtype='float32')
 
 
 def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
@@ -118,6 +125,145 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     return rois, labels, bbox_targets, bbox_weights
 
 
+def roidb_anchor_worker(data):
+    im_info = data[0]
+    cur_crop = data[1]
+    im_scale = data[2]
+    nids = data[3]
+    gtids = data[4]
+    gt_boxes = data[5]
+    boxes = data[6]
+
+    anchors = all_anchors.copy()
+    inds_inside = np.where((anchors[:, 0] >= -32) &
+                           (anchors[:, 1] >= -32) &
+                           (anchors[:, 2] < im_info[0]+32) &
+                           (anchors[:, 3] < im_info[1]+32))[0]
+
+    anchors = anchors[inds_inside, :]
+    labels = np.empty((len(inds_inside),), dtype=np.float32)
+    labels.fill(-1)
+    total_anchors = int(K * A)
+
+    gt_boxes[:, 0] = gt_boxes[:, 0] - cur_crop[0]
+    gt_boxes[:, 2] = gt_boxes[:, 2] - cur_crop[0]
+    gt_boxes[:, 1] = gt_boxes[:, 1] - cur_crop[1]
+    gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
+
+    vgt_boxes = boxes[np.intersect1d(gtids, nids)]
+
+    vgt_boxes[:, 0] = vgt_boxes[:, 0] - cur_crop[0]
+    vgt_boxes[:, 2] = vgt_boxes[:, 2] - cur_crop[0]
+    vgt_boxes[:, 1] = vgt_boxes[:, 1] - cur_crop[1]
+    vgt_boxes[:, 3] = vgt_boxes[:, 3] - cur_crop[1]
+
+    gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
+    vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
+
+    ids = filter_boxes(gt_boxes, 10)
+    if len(ids)>0:
+        gt_boxes = gt_boxes[ids]
+    else:
+        gt_boxes = np.zeros((0, 4))
+
+    ids = filter_boxes(vgt_boxes, 10)
+    if len(ids) > 0:
+        vgt_boxes = vgt_boxes[ids]
+    else:
+        vgt_boxes = np.zeros((0, 4))
+
+    if len(vgt_boxes) > 0:
+        ov = bbox_overlaps(np.ascontiguousarray(gt_boxes).astype(float), np.ascontiguousarray(vgt_boxes).astype(float))
+        mov = np.max(ov, axis=1)
+    else:
+        mov = np.zeros((len(gt_boxes)))
+
+    invalid_gtids = np.where(mov < 1)[0]
+    valid_gtids = np.where(mov == 1)[0]
+    invalid_boxes = gt_boxes[invalid_gtids, :]
+    gt_boxes = gt_boxes[valid_gtids, :]
+
+    def _unmap(data, count, inds, fill=0):
+        """" unmap a subset inds of data into original data of size count """
+        if len(data.shape) == 1:
+            ret = np.empty((count,), dtype=np.float32)
+            ret.fill(fill)
+            ret[inds] = data
+        else:
+            ret = np.empty((count,) + data.shape[1:], dtype=np.float32)
+            ret.fill(fill)
+            ret[inds, :] = data
+        return ret
+
+    if gt_boxes.size > 0:
+        # overlap between the anchors and the gt boxes
+        # overlaps (ex, gt)
+        overlaps = bbox_overlaps(anchors.astype(np.float), gt_boxes.astype(np.float))
+        if invalid_boxes is not None:
+            if len(invalid_boxes) > 0:
+                overlapsn = bbox_overlaps(anchors.astype(np.float), invalid_boxes.astype(np.float))
+                argmax_overlapsn = overlapsn.argmax(axis=1)
+                max_overlapsn = overlapsn[np.arange(len(inds_inside)), argmax_overlapsn]
+        argmax_overlaps = overlaps.argmax(axis=1)
+        max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
+        gt_argmax_overlaps = overlaps.argmax(axis=0)
+        gt_max_overlaps = overlaps[gt_argmax_overlaps, np.arange(overlaps.shape[1])]
+        gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
+
+        labels[max_overlaps < 0.4] = 0
+        labels[gt_argmax_overlaps] = 1
+
+        # fg label: above threshold IoU
+        labels[max_overlaps >= 0.5] = 1
+
+        if invalid_boxes is not None:
+            if len(invalid_boxes) > 0:
+                labels[max_overlapsn > 0.3] = -1
+    else:
+        labels[:] = 0
+        if len(invalid_boxes) > 0:
+            overlapsn = bbox_overlaps(anchors.astype(np.float), invalid_boxes.astype(np.float))
+            argmax_overlapsn = overlapsn.argmax(axis=1)
+            max_overlapsn = overlapsn[np.arange(len(inds_inside)), argmax_overlapsn]
+            if len(invalid_boxes) > 0:
+                labels[max_overlapsn > 0.3] = -1
+
+        # subsample positive labels if we have too many
+    num_fg = 128
+    fg_inds = np.where(labels == 1)[0]
+    if len(fg_inds) > num_fg:
+        disable_inds = npr.choice(fg_inds, size=(len(fg_inds) - num_fg), replace=False)
+        labels[disable_inds] = -1
+
+    # subsample negative labels if we have too many
+    num_bg = 256 - np.sum(labels == 1)
+    bg_inds = np.where(labels == 0)[0]
+    if len(bg_inds) > num_bg:
+        disable_inds = npr.choice(bg_inds, size=(len(bg_inds) - num_bg), replace=False)
+        labels[disable_inds] = -1
+
+    bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
+    if gt_boxes.size > 0:
+        bbox_targets[:] = bbox_transform(anchors, gt_boxes[argmax_overlaps, :4])
+
+    bbox_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
+    bbox_weights[labels == 1, :] = np.array([1.0, 1.0, 1.0, 1.0])
+
+    # map up to original set of anchors
+    labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
+    bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
+    bbox_weights = _unmap(bbox_weights, total_anchors, inds_inside, fill=0)
+
+    labels = labels.reshape((1, feat_height, feat_width, A)).transpose(0, 3, 1, 2)
+    labels = labels.reshape((1, A * feat_height * feat_width)).astype(np.float16)
+    bbox_targets = bbox_targets.reshape((feat_height, feat_width, A * 4)).transpose(2, 0, 1)
+    bbox_weights = bbox_weights.reshape((feat_height, feat_width, A * 4)).transpose((2, 0, 1))
+    pids = np.where(bbox_weights == 1)
+    bbox_targets = bbox_targets[pids]
+
+    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids)]
+    return rval
+
 def roidb_worker(data):
     im_i = data[0]
     im_info = data[1]        
@@ -137,6 +283,7 @@ def roidb_worker(data):
 
     gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
     ids = filter_boxes(gt_boxes, 10)
+
     if len(ids)>0:
         gt_boxes = gt_boxes[ids]
         gt_labs = gt_labs[ids]                
