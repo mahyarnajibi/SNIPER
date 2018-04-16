@@ -115,7 +115,7 @@ def props_in_chip_worker(r):
     area = np.sqrt(widths * heights)
 
     sids = np.where((area < 80) & (max_sizes < 450.0/im_scale_1) & (widths >= 2) & (heights >= 2))[0]
-    mids = np.where((area >= 32) & (area < 150) & (max_sizes < 450.0/im_scale_2))[0]
+    mids = np.where((widths >= 2) & (heights >= 2) & (area < 150) & (max_sizes < 450.0/im_scale_2))[0]
     bids = np.where((area >= 120))[0]
 
     chips1, chips2, chips3 = [], [], []
@@ -174,7 +174,7 @@ def props_in_chip_worker(r):
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
             area = math.sqrt(abs((x2-x1)*(y2-y1)))
-            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 32 and area <= 150):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 0 and area <= 150):
                 props_in_chips[chip_ids2[cid]].append(mids[pi])
                 med_covered[pi] = True
             #else:
@@ -241,7 +241,7 @@ def props_in_chip_worker(r):
             y1 = max(cur_chip[1], cur_box[1])
             y2 = min(cur_chip[3], cur_box[3])
             area = math.sqrt(abs((x2-x1)*(y2-y1)))
-            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 32 and area < 150):
+            if (x2 - x1 >= 1 and y2 - y1 >= 1 and area >= 0 and area < 150):
                 neg_props_in_chips[chip_ids2[cid]].append(neg_mids[pi])
 
     if neg_chips3.shape[0] > 0:
@@ -422,7 +422,7 @@ class MNIteratorChips(MNIteratorBase):
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
         self.data_name = ['data']
         self.label_name = ['label', 'bbox_target', 'bbox_weight']
-        self.pool = Pool(32)
+        self.pool = Pool(64)
         self.context_size = 320
         self.epiter = 0
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)

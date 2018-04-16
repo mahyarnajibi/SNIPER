@@ -282,7 +282,7 @@ def roidb_worker(data):
     gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
 
     gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
-    ids = filter_boxes(gt_boxes, 10)
+    ids = filter_boxes(gt_boxes, 5)
 
     if len(ids)>0:
         gt_boxes = gt_boxes[ids]
