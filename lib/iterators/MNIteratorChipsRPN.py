@@ -425,6 +425,7 @@ class MNIteratorChips(MNIteratorBase):
         self.pool = Pool(64)
         self.context_size = 320
         self.epiter = 0
+        self.im_worker = im_worker(crop_size=self.crop_size[0],cfg=config)
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
     def reset(self):
@@ -509,7 +510,7 @@ class MNIteratorChips(MNIteratorBase):
         n_batch = len(roidb)
         ims = []
         for i in range(n_batch):
-            ims.append([roidb[i]['image'], roidb[i]['crops'][cropids[i]], roidb[i]['flipped'], self.crop_size[0]])
+            ims.append([roidb[i]['image'], roidb[i]['crops'][cropids[i]], roidb[i]['flipped']])
 
         for i in range(cur_from, cur_to):
             self.crop_idx[self.inds[i]] = self.crop_idx[self.inds[i]] + 1
@@ -522,7 +523,8 @@ class MNIteratorChips(MNIteratorBase):
             tmp['im_info'] = [self.crop_size[0], self.crop_size[1], scale]
             processed_roidb.append(tmp)
 
-        processed_list = self.thread_pool.map_async(im_worker, ims)
+        processed_list = self.thread_pool.map_async(self.im_worker.worker, ims)
+
 
         worker_data = []
         for i in range(len(processed_roidb)):
