@@ -255,7 +255,7 @@ class MNIteratorChips(MNIteratorBase):
         self.num_classes = roidb[0]['gt_overlaps'].shape[1]
         self.bbox_means = np.tile(np.array(config.TRAIN.BBOX_MEANS), (self.num_classes, 1))
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
-        self.data_name = ['data', 'srange', 'im_info']
+        self.data_name = ['data', 'valid_ranges', 'im_info']
         self.label_name = ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
         self.pool = Pool(64)
         self.context_size = 320
@@ -372,6 +372,7 @@ class MNIteratorChips(MNIteratorBase):
             boxes = processed_roidb[i]['boxes'].copy()
             cur_crop = processed_roidb[i]['crops'][cropid][0]
             im_scale = processed_roidb[i]['crops'][cropid][1]
+            classes = processed_roidb[i]['max_classes'][gtids]
             if im_scale == 3:
                 srange[i, 0] = 0
                 srange[i, 1] = 32*3
@@ -384,7 +385,7 @@ class MNIteratorChips(MNIteratorBase):
             chipinfo[i, 0] = processed_roidb[i]['im_info'][0]
             chipinfo[i, 1] = processed_roidb[i]['im_info'][1]
             chipinfo[i, 2] = im_scale
-            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes]
+            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1)]
             worker_data.append(argw)
 
         t2 = time.time()

@@ -14,7 +14,7 @@ def checkpoint_callback(bbox_param_names, prefix, means, stds):
     return _callback
 
 
-class resnet_mx_101_rpn(Symbol):
+class resnet_mx_101_e2e(Symbol):
     def __init__(self, n_proposals=400, momentum=0.95, fix_bn=False):
         """
         Use __init__ to define parameter network needs
@@ -161,6 +161,7 @@ class resnet_mx_101_rpn(Symbol):
             rpn_bbox_weight = mx.sym.Variable(name='bbox_weight')
             gt_boxes = mx.sym.Variable(name='gt_boxes')
             valid_ranges = mx.sym.Variable(name='valid_ranges')
+            im_info = mx.sym.Variable(name='im_info')
         else:
             data = mx.sym.Variable(name="data")
 
@@ -187,7 +188,7 @@ class resnet_mx_101_rpn(Symbol):
             rpn_cls_prob = mx.sym.SoftmaxOutput(data=rpn_cls_score_reshape, label=rpn_label, multi_output=True,
                                                 normalization='valid', use_ignore=True, ignore_label=-1,
                                                 name="rpn_cls_prob", grad_scale=grad_scale)
-            rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges)
+            rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges, datai5=im_info, datai6=data)
             # bounding box regression
             rpn_bbox_loss_ = rpn_bbox_weight * mx.sym.smooth_l1(name='rpn_bbox_loss_', scalar=1.0,
                                                                 data=(rpn_bbox_pred - rpn_bbox_target))
