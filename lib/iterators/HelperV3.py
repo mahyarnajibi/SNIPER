@@ -274,7 +274,11 @@ def roidb_anchor_worker(data):
     pids = np.where(bbox_weights == 1)
     bbox_targets = bbox_targets[pids]
 
-    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids)]
+    fgt_boxes = -np.ones((100, 5))
+    if len(gt_boxes) > 0:
+        fgt_boxes[:min(len(gt_boxes), 100), :] = gt_boxes
+
+    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
     return rval
 
 def roidb_worker(data):
