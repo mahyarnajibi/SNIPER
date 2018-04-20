@@ -533,9 +533,10 @@ class MNIteratorChips(MNIteratorBase):
             gtids = np.where(processed_roidb[i]['max_overlaps'] == 1)[0]
             gt_boxes = processed_roidb[i]['boxes'][gtids, :]
             boxes = processed_roidb[i]['boxes'].copy()
+            classes = processed_roidb[i]['max_classes'][gtids]
             cur_crop = processed_roidb[i]['crops'][cropid][0]
             im_scale = processed_roidb[i]['crops'][cropid][1]
-            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes]
+            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1)]
             worker_data.append(argw)
 
         t2 = time.time()
