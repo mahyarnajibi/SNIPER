@@ -1,16 +1,20 @@
 import cPickle
 import mxnet as mx
 from lib.symbol import Symbol
-# from operator_py.debug import *
 from operator_py.box_annotator_ohem import *
 from operator_py.debug_data import *
 import numpy as np
 
-
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
     def _callback(iter_no, sym, arg, aux):
+        weight = arg[bbox_param_names[0]]
+        bias = arg[bbox_param_names[1]]
+        stds = np.array([0.1, 0.1, 0.2, 0.2])
+        arg[bbox_param_names[0]+'_test'] = (weight.T * mx.nd.array(stds)).T
+        arg[bbox_param_names[1]+'_test'] =bias * mx.nd.array(stds)
         mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
-
+        arg.pop(bbox_param_names[0]+'_test')
+        arg.pop(bbox_param_names[1]+'_test')
     return _callback
 
 
@@ -171,7 +175,7 @@ class resnet_mx_101_e2e(Symbol):
         relut = self.resnetc5(conv_feat, deform=True)
         relu1 = mx.symbol.Concat(*[conv_feat, relut], name='cat4')
         if cfg.TRAIN.fp16:
-            relu1 = mx.sym.Cast(data=relu1, dtype=np.float32)
+            relu1 = mx.sym.Cast(data=relu1, dtype=np.float32)        
 
         rpn_cls_score, rpn_bbox_pred = self.get_rpn(relu1, num_anchors)
 
@@ -189,13 +193,57 @@ class resnet_mx_101_e2e(Symbol):
                                                 normalization='valid', use_ignore=True, ignore_label=-1,
                                                 name="rpn_cls_prob", grad_scale=grad_scale)
             rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges, datai5=im_info, datai6=data)
+            #rpn_cls_probr = mx.sym.Reshape(data = rpn_cls_prob, shape=(0, 42, -1, 0), name="rpn_cls_score_reshape_back")
+            conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
+            conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
+
+            rois, label, bbox_target, bbox_weight = mx.sym.MultiProposalTarget(cls_prob=rpn_cls_prob, bbox_pred=rpn_bbox_pred, im_info=im_info, gt_boxes=gt_boxes, valid_ranges=valid_ranges, batch_size=cfg.TRAIN.BATCH_IMAGES, name='multi_proposal_target')
+            label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
+            offset_t = mx.contrib.sym.DeformablePSROIPooling(name='offset_t', data=conv_new_1_relu, rois=rois, group_size=1, pooled_size=7,
+                                                             sample_per_part=4, no_trans=True, part_size=7, output_dim=256, spatial_scale=0.0625)
+            offset = mx.sym.FullyConnected(name='offset', data=offset_t, num_hidden=7 * 7 * 2, lr_mult=0.01)
+            offset_reshape = mx.sym.Reshape(data=offset, shape=(-1, 2, 7, 7), name="offset_reshape")
+            
+            deformable_roi_pool = mx.contrib.sym.DeformablePSROIPooling(name='deformable_roi_pool', data=conv_new_1_relu, rois=rois,
+                                                                        trans=offset_reshape, group_size=1, pooled_size=7, sample_per_part=4,
+                                                                        no_trans=False, part_size=7, output_dim=256, spatial_scale=0.0625, trans_std=0.1)
+            # 2 fc
+            fc_new_1 = mx.sym.FullyConnected(name='fc_new_1', data=deformable_roi_pool, num_hidden=1024)
+            fc_new_1_relu = mx.sym.Activation(data=fc_new_1, act_type='relu', name='fc_new_1_relu')
+
+            fc_new_2 = mx.sym.FullyConnected(name='fc_new_2', data=fc_new_1_relu, num_hidden=1024)
+            fc_new_2_relu = mx.sym.Activation(data=fc_new_2, act_type='relu', name='fc_new_2_relu')
+            num_classes = 81
+            num_reg_classes = 1
+            cls_score = mx.sym.FullyConnected(name='cls_score', data=fc_new_2_relu, num_hidden=num_classes)
+            bbox_pred = mx.sym.FullyConnected(name='bbox_pred', data=fc_new_2_relu, num_hidden=num_reg_classes * 4)            
+
+            if cfg.TRAIN.fp16 == True:
+                grad_scale = float(cfg.TRAIN.scale)
+            else:
+                grad_scale = 1.0
+
+            cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
+                                            grad_scale=grad_scale)
+            bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
+                                                        data=(bbox_pred - bbox_target))
+            bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188.0*16.0))
+            rcnn_label = label
+
+            # reshape output
+            cls_prob = mx.sym.Reshape(data=cls_prob, shape=(cfg.TRAIN.BATCH_IMAGES, -1, num_classes),
+                                      name='cls_prob_reshape')
+            bbox_loss = mx.sym.Reshape(data=bbox_loss, shape=(cfg.TRAIN.BATCH_IMAGES, -1, 4 * num_reg_classes),
+                                       name='bbox_loss_reshape')
+            
+            
             # bounding box regression
             rpn_bbox_loss_ = rpn_bbox_weight * mx.sym.smooth_l1(name='rpn_bbox_loss_', scalar=1.0,
                                                                 data=(rpn_bbox_pred - rpn_bbox_target))
             rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
                                             grad_scale=3 * grad_scale / float(
                                                 cfg.TRAIN.BATCH_IMAGES * cfg.TRAIN.RPN_BATCH_SIZE))
-            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss])
+            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label)])
         else:
             # ROI Proposal
             rpn_cls_score_reshape = mx.sym.Reshape(
@@ -281,12 +329,40 @@ class resnet_mx_101_e2e(Symbol):
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_conv_3x3_weight'])
         arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_conv_3x3_bias'])
-        arg_params['rpn_cls_score_weight'] = mx.random.normal(0, 0.01,
-                                                              shape=self.arg_shape_dict['rpn_cls_score_weight'])
+        arg_params['rpn_cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_cls_score_weight'])
         arg_params['rpn_cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_cls_score_bias'])
-        arg_params['rpn_bbox_pred_weight'] = mx.random.normal(0, 0.01,
-                                                              shape=self.arg_shape_dict['rpn_bbox_pred_weight'])
+        arg_params['rpn_bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_bbox_pred_weight'])
+        arg_params['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_bbox_pred_bias'])
+        
+        arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
+        arg_params['conv_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bias'])
+        arg_params['offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_weight'])
+        arg_params['offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_bias'])
+        arg_params['fc_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_1_weight'])
+        arg_params['fc_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_1_bias'])
+        arg_params['fc_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_2_weight'])
+        arg_params['fc_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_2_bias'])
+        arg_params['cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['cls_score_weight'])
+        arg_params['cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['cls_score_bias'])
+        arg_params['bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['bbox_pred_weight'])
+        arg_params['bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['bbox_pred_bias'])
+
+    def init_weight_rpn(self, cfg, arg_params, aux_params):        
+        arg_params['stage4_unit1_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_weight'])
+        arg_params['stage4_unit1_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_bias'])
+        arg_params['stage4_unit2_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_weight'])
+        arg_params['stage4_unit2_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_bias'])
+        arg_params['stage4_unit3_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit3_offset_weight'])
+        arg_params['stage4_unit3_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit3_offset_bias'])
+
+        arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_conv_3x3_weight'])
+        arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_conv_3x3_bias'])
+        arg_params['rpn_cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_cls_score_weight'])
+        arg_params['rpn_cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_cls_score_bias'])
+        arg_params['rpn_bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_bbox_pred_weight'])
         arg_params['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_bbox_pred_bias'])
 
-    def init_weight(self, cfg, arg_params, aux_params):
+        
+
+    def init_weight(self, cfg, arg_params, aux_params):        
         self.init_weight_rcnn(cfg, arg_params, aux_params)

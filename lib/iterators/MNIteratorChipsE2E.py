@@ -55,11 +55,11 @@ def chip_worker(r):
 
     chip_ar = []
     for chip in chips1:
-        chip_ar.append([chip, im_scale_1])
+        chip_ar.append([chip, im_scale_1, 512, 512])
     for chip in chips2:
-        chip_ar.append([chip, im_scale_2])
+        chip_ar.append([chip, im_scale_2, 512, 512])
     for chip in chips3:
-        chip_ar.append([chip, im_scale_3])
+        chip_ar.append([chip, im_scale_3, int(r['height'] * im_scale_3), int(r['width'] * im_scale_3)])
 
     return chip_ar
 
@@ -235,8 +235,11 @@ def props_in_chip_worker(r):
         for chip in chips:
             if len(neg_props_in_chips[chip_counter]) > 40:
                 final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
-                neg_chips.append([chip, cscale])
-            chip_counter += 1
+                if cscale != 1:
+                    neg_chips.append([chip, cscale, 512, 512])
+                else:
+                    neg_chips.append([chip, cscale, int(r['height'] * im_scale_3), int(r['width'] * im_scale_3)])
+                chip_counter += 1
 
     # import pdb;pdb.set_trace()
     r['neg_chips'] = neg_chips
@@ -356,6 +359,8 @@ class MNIteratorChips(MNIteratorBase):
         for i in range(len(roidb)):
             tmp = roidb[i].copy()
             scale = roidb[i]['crops'][cropids[i]][1]
+            height = roidb[i]['crops'][cropids[i]][2]
+            width = roidb[i]['crops'][cropids[i]][3]                                      
             tmp['im_info'] = [self.crop_size[0], self.crop_size[1], scale]
             processed_roidb.append(tmp)
 
@@ -372,18 +377,20 @@ class MNIteratorChips(MNIteratorBase):
             boxes = processed_roidb[i]['boxes'].copy()
             cur_crop = processed_roidb[i]['crops'][cropid][0]
             im_scale = processed_roidb[i]['crops'][cropid][1]
+            height = processed_roidb[i]['crops'][cropid][2]
+            width = processed_roidb[i]['crops'][cropid][3]
             classes = processed_roidb[i]['max_classes'][gtids]
             if im_scale == 3:
                 srange[i, 0] = 0
-                srange[i, 1] = 32*3
+                srange[i, 1] = 80*3
             elif im_scale == 1.667:
                 srange[i, 0] = 32*1.667
                 srange[i, 1] = 1.667*150
             else:
-                srange[i, 0] = 120
+                srange[i, 0] = 120*im_scale
                 srange[i, 1] = 512
-            chipinfo[i, 0] = processed_roidb[i]['im_info'][0]
-            chipinfo[i, 1] = processed_roidb[i]['im_info'][1]
+            chipinfo[i, 0] = height
+            chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale
             argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1)]
             worker_data.append(argw)
