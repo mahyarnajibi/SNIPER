@@ -1,9 +1,8 @@
 import os
 
 os.environ['PYTHONUNBUFFERED'] = '1'
-os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
-os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
-os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
+os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
+#os.environ['MXNET_ENABLE_GPU_P2P'] = '1'
 
 import init
 from iterators.MNIteratorChipsE2E import MNIteratorChips
@@ -112,18 +111,25 @@ if __name__ == '__main__':
     sym_inst.infer_shape(shape_dict)
     arg_params, aux_params = load_param(config.network.pretrained, config.network.pretrained_epoch, convert=True)
 
-    #sym_inst.init_weight_rcnn(config, arg_params, aux_params)
+    sym_inst.init_weight_rcnn(config, arg_params, aux_params)
 
     # Creating the metrics
     eval_metric = metric.RPNAccMetric()
     cls_metric = metric.RPNLogLossMetric()
     bbox_metric = metric.RPNL1LossMetric()
+    rceval_metric = metric.RCNNAccMetric(config)
+    rccls_metric  = metric.RCNNLogLossMetric(config)
+    rcbbox_metric = metric.RCNNL1LossCRCNNMetric(config)
 
     eval_metrics = mx.metric.CompositeEvalMetric()
 
     eval_metrics.add(eval_metric)
     eval_metrics.add(cls_metric)
     eval_metrics.add(bbox_metric)
+    eval_metrics.add(rceval_metric)
+    eval_metrics.add(rccls_metric)
+    eval_metrics.add(rcbbox_metric)
+
     # eval_metrics.add(vis_metric)
 
     optimizer_params = get_optim_params(config, len(train_iter), batch_size)

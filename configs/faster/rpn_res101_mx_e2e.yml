@@ -3,7 +3,8 @@ MXNET_VERSION: "mxnet"
 output_path: "./output/chips_rpn_resnet101_mx_bn"
 proposal_path: "proposals"
 symbol: resnet_mx_101_e2e
-gpus: '0'
+gpus: '0,1,2,3,4,5,6,7'
+#gpus: '0'
 CLASS_AGNOSTIC: true
 startMSTR: 9
 IS_DPN: false
@@ -16,8 +17,8 @@ default:
   kvstore: device
 network:
   deform: true
-  pretrained: "./output/chips_rpn_resnet101_mx_bn/rpn_res101_mx_bn1/train2014_valminusminival2014/CRCNN"
-  pretrained_epoch: 5
+  pretrained: "./data/pretrained_model/resnet_mx_101"  
+  pretrained_epoch: 0
   PIXEL_MEANS:
   - 103.939
   - 116.779
@@ -52,13 +53,13 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: minival2014
+  image_set: train2014+val2014
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
   lr: 0.015 #0.002 #0.0005
-  lr_step: '4'
+  lr_step: '5'
   warmup: true
   fp16: true
   warmup_lr: 0.0005 #0.00005
@@ -66,7 +67,7 @@ TRAIN:
   scale: 100.0
   warmup_step: 9000 #4000 #1000
   begin_epoch: 0
-  end_epoch: 5 #9
+  end_epoch: 7 #9
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false
@@ -79,7 +80,7 @@ TRAIN:
   # size of images for each device, 2 for rcnn, 1 for rpn and e2e
   BATCH_IMAGES: 16
   # e2e changes behavior of anchor loader and metric
-  END2END: false
+  END2END: true
   # group images with similar aspect ratio
   ASPECT_GROUPING: true
   # R-CNN

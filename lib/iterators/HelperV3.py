@@ -175,13 +175,13 @@ def roidb_anchor_worker(data):
     vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
 
     ids = filter_boxes(gt_boxes, 10)
-    if len(ids)>0:
+    if len(ids)>0:        
         gt_boxes = gt_boxes[ids]
         classes = classes[ids]
     else:
         gt_boxes = np.zeros((0, 4))
         classes = np.zeros((0, 1))
-
+    agt_boxes = gt_boxes.copy()
     ids = filter_boxes(vgt_boxes, 10)
     if len(ids) > 0:
         vgt_boxes = vgt_boxes[ids]
@@ -198,7 +198,7 @@ def roidb_anchor_worker(data):
     valid_gtids = np.where(mov == 1)[0]
     invalid_boxes = gt_boxes[invalid_gtids, :]
     gt_boxes = gt_boxes[valid_gtids, :]
-    classes = classes[valid_gtids, :]
+    #classes = classes[valid_gtids, :]
 
     def _unmap(data, count, inds, fill=0):
         """" unmap a subset inds of data into original data of size count """
@@ -279,8 +279,8 @@ def roidb_anchor_worker(data):
     bbox_targets = bbox_targets[pids]
 
     fgt_boxes = -np.ones((100, 5))
-    if len(gt_boxes) > 0:
-        fgt_boxes[:min(len(gt_boxes), 100), :] = np.hstack((gt_boxes, classes))
+    if len(agt_boxes) > 0:
+        fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
 
     rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
     return rval
