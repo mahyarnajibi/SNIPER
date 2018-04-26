@@ -59,7 +59,7 @@ dataset:
   proposal: rpn
 TRAIN:
   lr: 0.015 #0.002 #0.0005
-  lr_step: '5'
+  lr_step: '5.33'
   warmup: true
   fp16: true
   warmup_lr: 0.0005 #0.00005
