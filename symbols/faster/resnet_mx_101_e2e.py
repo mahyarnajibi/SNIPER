@@ -192,7 +192,7 @@ class resnet_mx_101_e2e(Symbol):
             rpn_cls_prob = mx.sym.SoftmaxOutput(data=rpn_cls_score_reshape, label=rpn_label, multi_output=True,
                                                 normalization='valid', use_ignore=True, ignore_label=-1,
                                                 name="rpn_cls_prob", grad_scale=grad_scale)
-            rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges, datai5=im_info, datai6=data)
+            #rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges, datai5=im_info, datai6=data)
             #rpn_cls_probr = mx.sym.Reshape(data = rpn_cls_prob, shape=(0, 42, -1, 0), name="rpn_cls_score_reshape_back")
             conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
             conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
