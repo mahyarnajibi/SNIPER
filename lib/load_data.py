@@ -15,14 +15,22 @@ def load_gt_roidb(dataset_name, image_set_name, root_path, dataset_path, result_
 
 
 def load_proposal_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
-                        proposal='rpn', append_gt=True, flip=False,proposal_path='proposals'):
+                        proposal='rpn', append_gt=True, flip=False,proposal_path='proposals', only_gt=False,
+                        get_imdb=False):
     """ load proposal roidb (append_gt when training) """
     imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path)
 
-    gt_roidb = imdb.gt_roidb()
-    roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb, append_gt,proposal_path=proposal_path)
+    roidb = imdb.gt_roidb()
+
+    if not only_gt:
+        roidb = eval('imdb.' + proposal + '_roidb')(roidb, append_gt,proposal_path=proposal_path)
+
     if flip:
         roidb = imdb.append_flipped_images(roidb)
+
+    if get_imdb:
+        return roidb, imdb
+
     return roidb
 
 
