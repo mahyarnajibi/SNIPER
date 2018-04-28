@@ -76,6 +76,12 @@ class PrefetchingIter(mx.io.DataIter):
         for thread in self.prefetch_threads:
             thread.join()
 
+    def get_batch_size(self):
+        if not "get_batch_size" in dir(self.iters[0]):
+            raise NotImplementedError
+        else:
+            return self.iters[0].get_batch_size()
+
     @property
     def provide_data(self):
         """The name and shape of data provided by this iterator"""
