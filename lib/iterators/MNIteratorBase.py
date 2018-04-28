@@ -32,6 +32,9 @@ class MNIteratorBase(mx.io.DataIter):
         self.reset()
         self.get_batch()
 
+    def get_batch_size(self):
+        return self.batch_size
+
     def __len__(self):
         return len(self.inds)
     @property
@@ -40,7 +43,10 @@ class MNIteratorBase(mx.io.DataIter):
 
     @property
     def provide_label(self):
-        return [ (k, v.shape) for k, v in zip(self.label_name, self.label) ]
+        if self.label_name:
+            return [ (k, v.shape) for k, v in zip(self.label_name, self.label) ]
+        else:
+            return None
 
     @property
     def provide_data_single(self):
@@ -48,7 +54,10 @@ class MNIteratorBase(mx.io.DataIter):
 
     @property
     def provide_label_single(self):
-        return [ (k, v.shape) for k, v in zip(self.label_name, self.label) ]
+        if self.label_name:
+            return [ (k, v.shape) for k, v in zip(self.label_name, self.label) ]
+        else:
+            return None
 
 
 
