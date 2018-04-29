@@ -136,9 +136,9 @@ TRAIN:
   - 0.2
 TEST:
   # use rpn to generate proposal
-  HAS_RPN: false
+  HAS_RPN: true
   # size of images for each device
-  BATCH_IMAGES: 1
+  BATCH_IMAGES: 4
   # RPN proposal
   CXX_PROPOSAL: false
   RPN_NMS_THRESH: 0.7
@@ -152,4 +152,4 @@ TEST:
   PROPOSAL_MIN_SIZE: 0
   # RCNN nms
   NMS: 0.45
-  test_epoch: 7
+  TEST_EPOCH: 6
