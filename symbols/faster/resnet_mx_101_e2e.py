@@ -169,6 +169,7 @@ class resnet_mx_101_e2e(Symbol):
         else:
             data = mx.sym.Variable(name="data")
             im_info = mx.sym.Variable(name='im_info')
+            im_ids = mx.sym.Variable(name='im_ids')
         # shared convolutional layers
         conv_feat = self.resnetc4(data, fp16=cfg.TRAIN.fp16)
         # res5
@@ -294,7 +295,7 @@ class resnet_mx_101_e2e(Symbol):
             #     scales=tuple(cfg.network.ANCHOR_SCALES), ratios=tuple(cfg.network.ANCHOR_RATIOS), output_score='True',
             #     rpn_pre_nms_top_n=cfg.TEST.RPN_PRE_NMS_TOP_N, rpn_post_nms_top_n=cfg.TEST.RPN_POST_NMS_TOP_N,
             #     threshold=cfg.TEST.RPN_NMS_THRESH, rpn_min_size=cfg.TEST.RPN_MIN_SIZE)
-            group = mx.sym.Group([rois, cls_prob, bbox_pred])
+            group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids])
 
         self.sym = group
         return group
