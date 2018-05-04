@@ -90,7 +90,7 @@ def genchips(width, height, boxes, chipsize):
     chips.append([max(width - chipsize, 0), 0, width - 1, min(chipsize, height-1)])
     chips.append([0, max(height - chipsize, 0), min(chipsize, width-1), height-1])
     chips.append([max(width - chipsize, 0), max(height - chipsize, 0), width-1, height-1])
-    stride = 32
+    stride = np.random.randint(52,60)    
     for i in range(0, width - int(chipsize), stride):
         for j in range(0, height - int(chipsize), stride):
             x1 = i

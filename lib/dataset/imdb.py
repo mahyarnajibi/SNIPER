@@ -177,7 +177,7 @@ class IMDB(object):
             rpn_roidb = self.load_rpn_roidb(gt_roidb,proposal_path)
             roidb = IMDB.merge_roidbs(gt_roidb, rpn_roidb)
         else:
-            roidb = self.load_rpn_roidb(gt_roidb)
+            return gt_roidb
         return roidb
 
     def create_roidb_from_box_list(self, box_list, mapping_list, gt_roidb):
@@ -296,6 +296,13 @@ class IMDB(object):
         for i in range(entries):
             roi_rec = roidb[i]
             boxes = roi_rec['boxes'].copy()
+            group = roi_rec['crowd'].copy()
+            if len(group) > 0:
+                oldx1g = group[:, 0].copy()
+                oldx2g = group[:, 2].copy()
+                group[:, 0] = roi_rec['width'] - oldx2g - 1
+                group[:, 2] = roi_rec['width'] - oldx1g - 1                
+            
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = roi_rec['width'] - oldx2 - 1
@@ -305,12 +312,13 @@ class IMDB(object):
                      'height': roi_rec['height'],
                      'width': roi_rec['width'],
                      'boxes': boxes,
+                     'crowd': group,
                      'gt_classes': roidb[i]['gt_classes'],
-                     'gt_overlaps': roidb[i]['gt_overlaps'],
+                     #'gt_overlaps': roidb[i]['gt_overlaps'],
                      'max_classes': roidb[i]['max_classes'],
                      'max_overlaps': roidb[i]['max_overlaps'],
-                     'flipped': True,
-                     'proposal_scores': roidb[i]['proposal_scores']}
+                     'flipped': True}
+                     #'proposal_scores': roidb[i]['proposal_scores']}
 
             # if roidb has mask
             if 'cache_seg_inst' in roi_rec:

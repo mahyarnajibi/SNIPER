@@ -145,6 +145,7 @@ class resnet_mx_101_e2e(Symbol):
         return conv3 + shortcut
 
     def get_rpn(self, conv_feat, num_anchors):
+        conv_feat = mx.sym.Cast(data=conv_feat, dtype=np.float32)                
         rpn_conv = mx.sym.Convolution(
             data=conv_feat, kernel=(3, 3), pad=(1, 1), num_filter=512, name="rpn_conv_3x3")
         rpn_relu = mx.sym.Activation(data=rpn_conv, act_type="relu", name="rpn_relu")
@@ -156,7 +157,7 @@ class resnet_mx_101_e2e(Symbol):
 
     def get_symbol_rcnn(self, cfg, is_train=True):
         num_anchors = cfg.network.NUM_ANCHORS
-
+        num_classes = cfg.dataset.NUM_CLASSES
         # input init
         if is_train:
             data = mx.sym.Variable(name="data")
@@ -164,6 +165,7 @@ class resnet_mx_101_e2e(Symbol):
             rpn_bbox_target = mx.sym.Variable(name='bbox_target')
             rpn_bbox_weight = mx.sym.Variable(name='bbox_weight')
             gt_boxes = mx.sym.Variable(name='gt_boxes')
+            crowd_boxes = mx.sym.Variable(name='crowd_boxes')
             valid_ranges = mx.sym.Variable(name='valid_ranges')
             im_info = mx.sym.Variable(name='im_info')
         else:
@@ -174,10 +176,9 @@ class resnet_mx_101_e2e(Symbol):
         # res5
         relut = self.resnetc5(conv_feat, deform=True)
         relu1 = mx.symbol.Concat(*[conv_feat, relut], name='cat4')
-        if cfg.TRAIN.fp16:
-            relu1 = mx.sym.Cast(data=relu1, dtype=np.float32)        
+        relu1 = mx.sym.Cast(data=relu1, dtype=np.float32)        
 
-        rpn_cls_score, rpn_bbox_pred = self.get_rpn(relu1, num_anchors)
+        rpn_cls_score, rpn_bbox_pred = self.get_rpn(conv_feat, num_anchors)
 
         if is_train:
             # prepare rpn data
@@ -197,7 +198,7 @@ class resnet_mx_101_e2e(Symbol):
             conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
             conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
 
-            rois, label, bbox_target, bbox_weight = mx.sym.MultiProposalTarget(cls_prob=rpn_cls_prob, bbox_pred=rpn_bbox_pred, im_info=im_info, gt_boxes=gt_boxes, valid_ranges=valid_ranges, batch_size=cfg.TRAIN.BATCH_IMAGES, name='multi_proposal_target')
+            rois, label, bbox_target, bbox_weight = mx.sym.MultiProposalTarget(cls_prob=rpn_cls_prob, bbox_pred=rpn_bbox_pred, im_info=im_info, gt_boxes=gt_boxes, valid_ranges=valid_ranges, crowd_boxes=crowd_boxes, batch_size=cfg.TRAIN.BATCH_IMAGES, scales=cfg.network.ANCHOR_SCALES, name='multi_proposal_target')
             label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
             offset_t = mx.contrib.sym.DeformablePSROIPooling(name='offset_t', data=conv_new_1_relu, rois=rois, group_size=1, pooled_size=7,
                                                              sample_per_part=4, no_trans=True, part_size=7, output_dim=256, spatial_scale=0.0625)
@@ -213,7 +214,7 @@ class resnet_mx_101_e2e(Symbol):
 
             fc_new_2 = mx.sym.FullyConnected(name='fc_new_2', data=fc_new_1_relu, num_hidden=1024)
             fc_new_2_relu = mx.sym.Activation(data=fc_new_2, act_type='relu', name='fc_new_2_relu')
-            num_classes = 81
+
             num_reg_classes = 1
             cls_score = mx.sym.FullyConnected(name='cls_score', data=fc_new_2_relu, num_hidden=num_classes)
             bbox_pred = mx.sym.FullyConnected(name='bbox_pred', data=fc_new_2_relu, num_hidden=num_reg_classes * 4)            

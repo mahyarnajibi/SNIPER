@@ -524,6 +524,11 @@ class MNIteratorChips(MNIteratorBase):
             processed_roidb.append(tmp)
 
         processed_list = self.thread_pool.map_async(self.im_worker.worker, ims)
+        scales = cfg.NETWORK.ANCHOR_SCALES
+        ratios = cfg.NETWORK.ANCHOR_RATIOS
+        feat_stride = cfg.NETWORK.RPN_FEAT_STRIDE
+        feat_width = self.crop_size[1]/feat_stride
+        feat_height = self.crop_size[0]/feat_stride
 
 
         worker_data = []
@@ -536,7 +541,7 @@ class MNIteratorChips(MNIteratorBase):
             classes = processed_roidb[i]['max_classes'][gtids]
             cur_crop = processed_roidb[i]['crops'][cropid][0]
             im_scale = processed_roidb[i]['crops'][cropid][1]
-            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1)]
+            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1), scales, ratios, feat_stride, feat_width. feat_height]            
             worker_data.append(argw)
 
         t2 = time.time()
@@ -545,9 +550,7 @@ class MNIteratorChips(MNIteratorBase):
         all_labels = self.pool.map(roidb_anchor_worker, worker_data)
         t3 = time.time()
         #print 'q2 ' + str(t3 - t2)
-        A = 21
-        feat_height = 32
-        feat_width = 32
+        A = len(scales)*len(ratios)        
         labels = mx.nd.zeros((n_batch, A*feat_height*feat_width), mx.cpu(0))
         bbox_targets = mx.nd.zeros((n_batch, A*4, feat_height, feat_width), mx.cpu(0))
         bbox_weights = mx.nd.zeros((n_batch, A*4, feat_height, feat_width), mx.cpu(0))

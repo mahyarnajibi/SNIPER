@@ -29,7 +29,7 @@ def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
                             #default='configs/faster/dpn98_coco_chips.yml', type=str)
-    							default='configs/faster/rpn_res101_mx_e2e.yml',type=str)
+    							default='configs/faster/open_res101_mx_e2e.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
     arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         image_sets = [iset for iset in config.dataset.image_set.split('+')]
         roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path,
                                       config.dataset.dataset_path,
-                                      proposal=config.dataset.proposal, append_gt=True, flip=True,
+                                      proposal=config.dataset.proposal, append_gt=False, flip=True,
                                       result_path=config.output_path,
                                       proposal_path=config.proposal_path)
                   for image_set in image_sets]

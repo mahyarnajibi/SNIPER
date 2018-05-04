@@ -6,21 +6,6 @@ from bbox.bbox_transform import *
 from bbox.bbox_regression import expand_bbox_regression_targets
 from generate_anchor import generate_anchors
 
-scales = np.array([2, 4, 7, 10, 13, 16, 24], dtype=np.float32)
-ratios = (0.5, 1, 2)
-feat_stride = 16
-base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=list(scales))
-num_anchors = base_anchors.shape[0]
-feat_width = 32
-feat_height = 32
-shift_x = np.arange(0, feat_width) * feat_stride
-shift_y = np.arange(0, feat_height) * feat_stride
-shift_x, shift_y = np.meshgrid(shift_x, shift_y)
-shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
-A = num_anchors
-K = shifts.shape[0]
-all_anchors = base_anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
-all_anchors = all_anchors.reshape((K * A, 4))
 
 
 class im_worker(object):
@@ -147,8 +132,25 @@ def roidb_anchor_worker(data):
     gt_boxes = data[5]
     boxes = data[6]
     classes = data[7]
+    scales = data[8]
+    ratios = data[9]
+    feat_width = data[10]
+    feat_height = data[11]
+    feat_stride = data[12]
+    crowd = data[13]
     
-    anchors = all_anchors.copy()
+    base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=list(scales))
+    num_anchors = base_anchors.shape[0]
+    shift_x = np.arange(0, feat_width) * feat_stride
+    shift_y = np.arange(0, feat_height) * feat_stride
+    shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+    shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
+    
+    A = num_anchors
+    K = shifts.shape[0]
+    all_anchors = base_anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
+    anchors = all_anchors.reshape((K * A, 4))
+
     inds_inside = np.where((anchors[:, 0] >= -32) &
                            (anchors[:, 1] >= -32) &
                            (anchors[:, 2] < im_info[0]+32) &
@@ -164,6 +166,13 @@ def roidb_anchor_worker(data):
     gt_boxes[:, 1] = gt_boxes[:, 1] - cur_crop[1]
     gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
 
+    if len(crowd) > 0:
+        crowd[:, 0] = crowd[:, 0] - cur_crop[0]
+        crowd[:, 2] = crowd[:, 2] - cur_crop[0]
+        crowd[:, 1] = crowd[:, 1] - cur_crop[1]
+        crowd[:, 3] = crowd[:, 3] - cur_crop[1]
+        
+    
     vgt_boxes = boxes[np.intersect1d(gtids, nids)]
 
     vgt_boxes[:, 0] = vgt_boxes[:, 0] - cur_crop[0]
@@ -172,6 +181,8 @@ def roidb_anchor_worker(data):
     vgt_boxes[:, 3] = vgt_boxes[:, 3] - cur_crop[1]
 
     gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
+    if len(crowd) > 0:
+        crowd = clip_boxes(np.round(crowd * im_scale), im_info[:2])
     vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
 
     ids = filter_boxes(gt_boxes, 10)
@@ -181,6 +192,8 @@ def roidb_anchor_worker(data):
     else:
         gt_boxes = np.zeros((0, 4))
         classes = np.zeros((0, 1))
+
+        
     agt_boxes = gt_boxes.copy()
     ids = filter_boxes(vgt_boxes, 10)
     if len(ids) > 0:
@@ -280,9 +293,15 @@ def roidb_anchor_worker(data):
 
     fgt_boxes = -np.ones((100, 5))
     if len(agt_boxes) > 0:
-        fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
-
-    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
+        gts = np.hstack((agt_boxes, classes))
+        fgt_boxes[:min(len(gts), 100), :] = gts[:min(len(gts), 100), :]
+        
+    crowd_boxes = -np.ones((10, 5))
+    if len(crowd) > 0:
+        cbs = np.hstack((crowd, np.zeros((len(crowd), 1))))
+        crowd_boxes[:min(len(cbs), 10), :] = cbs[:min(len(cbs), 10), :]
+        
+    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes), mx.nd.array(crowd_boxes)]
     return rval
 
 def roidb_worker(data):
