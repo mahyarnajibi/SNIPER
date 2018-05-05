@@ -55,7 +55,7 @@ dataset:
   dataset_path: "./data/coco"
   image_set: train2014+val2014
   root_path: "./data"
-  test_image_set: test-dev2015
+  test_image_set: test-dev2015 #minival2014
   proposal: rpn
 TRAIN:
   lr: 0.015 #0.002 #0.0005
@@ -135,21 +135,67 @@ TRAIN:
   - 0.2
   - 0.2
 TEST:
-  # use rpn to generate proposal
+  # Maximum number of detections per image
+  # Set to -1 to disable
+  MAX_PER_IMAGE: 200
+
+  # Whether to do multi-scale inference
+  SCALES:
+  - !!python/tuple [1400, 2000]
+  - !!python/tuple [800, 1280]
+  - !!python/tuple [480, 512]
+
+  # Number of images per gpu for each scale
+  BATCH_IMAGES:
+  - 2
+  - 8
+  - 16
+
+  # Number of concurrent jobs used for inference
+  # if greater than 1, the roidb is distributed over
+  # concurrent jobs to increase throughput
+  CONCURRENT_JOBS: 2
+
+  # Ranges to specify valid proposal length
+  # in each of the test scale, square area
+  # would be computed based on the lengths
+  # to invalidate, -1 means unbounded, use
+  # -1 everywhere if you want to use all
+  VALID_RANGES:
+  - !!python/tuple [-1,90]
+  - !!python/tuple [32,180]
+  - !!python/tuple [75,-1]
+
+  # Use rpn to generate proposal
   HAS_RPN: true
-  # size of images for each device
-  BATCH_IMAGES: 4
+
   # RPN proposal
-  CXX_PROPOSAL: false
   RPN_NMS_THRESH: 0.7
   RPN_PRE_NMS_TOP_N: 6000
   RPN_POST_NMS_TOP_N: 300
   RPN_MIN_SIZE: 0
-  # RPN generate proposal
   PROPOSAL_NMS_THRESH: 0.7
   PROPOSAL_PRE_NMS_TOP_N: 20000
   PROPOSAL_POST_NMS_TOP_N: 2000
   PROPOSAL_MIN_SIZE: 0
+
   # RCNN nms
   NMS: 0.45
+  NMS_SIGMA: 0.55
   TEST_EPOCH: 6
+  VISUALIZATION_PATH: './debug/visualization'
+
+  # PROPOSAL EXTRACTION FLAGS
+  # If true only would extract proposals
+  EXTRACT_PROPOSALS: false
+
+  # The folder path to be used for saving proposals
+  PROPOSAL_SAVE_PATH: 'output/proposals'
+
+  # Number of proposals extracted per scale
+  # SCALES and BATCH_IMAGES above would be used to
+  # Specify scales and number of images per batch for
+  # each scale, no valid ranges would be applied for
+  # aggregating proposals
+  N_PROPOSAL_PER_SCALE: 300
+
