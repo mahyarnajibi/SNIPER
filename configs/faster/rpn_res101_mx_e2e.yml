@@ -55,7 +55,7 @@ dataset:
   dataset_path: "./data/coco"
   image_set: train2014+val2014
   root_path: "./data"
-  test_image_set: test-dev2015 #minival2014
+  test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
   lr: 0.015 #0.002 #0.0005
@@ -148,8 +148,8 @@ TEST:
   # Number of images per gpu for each scale
   BATCH_IMAGES:
   - 2
-  - 8
-  - 16
+  - 2
+  - 4
 
   # Number of concurrent jobs used for inference
   # if greater than 1, the roidb is distributed over
@@ -160,7 +160,7 @@ TEST:
   # in each of the test scale, square area
   # would be computed based on the lengths
   # to invalidate, -1 means unbounded, use
-  # -1 everywhere if you want to use all
+  # -1 everywhere if you want to have all proposals
   VALID_RANGES:
   - !!python/tuple [-1,90]
   - !!python/tuple [32,180]
@@ -183,7 +183,14 @@ TEST:
   NMS: 0.45
   NMS_SIGMA: 0.55
   TEST_EPOCH: 6
+
+  # VISUALIZATION CONFIG
   VISUALIZATION_PATH: './debug/visualization'
+  # Whether to visualize all intermediate scales
+  # before aggregation (when doing multi-scale inference)
+  # If False, only final detections are saved to 
+  # VISUALIZATION_PATH
+  VISUALIZE_INTERMEDIATE_SCALES: True
 
   # PROPOSAL EXTRACTION FLAGS
   # If true only would extract proposals
