@@ -14,15 +14,20 @@ from nms.nms import py_nms_wrapper, soft_nms
 from utils.visualization import visualize_dets
 from multiprocessing import Pool
 from tqdm import tqdm
+import math
+from multiprocessing import Pool
+from iterators.MNIteratorTest import MNIteratorTest
+import mxnet as mx
 
 class Tester(object):
     def __init__(self, module, imdb, roidb, test_iter, cfg, rcnn_output_names=None,rpn_output_names=None,
                  logger=None, batch_size=None):
         self.test_iter = test_iter
-        self.scale = test_iter.test_scale
+        
         # Make sure that iterator is instnace of Prefetching iterator
         if test_iter and not isinstance(test_iter, PrefetchingIter):
             self.test_iter = PrefetchingIter(self.test_iter)
+            self.scale = test_iter.test_scale
         self.cfg = cfg
         self.module = module
         if test_iter:
@@ -122,7 +127,7 @@ class Tester(object):
 
 
 
-    def aggregate(self, scale_cls_dets, vis=False, cache_name= 'cache'):
+    def aggregate(self, scale_cls_dets, vis=False, cache_name='cache'):
         n_scales = len(scale_cls_dets)
         assert n_scales== len(self.cfg.TEST.VALID_RANGES), 'A valid range should be specified for each test scale'
         all_boxes = [[[] for _ in range(self.num_images)] for _ in range(self.num_classes)]
@@ -157,20 +162,23 @@ class Tester(object):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
             if vis:
+                visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                if not os.path.isdir(visualization_path):
+                    os.makedirs(visualization_path)
                 import cv2
                 im = cv2.cvtColor(cv2.imread(self.roidb[i]['image']), cv2.COLOR_BGR2RGB)
                 visualize_dets(im,
                                [[]] + [all_boxes[j][i] for j in range(1, self.num_classes)],
                                1.0,
                                self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
-                               save_path=os.path.join(self.cfg.TEST.VISUALIZATION_PATH, '{}.png'.format(i)), 
+                               save_path=os.path.join(visualization_path, cache_name, '{}.png'.format(i)), 
                                transform=False)
 
         nms_pool.close()
         cache_path = os.path.join(self.result_path, cache_name)
         if not os.path.isdir(cache_path):
             os.makedirs(cache_path)
-        cache_path = os.path.join(cache_path, 'final_detections.pkl')
+        cache_path = os.path.join(cache_path, 'detections.pkl')
         self.show_info('Done! Saving detections into: {}'.format(cache_path))
         with open(cache_path, 'wb') as detfile:
             cPickle.dump(all_boxes, detfile)
@@ -217,10 +225,13 @@ class Tester(object):
                             keep = np.where(all_boxes[j][im_id][:, -1] >= image_thresh)[0]
                             all_boxes[j][im_id] = all_boxes[j][im_id][keep, :]
                 if vis:
+                    visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                    if not os.path.isdir(visualization_path):
+                        os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
                                    [[]]+[all_boxes[j][im_id] for j in range(1, self.num_classes)], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
-                                   save_path=os.path.join(self.cfg.TEST.VISUALIZATION_PATH,'{}.png'.format(im_id)))
+                                   save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
 
             data_counter += self.test_iter.get_batch_size()
             post_time += time.time() - stime
@@ -260,14 +271,17 @@ class Tester(object):
                 rem_boxes = cboxes[0:n_proposals, 0:4]
                 cls_dets = np.hstack((rem_boxes, rem_scores)).astype(np.float32)
                 if vis:
+                    visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                    if not os.path.isdir(visualization_path):
+                        os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
                                    [[]]+[cls_dets], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, ['__background__','object'], threshold=0.5,
-                                   save_path=os.path.join(self.cfg.TEST.VISUALIZATION_PATH,'{}.png'.format(im_id)))
+                                   save_path=os.path.join(visulization_path,'{}.png'.format(im_id)))
                 all_boxes[im_id] = cls_dets
             data_counter += self.test_iter.get_batch_size()
             post_time += time.time() - stime
-            self.show_info('Tester: {}/{}, Detection: {:.4f}s, Post Processing: {:.4}s'.format(data_counter, self.num_images,
+            self.show_info('Tester: {}/{}, Forward: {:.4f}s, Post Processing: {:.4}s'.format(data_counter, self.num_images,
                                                                                detect_time / data_counter,
                                                                                post_time / data_counter ))
         cache_path = os.path.join(self.result_path, cache_name)
@@ -278,3 +292,135 @@ class Tester(object):
         with open(cache_path, 'wb') as detfile:
             cPickle.dump(all_boxes, detfile)
         return all_boxes
+
+def detect_scale_worker(arguments):
+    [scale, nbatch, context, config, sym_def,\
+     roidb, imdb, arg_params, aux_params, vis] = arguments
+    print('Performing inference for scale: {}'.format(scale))
+    nGPUs= len(context)
+    sym_inst = sym_def(n_proposals=400, test_nbatch=nbatch)
+    sym = sym_inst.get_symbol_rcnn(config, is_train=False)
+    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=nGPUs * nbatch, nGPUs=nGPUs, threads=32,
+                               pad_rois_to=400, crop_size=None, test_scale=scale)
+    # Create the module
+    shape_dict = dict(test_iter.provide_data_single)
+    sym_inst.infer_shape(shape_dict)
+    mod = mx.mod.Module(symbol=sym,
+                        context=context,
+                        data_names=[k[0] for k in test_iter.provide_data_single],
+                        label_names=None)
+    mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
+    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+    # Create Tester
+    tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)
+    return tester.get_detections(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
+     evaluate=(len(config.TEST.BATCH_IMAGES) == 1), cache_name='dets_scale_{}x{}'.format(scale[0],scale[1]))
+
+def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, aux_params, vis):
+    if vis and config.TEST.CONCURRENT_JOBS>1:
+        print('Visualization is only allowed with 1 CONCURRENT_JOBS')
+        print('Setting CONCURRENT_JOBS to 1')
+        config.TEST.CONCURRENT_JOBS = 1
+    detections = []
+    if config.TEST.CONCURRENT_JOBS==1:
+        for nbatch, scale in zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES):
+            detections.append(detect_scale_worker([scale, nbatch, context, config, sym_def, \
+                roidb, imdb, arg_params, aux_params, vis]))
+    else:
+        im_per_job = int(math.ceil(float(len(roidb))/config.TEST.CONCURRENT_JOBS))
+        roidbs = []
+        pool = Pool(config.TEST.CONCURRENT_JOBS)
+        for i in range(config.TEST.CONCURRENT_JOBS):
+            roidbs.append([roidb[j] for j in range(im_per_job*i, min(im_per_job*(i+1), len(roidb)))])
+
+        for i, (nbatch, scale) in enumerate(zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES)):
+            parallel_args = []
+            for j in range(config.TEST.CONCURRENT_JOBS):
+                parallel_args.append([scale, nbatch, context, config, sym_def, \
+                roidbs[j], imdb, arg_params, aux_params, vis])
+                    
+            detection_list = pool.map(detect_scale_worker, parallel_args)
+            tmp_dets = detection_list[0]
+            for i in range(1,len(detection_list)):
+		for j in range(imdb.num_classes):
+                	tmp_dets[j] += detection_list[i][j]
+            detections.append(tmp_dets)
+        pool.close()
+    #import pdb;pdb.set_trace()
+    if len(config.TEST.SCALES) > 1:
+        tester = Tester(None, imdb, roidb, None, cfg=config, batch_size=nbatch)
+        all_boxes = tester.aggregate(detections, vis=vis, cache_name='dets_final') if len(config.TEST.SCALES) > 1 \
+                                            else detections[0]
+    print('Evaluating detections...')
+    imdb.evaluate_detections(all_boxes)
+    print('All done!')
+
+def proposal_scale_worker(arguments):
+    [scale, nbatch, context, config, sym_def,\
+     roidb, imdb, arg_params, aux_params, vis] = arguments
+    print('Performing inference for scale: {}'.format(scale))
+    nGPUs= len(context)
+    sym_inst = sym_def(n_proposals=400, test_nbatch=nbatch)
+    sym = sym_inst.get_symbol_rpn(config, is_train=False)
+    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=nGPUs * nbatch, nGPUs=nGPUs, threads=32,
+                               pad_rois_to=400, crop_size=None, test_scale=scale)
+    # Create the module
+    shape_dict = dict(test_iter.provide_data_single)
+    sym_inst.infer_shape(shape_dict)
+    mod = mx.mod.Module(symbol=sym,
+                        context=context,
+                        data_names=[k[0] for k in test_iter.provide_data_single],
+                        label_names=None)
+    mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
+    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+    # Create Tester
+    tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)
+    return tester.extract_proposals(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
+        cache_name='props_scale_{}x{}'.format(scale[0],scale[1]))
+
+def imdb_proposal_extraction_wrapper(sym_def, config, imdb, roidb, context, arg_params, aux_params, vis):
+    if vis and config.TEST.CONCURRENT_JOBS>1:
+        print('Visualization is only allowed with 1 CONCURRENT_JOBS')
+        print('Setting CONCURRENT_JOBS to 1')
+        config.TEST.CONCURRENT_JOBS = 1
+
+    proposals = []
+    if config.TEST.CONCURRENT_JOBS==1:
+        for nbatch, scale in zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES):
+            proposals.append(proposal_scale_worker([scale, nbatch, context, config, sym_def, \
+                roidb, imdb, arg_params, aux_params, vis]))
+    else:
+        im_per_job = int(math.ceil(float(len(roidb))/config.TEST.CONCURRENT_JOBS))
+        roidbs = []
+        pool = Pool(config.TEST.CONCURRENT_JOBS)
+        for i in range(config.TEST.CONCURRENT_JOBS):
+            roidbs.append([roidb[j] for j in range(im_per_job*i, min(im_per_job*(i+1), len(roidb)))])
+
+        for i, (nbatch, scale) in enumerate(zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES)):
+            parallel_args = []
+            for j in range(config.TEST.CONCURRENT_JOBS):
+                parallel_args.append([scale, nbatch, context, config, sym_def, \
+                roidbs[j], imdb, arg_params, aux_params, vis])
+                    
+            proposal_list = pool.map(proposal_scale_worker, parallel_args)
+            tmp_props = []
+            for prop in proposal_list:
+                tmp_props += prop
+            proposals.append(tmp_props)
+        pool.close()
+
+    if not os.path.isdir(config.TEST.PROPOSAL_SAVE_PATH):
+            os.makedirs(config.TEST.PROPOSAL_SAVE_PATH)
+
+    final_proposals = proposals[0]
+
+    if len(proposals) > 1:
+        for i in range(len(proposals[0])):
+            for j in range(1, len(proposals)):
+                final_proposals[i] = np.vstack((final_proposals[i], proposals[j][i]))
+    save_path = os.path.join(config.TEST.PROPOSAL_SAVE_PATH, '{}_{}_rpn.pkl'.format(config.dataset.dataset,
+                                                                                        config.dataset.test_image_set))
+    with open(save_path, 'wb') as file:
+         cPickle.dump(final_proposals, file)    
+
+    print('All done!')
