@@ -3,7 +3,6 @@ import mxnet as mx
 from lib.symbol import Symbol
 from operator_py.box_annotator_ohem import *
 from operator_py.debug_data import *
-from operator_py.proposal import *
 
 import numpy as np
 
