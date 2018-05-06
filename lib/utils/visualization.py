@@ -13,8 +13,9 @@ def transform_im(im, pixel_means):
     return im.astype(np.uint8)
 
 
-def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, save_path='debug.png'):
-    im = transform_im(im, np.array(pixel_means)[[2, 1, 0]])
+def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, save_path='debug.png', transform=True):
+    if transform:
+        im = transform_im(im, np.array(pixel_means)[[2, 1, 0]])
     plt.imshow(im)
     for j, name in enumerate(class_names):
         if name == '__background__': continue
