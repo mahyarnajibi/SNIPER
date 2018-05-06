@@ -1,14 +1,17 @@
 import cv2
 import mxnet as mx
 import numpy as np
-
+from nms.nms import py_nms_wrapper, soft_nms
 class im_worker(object):
-    def __init__(self, cfg, crop_size=None):
+    def __init__(self, cfg, crop_size=None, target_size=None):
         self.cfg = cfg
         self.crop_size = crop_size
+        if not target_size:
+            self.target_size = self.cfg.SCALES[0]
+        else:
+            self.target_size = target_size
 
     def worker(self, data):
-
         imp = data[0]
         flipped = data[2]
         pixel_means = self.cfg.network.PIXEL_MEANS
@@ -26,8 +29,8 @@ class im_worker(object):
         else:
             max_size = data[1]
             # Compute scale based on config
-            min_target_size = self.cfg.SCALES[0][0]
-            max_target_size = self.cfg.SCALES[0][1]
+            min_target_size = self.target_size[0]
+            max_target_size = self.target_size[1]
             im_size_min = np.min(im.shape[0:2])
             im_size_max = np.max(im.shape[0:2])
             scale = float(min_target_size) / float(im_size_min)
@@ -51,4 +54,7 @@ class im_worker(object):
         if self.crop_size:
             return mx.nd.array(rim, dtype='float32')
         else:
-            return mx.nd.array(rim, dtype='float32'), scale
+            return mx.nd.array(rim, dtype='float32'), scale, (im.shape[0],im.shape[1])
+            
+def nms_worker(worker_args):
+    return soft_nms(worker_args[0], sigma=worker_args[1], method=2)
