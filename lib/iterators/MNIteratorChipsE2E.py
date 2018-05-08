@@ -259,7 +259,7 @@ class MNIteratorChips(MNIteratorBase):
         self.bbox_means = np.tile(np.array(config.TRAIN.BBOX_MEANS), (self.num_classes, 1))
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
         self.data_name = ['data', 'valid_ranges', 'im_info']
-        self.label_name = ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
+        self.label_name = ['label', 'bbox_target', 'bbox_weight', 'gt_boxes', 'crowd_boxes']
         self.pool = Pool(64)
         self.context_size = 320
         self.epiter = 0
@@ -370,11 +370,11 @@ class MNIteratorChips(MNIteratorBase):
         srange = np.zeros((len(processed_roidb), 2))
         chipinfo = np.zeros((len(processed_roidb), 3))
 
-        scales = cfg.NETWORK.ANCHOR_SCALES
-        ratios = cfg.NETWORK.ANCHOR_RATIOS
-        feat_stride = cfg.NETWORK.RPN_FEAT_STRIDE
+        scales = self.cfg.network.ANCHOR_SCALES
+        ratios = self.cfg.network.ANCHOR_RATIOS
+        feat_stride = self.cfg.network.RPN_FEAT_STRIDE
         feat_width = self.crop_size[1]/feat_stride
-        feat_height = self.crop_size[0]/feat_stride
+        feat_height = self.crop_size[0]/feat_stride        
         
         for i in range(len(processed_roidb)):
             cropid = cropids[i]
@@ -399,9 +399,9 @@ class MNIteratorChips(MNIteratorBase):
             chipinfo[i, 0] = height
             chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale
+            crowd = np.zeros((0, 4))
 
-            
-            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1), scales, ratios, feat_stride, feat_width. feat_height]
+            argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes.reshape(len(classes), 1), scales, ratios, feat_width, feat_height, feat_stride, crowd]            
             worker_data.append(argw)
 
         t2 = time.time()
@@ -415,7 +415,7 @@ class MNIteratorChips(MNIteratorBase):
         bbox_targets = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
         bbox_weights = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
         gt_boxes = -mx.nd.ones((n_batch, 100, 5))
-
+        crowd_boxes = -mx.nd.ones((n_batch, 10, 5))
 
         for i in range(len(all_labels)):
             labels[i] = all_labels[i][0][0]
@@ -424,6 +424,7 @@ class MNIteratorChips(MNIteratorBase):
                 bbox_targets[i][pids[0], pids[1], pids[2]] = all_labels[i][1]
                 bbox_weights[i][pids[0], pids[1], pids[2]] = 1.0
             gt_boxes[i] = all_labels[i][3]
+            crowd_boxes[i] = all_labels[i][4]            
         t4 = time.time()
         # print 'q3 ' + str(t4 - t3)
 
@@ -435,7 +436,7 @@ class MNIteratorChips(MNIteratorBase):
         # print 'q4 ' + str(t5 - t4)
         # self.visualize(im_tensor, rois, labels)
         self.data = [im_tensor, mx.nd.array(srange), mx.nd.array(chipinfo)]
-        self.label = [labels, bbox_targets, bbox_weights, gt_boxes]
+        self.label = [labels, bbox_targets, bbox_weights, gt_boxes, crowd_boxes]
         t6 = time.time()
         # print 'convert ' + str(t6 - t5)
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(),

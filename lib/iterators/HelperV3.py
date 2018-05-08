@@ -21,7 +21,9 @@ class im_worker(object):
         pixel_means = self.cfg.network.PIXEL_MEANS
 
         im = cv2.imread(imp, cv2.IMREAD_COLOR)
-        
+        if im is None:
+            im = cv2.imread(imp, cv2.IMREAD_COLOR)            
+            print (imp)
         # Crop the image
         crop_scale = crop[1]
         if flipped:
@@ -35,9 +37,11 @@ class im_worker(object):
         # Resize the crop
         if int(origim.shape[0]*0.625)==0 or int(origim.shape[1]*0.625)==0:
             print 'Something wrong3'
+            print (imp)
         try:
             im = cv2.resize(origim, None, None, fx=crop_scale, fy=crop_scale, interpolation=cv2.INTER_LINEAR)
         except:
+            print (imp)            
             print 'Something wrong4'
         
         rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)

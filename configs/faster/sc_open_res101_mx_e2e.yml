@@ -17,8 +17,6 @@ default:
   kvstore: device
 network:
   deform: true
-  pretrained: "./data/pretrained_model/CRCNN"  
-  pretrained_epoch: 1
   PIXEL_MEANS:
   - 103.939
   - 116.779
@@ -53,20 +51,20 @@ dataset:
   proposal: rpn
 TRAIN:
   lr: 0.075 #0.002 #0.0005
-  lr_step: '5,12'
-  warmup: false
+  lr_step: '6,12'
+  warmup: true
   fp16: true
   warmup_lr: 0.0005 #0.00005
   wd: 0.0001
   scale: 100.0
   warmup_step: 9000 #4000 #1000
   begin_epoch: 0
-  end_epoch: 14 #9
+  end_epoch: 15 #9
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false
   # whether flip image
-  FLIP: true
+  FLIP: false
   # whether shuffle image
   SHUFFLE: true
   # whether use OHEM

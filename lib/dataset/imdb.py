@@ -296,7 +296,10 @@ class IMDB(object):
         for i in range(entries):
             roi_rec = roidb[i]
             boxes = roi_rec['boxes'].copy()
-            group = roi_rec['crowd'].copy()
+            if 'crowd' in roi_rec:
+                group = roi_rec['crowd'].copy()
+            else:
+                group = np.zeros((0, 4))
             if len(group) > 0:
                 oldx1g = group[:, 0].copy()
                 oldx2g = group[:, 2].copy()

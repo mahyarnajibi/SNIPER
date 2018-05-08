@@ -193,8 +193,7 @@ class resnet_mx_101_e2e(Symbol):
             rpn_cls_prob = mx.sym.SoftmaxOutput(data=rpn_cls_score_reshape, label=rpn_label, multi_output=True,
                                                 normalization='valid', use_ignore=True, ignore_label=-1,
                                                 name="rpn_cls_prob", grad_scale=grad_scale)
-            #rpn_cls_prob = mx.sym.Custom(op_type='debug_data', datai1=rpn_cls_prob, datai2=rpn_bbox_target, datai3=gt_boxes, datai4=valid_ranges, datai5=im_info, datai6=data)
-            #rpn_cls_probr = mx.sym.Reshape(data = rpn_cls_prob, shape=(0, 42, -1, 0), name="rpn_cls_score_reshape_back")
+
             conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
             conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
 
@@ -224,11 +223,10 @@ class resnet_mx_101_e2e(Symbol):
             else:
                 grad_scale = 1.0
 
-            cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
-                                            grad_scale=grad_scale)
+            cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, use_ignore=True, ignore_label=-1, grad_scale=grad_scale / (300.0*16.0))
             bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                         data=(bbox_pred - bbox_target))
-            bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188.0*16.0))
+            bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (300.0*16.0))
             rcnn_label = label
 
             # reshape output

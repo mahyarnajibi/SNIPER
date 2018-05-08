@@ -29,10 +29,10 @@ def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
                             #default='configs/faster/dpn98_coco_chips.yml', type=str)
-    							default='configs/faster/open_res101_mx_e2e.yml',type=str)
+    							default='configs/faster/sc_open_res101_mx_e2e.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
-    arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
+    arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.95, type=float)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
                             default='CRCNN', type=str)
     arg_parser.add_argument('--threadid', dest='threadid', help='Prefix used for snapshotting the network',
@@ -77,17 +77,6 @@ if __name__ == '__main__':
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
-    #for data in train_iter:
-    # 	print 'Yes'
-    #import time
-    #t1 = time.time()
-    #for i,batch in enumerate(train_iter):
-    #    t2 = time.time() - t1
-    #    if i % 100 == 0:
-    #        print i
-    #    t1 = time.time()
-    # exit(0)
-
 
     print('Initializing the model...')
     sym_inst = resnet_mx_101_e2e(n_proposals=400, momentum=args.momentum)
@@ -96,21 +85,15 @@ if __name__ == '__main__':
     # Creating the Logger
     logger, output_path = create_logger(config.output_path, args.cfg, config.dataset.image_set)
 
-    # get list of fixed parameters
-    fixed_param_names = get_fixed_param_names(config.network.FIXED_PARAMS, sym)
-
     # Creating the module
     mod = mx.mod.Module(symbol=sym,
                         context=context,
                         data_names=[k[0] for k in train_iter.provide_data_single],
-                        label_names=[k[0] for k in train_iter.provide_label_single],
-                        fixed_param_names=fixed_param_names)
+                        label_names=[k[0] for k in train_iter.provide_label_single])
+
 
     shape_dict = dict(train_iter.provide_data_single + train_iter.provide_label_single)
     sym_inst.infer_shape(shape_dict)
-    arg_params, aux_params = load_param(config.network.pretrained, config.network.pretrained_epoch, convert=True)
-
-    #sym_inst.init_weight_rcnn(config, arg_params, aux_params)
 
     # Creating the metrics
     eval_metric = metric.RPNAccMetric()
@@ -144,4 +127,4 @@ if __name__ == '__main__':
     mod.fit(train_iter, optimizer='sgd', optimizer_params=optimizer_params,
             eval_metric=eval_metrics, num_epoch=config.TRAIN.end_epoch, kvstore=config.default.kvstore,
             batch_end_callback=batch_end_callback,
-            epoch_end_callback=epoch_end_callback, arg_params=arg_params, aux_params=aux_params)
+            epoch_end_callback=epoch_end_callback)

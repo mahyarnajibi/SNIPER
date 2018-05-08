@@ -5,12 +5,12 @@ os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 os.environ['MXNET_ENABLE_GPU_P2P'] = '1'
 
 import init
-from iterators.MNIteratorChipsE2E2SNoNeg import MNIteratorChips
+from iterators.MNIteratorChipsE2E import MNIteratorChips
 from load_model import load_param
 import sys
 
 sys.path.insert(0, 'lib')
-from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
+from symbols.faster.mobilenetv2 import mobilenetv2, checkpoint_callback
 #from symbols.faster.symbol_dpn_98_cls import symbol_dpn_98_cls, checkpoint_callback
 from configs.faster.default_configs import config, update_config, get_opt_params
 import mxnet as mx
@@ -29,7 +29,7 @@ def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
                             #default='configs/faster/dpn98_coco_chips.yml', type=str)
-    							default='configs/faster/rpn_res101_mx_e2e.yml',type=str)
+    			    default='configs/faster/mobilenet.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
     arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
@@ -91,7 +91,8 @@ if __name__ == '__main__':
 
 
     print('Initializing the model...')
-    sym_inst = resnet_mx_101_e2e(n_proposals=400, momentum=args.momentum)
+    #sym_inst = resnet_mx_101_e2e(n_proposals=400, momentum=args.momentum)
+    sym_inst = mobilenetv2()
     sym = sym_inst.get_symbol_rcnn(config)
 
     # Creating the Logger

@@ -1,8 +1,8 @@
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_open_resnet101_mx_bn"
+output_path: "./output/chips_mobilenet"
 proposal_path: "proposals"
-symbol: resnet_mx_101_e2e
+symbol: mobilenetv2
 gpus: '0,1,2,3,4,5,6,7'
 #gpus: '0'
 CLASS_AGNOSTIC: true
@@ -17,15 +17,15 @@ default:
   kvstore: device
 network:
   deform: true
-  pretrained: "./data/pretrained_model/CRCNN"  
-  pretrained_epoch: 1
+  pretrained: "./data/pretrained_model/mobilenetv2"
+  pretrained_epoch: 0
   PIXEL_MEANS:
   - 103.939
   - 116.779
   - 123.68
   IMAGE_STRIDE: 0
-  RCNN_FEAT_STRIDE: 16
-  RPN_FEAT_STRIDE: 16
+  RCNN_FEAT_STRIDE: 32
+  RPN_FEAT_STRIDE: 32
   FIXED_PARAMS:
 
   FIXED_PARAMS_SHARED:
@@ -38,30 +38,31 @@ network:
   - 1
   - 2
   ANCHOR_SCALES:
-  - 3
-  - 6
+  - 1
+  - 2
+  - 4
+  - 8
   - 12
-  - 24
-  NUM_ANCHORS: 12
+  NUM_ANCHORS: 15
 dataset:
-  NUM_CLASSES: 602
-  dataset: openimages
-  dataset_path: "./data/openimages"
-  image_set: train
+  NUM_CLASSES: 81
+  dataset: coco
+  dataset_path: "./data/coco"
+  image_set: train2014+val2014
   root_path: "./data"
-  test_image_set: val
+  test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
-  lr: 0.075 #0.002 #0.0005
-  lr_step: '5,12'
-  warmup: false
+  lr: 0.025 #0.002 #0.0005
+  lr_step: '5.33'
+  warmup: true
   fp16: true
   warmup_lr: 0.0005 #0.00005
   wd: 0.0001
-  scale: 100.0
+  scale: 100.0 
   warmup_step: 9000 #4000 #1000
   begin_epoch: 0
-  end_epoch: 14 #9
+  end_epoch: 7 #9
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false
@@ -72,7 +73,7 @@ TRAIN:
   # whether use OHEM
   ENABLE_OHEM: true
   # size of images for each device, 2 for rcnn, 1 for rpn and e2e
-  BATCH_IMAGES: 16
+  BATCH_IMAGES: 42 
   # e2e changes behavior of anchor loader and metric
   END2END: true
   # group images with similar aspect ratio
@@ -99,8 +100,8 @@ TRAIN:
   RPN_BATCH_SIZE: 256
   # rpn anchors sampling params
   RPN_FG_FRACTION: 0.5
-  RPN_POSITIVE_OVERLAP: 0.5
-  RPN_NEGATIVE_OVERLAP: 0.4
+  RPN_POSITIVE_OVERLAP: 0.7
+  RPN_NEGATIVE_OVERLAP: 0.3
   RPN_CLOBBER_POSITIVES: false
   # rpn bounding box regression params
   RPN_BBOX_WEIGHTS:
