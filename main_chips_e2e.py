@@ -1,5 +1,7 @@
+# setup matplotlib to use Agg
+import matplotlib
+matplotlib.use('Agg')
 import os
-
 os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 #os.environ['MXNET_ENABLE_GPU_P2P'] = '1'
@@ -59,9 +61,10 @@ if __name__ == '__main__':
                                       config.dataset.dataset_path,
                                       proposal=config.dataset.proposal, append_gt=True, flip=True,
                                       result_path=config.output_path,
-                                      proposal_path=config.proposal_path)
+                                      proposal_path=config.proposal_path, get_imdb=True)
                   for image_set in image_sets]
-
+        imdbs = [r[1] for r in roidbs]
+        roidbs = [r[0] for r in roidbs]
         roidb = merge_roidb(roidbs)
         # roidb = remove_small_boxes(roidb,max_scale=3,min_size=2)
         roidb = filter_roidb(roidb, config)
@@ -76,18 +79,6 @@ if __name__ == '__main__':
     train_iter = MNIteratorChips(roidb=roidb, config=config, batch_size=batch_size, nGPUs=nGPUs, threads=32,
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
-
-    #for data in train_iter:
-    # 	print 'Yes'
-    """import time
-    t1 = time.time()
-    for i,batch in enumerate(train_iter):
-        import pdb
-        pdb.set_trace()
-        t2 = time.time() - t1
-        print 128.0 / t2"""
-    #    t1 = time.time()
-    # exit(0)
 
 
     print('Initializing the model...')
@@ -120,7 +111,6 @@ if __name__ == '__main__':
     rceval_metric = metric.RCNNAccMetric(config)
     rccls_metric  = metric.RCNNLogLossMetric(config)
     rcbbox_metric = metric.RCNNL1LossCRCNNMetric(config)
-
     eval_metrics = mx.metric.CompositeEvalMetric()
 
     eval_metrics.add(eval_metric)
@@ -129,8 +119,18 @@ if __name__ == '__main__':
     eval_metrics.add(rceval_metric)
     eval_metrics.add(rccls_metric)
     eval_metrics.add(rcbbox_metric)
-
-    # eval_metrics.add(vis_metric)
+    fit_vis_params = {}
+    if config.TRAIN.visualize:
+        if not os.path.isdir(config.TRAIN.visualization_path):
+            os.makedirs(config.TRAIN.visualization_path)
+        vis_metric = metric.VisMetric(config)
+        eval_metrics.add(vis_metric)
+        fit_vis_params = {'vis': True,
+             'prefix': os.path.basename(os.path.normpath(config.output_path)),
+             'bbox_stds': np.array(config.TRAIN.BBOX_STDS),
+             'vis_freq': config.TRAIN.visualization_freq,
+             'class_names': imdbs[0].classes,
+             'pixel_means': np.array(config.network.PIXEL_MEANS)}
 
     optimizer_params = get_optim_params(config, len(train_iter), batch_size)
     print ('Optimizer params: {}'.format(optimizer_params))
@@ -145,4 +145,4 @@ if __name__ == '__main__':
     mod.fit(train_iter, optimizer='sgd', optimizer_params=optimizer_params,
             eval_metric=eval_metrics, num_epoch=config.TRAIN.end_epoch, kvstore=config.default.kvstore,
             batch_end_callback=batch_end_callback,
-            epoch_end_callback=epoch_end_callback, arg_params=arg_params, aux_params=aux_params)
+            epoch_end_callback=epoch_end_callback, arg_params=arg_params, aux_params=aux_params, **fit_vis_params)
