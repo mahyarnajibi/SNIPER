@@ -30,18 +30,8 @@ def get_rcnn_names(cfg):
 
 
 def get_rcnn_names_4vis(cfg):
-    pred = ['rcnn_cls_prob', 'rcnn_bbox_loss']
-    label = ['rcnn_label', 'rcnn_bbox_target', 'rcnn_bbox_weight']
-    if cfg.TRAIN.ENABLE_OHEM or cfg.TRAIN.END2END:
-        pred.append('rcnn_label')
-        pred.append('rcnn_bbox_pred')
-        #pred.append('rcnn_cls_probb')
-        #pred.append('rcnn_bbox_lossb')
-
-    if cfg.TRAIN.END2END:
-        rpn_pred, rpn_label = get_rpn_names()
-        pred = rpn_pred + pred
-        label = rpn_label
+    pred,label = get_rcnn_names(cfg)
+    pred += ['rcnn_bbox_pred', 'rois', 'rcnn_label']
     return pred, label
 
 
@@ -268,19 +258,22 @@ class RCNNL1LossCRCNNMetric(mx.metric.EvalMetric):
 class VisMetric(mx.metric.EvalMetric):
     def __init__(self, cfg):
         super(VisMetric, self).__init__('Vis')
-        self.freq = 1
-        self.root_path = 'debug/visualization'
+        self.freq = cfg.TRAIN.visualization_freq
+        self.root_path = cfg.TRAIN.visualization_path
         self.pred, self.label = get_rcnn_names_4vis(cfg)
         self.nGPU = len(cfg.gpus.split(','))
+        self.file_name = os.path.basename(os.path.normpath(cfg.output_path))
 
     def update(self, labels, preds):
-
         if self.num_inst % self.freq == 0 and self.num_inst%self.nGPU==0:
             pred = preds[self.pred.index('rcnn_cls_prob')].asnumpy()
             bbox_pred = preds[self.pred.index('rcnn_bbox_pred')].asnumpy()
-            path = os.path.join(self.root_path, 'dump_preds.pkl')
+            labels = preds[self.pred.index('rcnn_label')].asnumpy()
+            rois = preds[self.pred.index('rois')].asnumpy()
+            inds = np.where(rois[:, 0] == 0)[0]
+            path = os.path.join(self.root_path, 'dump_preds_{}.pkl'.format(self.file_name))
             with open(path,'wb') as f:
-                pickle.dump((pred[0],bbox_pred[0]),f)
+                pickle.dump((pred[0], bbox_pred[inds], rois[inds], labels[inds]),f)
        
         self.num_inst += 1
         self.sum_metric = 0
