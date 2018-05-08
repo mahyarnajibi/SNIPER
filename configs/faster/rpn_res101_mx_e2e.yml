@@ -4,7 +4,7 @@ output_path: "./output/chips_rpn_resnet101_mx_bn"
 proposal_path: "proposals"
 symbol: resnet_mx_101_e2e
 gpus: '0,1,2,3,4,5,6,7'
-#gpus: '0'
+
 CLASS_AGNOSTIC: true
 startMSTR: 9
 IS_DPN: false
@@ -58,6 +58,15 @@ dataset:
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
+  # Visualization flags
+  # Whether to visualize intermediate training samples
+  visualize: true
+  # Path to save the visualization images
+  visualization_path: 'debug/visualization'
+  # Number of epochs between each visualization
+  visualization_freq: 100
+  
+
   lr: 0.015 #0.002 #0.0005
   lr_step: '5.33'
   warmup: true
