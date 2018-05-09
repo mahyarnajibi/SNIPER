@@ -162,7 +162,7 @@ class Tester(object):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
             if vis:
-                visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                visualization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
                 if not os.path.isdir(visualization_path):
                     os.makedirs(visualization_path)
                 import cv2
@@ -225,7 +225,7 @@ class Tester(object):
                             keep = np.where(all_boxes[j][im_id][:, -1] >= image_thresh)[0]
                             all_boxes[j][im_id] = all_boxes[j][im_id][keep, :]
                 if vis:
-                    visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                    visualization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
@@ -271,13 +271,13 @@ class Tester(object):
                 rem_boxes = cboxes[0:n_proposals, 0:4]
                 cls_dets = np.hstack((rem_boxes, rem_scores)).astype(np.float32)
                 if vis:
-                    visulization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
+                    visualization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
                                    [[]]+[cls_dets], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, ['__background__','object'], threshold=0.5,
-                                   save_path=os.path.join(visulization_path,'{}.png'.format(im_id)))
+                                   save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
                 all_boxes[im_id] = cls_dets
             data_counter += self.test_iter.get_batch_size()
             post_time += time.time() - stime
