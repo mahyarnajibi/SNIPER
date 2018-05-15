@@ -82,39 +82,6 @@ class IMDB(object):
         """
         return self.image_path_from_index(self.image_set_index[index])
 
-    """def load_rpn_data(self, full=False):
-        #rpn_file = os.path.join('proposals/r100ep1/', self.name + '_rpn.pkl')
-        #rpn_file = os.path.join('proposals/r50ep3/', self.name + '_rpn.pkl')
-        rpn_file = os.path.join('proposals/dpn92/', self.name + '_rpn.pkl')
-
-        if self.cfg.SCALES[0][0] == 480:
-            start = 600
-            end = 900
-        elif self.cfg.SCALES[0][0] == 800:
-            start = 0
-            end = 300
-        else:
-            start = 300
-            end = 600
-
-        print 'loading {}'.format(rpn_file)
-        assert os.path.exists(rpn_file), 'rpn data not found at {}'.format(rpn_file)
-        with open(rpn_file, 'rb') as f:
-            box_list = cPickle.load(f)
-
-        boxes = []
-        
-        for i in range(len(box_list)):
-            tboxes = np.array(box_list[i][start:end, :])
-            boxes.append(tboxes)
-        #p = Pool(32)
-        #keeps = p.map(nmsp, ttboxes)
-        #print('nms done')
-        #for i in range(len(box_list)):
-        #    boxes.append(ttboxes[i][keeps[i]])
-        #boxes.append(ttboxes[i][keeps[i]])
-        #p.close()
-        return boxes, maps"""
 
     def load_rpn_data(self, proposal_path='proposals', full=False):
         rpn_file = os.path.join(proposal_path,'dpn92',self.name + '_rpn.pkl')
@@ -202,28 +169,20 @@ class IMDB(object):
                 scores = boxes[:, -1]
                 boxes = boxes[:, :4]
 
-            #if gt_roidb[i]['boxesc'].size > 0:
-            #    dc_boxes = gt_roidb[i]['boxesc']
-            #    dc_overlaps = ignore_overlaps(boxes.astype(np.float), dc_boxes.astype(np.float))
-            #    maxes = dc_overlaps.max(axis=1)
-            #    I = np.where(maxes < 0.6)[0]
-            #    boxes = boxes[I]
 
             num_boxes = boxes.shape[0]
             overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
             if gt_roidb is not None and gt_roidb[i]['boxes'].size > 0:
                 gt_boxes = gt_roidb[i]['boxes']
                 gt_classes = gt_roidb[i]['gt_classes']
-                #boxes = np.vstack((gt_boxes[:, :4], boxes))
-                # n boxes and k gt_boxes => n * k overlap
+
                 gt_overlaps = bbox_overlaps(boxes.astype(np.float), gt_boxes.astype(np.float))
                 # for each box in n boxes, select only maximum overlap (must be greater than zero)
                 argmaxes = gt_overlaps.argmax(axis=1)
                 maxes = gt_overlaps.max(axis=1)
                 I = np.where(maxes > 0)[0]
                 overlaps[I, gt_classes[argmaxes[I]]] = maxes[I]
-                #import pdb
-                #pdb.set_trace()
+
                 for k in range(len(maxes)):
                     if maxes[k] > 0.5:
                         stats[gt_classes[argmaxes[k]]] = stats[gt_classes[argmaxes[k]]] + 1
@@ -246,10 +205,7 @@ class IMDB(object):
             assert all(roi_rec['max_classes'][nonzero_indexes] != 0)
 
             roidb.append(roi_rec)
-        """f = open('stats.txt', 'w')
-        for k in range(len(stats)):
-            f.write(str(stats[k]) + ' ')
-        f.close()"""
+
         return roidb
 
     def get_flipped_entry(self, seg_rec):
@@ -259,27 +215,6 @@ class IMDB(object):
                 'width': seg_rec['width'],
                 'flipped': True}
 
-    def append_flipped_images_for_segmentation(self, segdb):
-        """
-        append flipped images to an roidb
-        flip boxes coordinates, images will be actually flipped when loading into network
-        :param segdb: [image_index]['seg_cls_path', 'flipped']
-        :return: segdb: [image_index]['seg_cls_path', 'flipped']
-        """
-        print 'append flipped images to segdb'
-        assert self.num_images == len(segdb)
-        pool = Pool(processes=1)
-        pool_result = []
-        for i in range(self.num_images):
-            seg_rec = segdb[i]
-            pool_result.append(pool.apply_async(get_flipped_entry_outclass_wrapper, args=(self, seg_rec, )))
-            #self.get_flipped_entry(seg_rec, segdb_flip, i)
-        pool.close()
-        pool.join()
-        segdb_flip = [res_instance.get() for res_instance in pool_result]
-        segdb += segdb_flip
-        self.image_set_index *= 2
-        return segdb
 
     def append_flipped_images(self, roidb):
         """
@@ -288,11 +223,17 @@ class IMDB(object):
         :param roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         :return: roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         """
+        def _flip_poly(poly, width):
+            flipped_poly = np.array(poly)
+            flipped_poly[::2] = width - np.array(poly[::2]) - 1
+            return flipped_poly.tolist()
+        
         print 'append flipped images to roidb'
         tmp = roidb[0]['boxes'].copy()
         entries = len(roidb)
         self.num_images = len(roidb)
         assert self.num_images == len(roidb)
+
         for i in range(entries):
             roi_rec = roidb[i]
             boxes = roi_rec['boxes'].copy()
@@ -316,6 +257,18 @@ class IMDB(object):
             if 'cache_seg_inst' in roi_rec:
                 [filename, extension] = os.path.splitext(roi_rec['cache_seg_inst'])
                 entry['cache_seg_inst'] = os.path.join(filename + '_flip' + extension)
+            if 'gt_masks' in roi_rec:
+                new_masks = []
+                for obj_mask in roi_rec['gt_masks']:
+                    new_segs = []
+                    for seg in obj_mask:
+
+                        flipped_segs = _flip_poly(seg, roi_rec['width'])
+                        assert len(flipped_segs) == len(seg), 'Error in flipping the mask'
+                        new_segs.append(flipped_segs)
+                    new_masks.append(new_segs)
+
+                entry['gt_masks'] = new_masks
 
             roidb.append(entry)
 
