@@ -135,7 +135,6 @@ class MaskLogLossMetric(mx.metric.EvalMetric):
         self.pred, self.label = get_rcnn_names(config)
 
     def update(self, labels, preds):
-        import pdb;pdb.set_trace()
         pred = preds[self.pred.index('mask_preds')].asnumpy().reshape(-1)
         weights = preds[self.pred.index('mask_weights')].asnumpy().reshape(-1)
         labels = preds[self.pred.index('mask_labels')].asnumpy().reshape(-1)
