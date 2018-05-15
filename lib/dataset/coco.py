@@ -138,7 +138,7 @@ class coco(IMDB):
                 vids.append(ct)
             ct = ct + 1
         self.image_set_index = valid_id
-        #gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
+
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         with open(index_file, 'wb') as fid:
@@ -252,17 +252,10 @@ class coco(IMDB):
                     segs.append([np.array(p) for p in obj['segmentation'] if len(p)>=6])
             
             roi_rec['gt_masks'] =  segs
-            # iscrowds = np.array([obj['iscrowd'] for obj in objs], dtype=bool)
-            # valid_ids = np.where(iscrowds==False)[0]
-            
-            seg_boxes = _polys2boxes(segs)
-            roi_rec['mask_boxes'] = seg_boxes
 
-    
-            for obj in objs:
-                if not obj['iscrowd']:
-                    assert len(obj['segmentation'])>0 and isinstance(obj['segmentation'], list),'Assertion failed for segmentation'
-
+            # Uncomment if you need to compute gts based on segmentation masks
+            # seg_boxes = _polys2boxes(segs)
+            # roi_rec['mask_boxes'] = seg_boxes
         return roi_rec, flag
 
     
