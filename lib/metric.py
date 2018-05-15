@@ -16,6 +16,10 @@ def get_rpn_names():
     label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight']
     return pred, label
 
+def get_mask_names():
+    pred = ['mask_preds', 'mask_weights', 'mask_labels']
+    label = []
+    return pred, label
 
 def get_rcnn_names(cfg):
     pred = ['rcnn_cls_prob', 'rcnn_bbox_loss']
@@ -26,6 +30,11 @@ def get_rcnn_names(cfg):
         rpn_pred, rpn_label = get_rpn_names()
         pred = rpn_pred + pred
         label = rpn_label
+        if cfg.TRAIN.WITH_MASK:
+            mask_pred, mask_label = get_mask_names()
+            pred += mask_pred
+            label += mask_label
+
     return pred, label
 
 
@@ -43,6 +52,7 @@ def get_rcnn_names_4vis(cfg):
         pred = rpn_pred + pred
         label = rpn_label
     return pred, label
+
 
 
 class RPNAccMetric(mx.metric.EvalMetric):
@@ -118,6 +128,28 @@ class RCNNAccFgMetric(mx.metric.EvalMetric):
 
         self.sum_metric += np.sum(pred_label.flat == label.flat)
         self.num_inst += len(pred_label.flat)
+
+class MaskLogLossMetric(mx.metric.EvalMetric):
+    def __init__(self, config):
+        super(MaskLogLossMetric, self).__init__('MaskLogLoss')
+        self.pred, self.label = get_rcnn_names(config)
+
+    def update(self, labels, preds):
+        import pdb;pdb.set_trace()
+        pred = preds[self.pred.index('mask_preds')].asnumpy().reshape(-1)
+        weights = preds[self.pred.index('mask_weights')].asnumpy().reshape(-1)
+        labels = preds[self.pred.index('mask_labels')].asnumpy().reshape(-1)
+        valid_inds = np.where(weights>0)[0]
+
+        labels = labels[valid_inds]
+        # Compute the logarithm
+        pred = pred[valid_inds]+ 1e-14
+        # Compute cross entropy
+        loss = -np.log(pred)*labels - np.log(1-pred)*(1-labels)
+        loss = np.sum(loss)
+        # Update metric
+        self.sum_metric += loss
+        self.num_inst += len(valid_inds)
 
 class RPNLogLossMetric(mx.metric.EvalMetric):
     def __init__(self):
