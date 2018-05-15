@@ -31,7 +31,7 @@ def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
                             #default='configs/faster/dpn98_coco_chips.yml', type=str)
-    							default='configs/faster/rpn_res101_mx_e2e.yml',type=str)
+    							default='configs/faster/res101_mx_e2e_mask.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
     arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
