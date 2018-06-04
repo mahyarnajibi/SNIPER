@@ -65,7 +65,7 @@ TRAIN:
   warmup_lr: 0.0005 #0.00005
   wd: 0.0001
   scale: 100.0
-  warmup_step: 9000 #4000 #1000
+  warmup_step: 1000 #4000 #1000
   begin_epoch: 0
   end_epoch: 7 #9
   model_prefix: 'rcnn'
