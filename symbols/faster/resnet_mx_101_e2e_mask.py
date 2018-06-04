@@ -238,6 +238,7 @@ class resnet_mx_101_e2e(Symbol):
                 data=mask_relu_out, kernel=(3, 3), pad=(1, 1), num_filter=256, name="mask_conv_3x3_{}".format(i+1))
             mask_relu_out = mx.sym.Activation(data=mask_conv_out, act_type="relu", name="mask_relu_{}".format(i+1))
         
+        mask_relu_out = mx.sym.Cast(data=mask_relu_out, dtype=np.float32)
         # Upsample the output
         mask_deconv = mx.symbol.Deconvolution(data=mask_relu_out, kernel=(2, 2),
           stride=(2, 2), pad=(0, 0), num_filter=256, name="mask_deconv")
@@ -245,7 +246,7 @@ class resnet_mx_101_e2e(Symbol):
 
         # Add the mask output layer
         mask_out = mx.sym.Convolution(
-                data=mask_deconv_relu, kernel=(3, 3), pad=(1, 1), num_filter=80, name="mask_out")
+                data=mask_deconv_relu, kernel=(1, 1), pad=(0, 0), num_filter=81, name="mask_out")
         return mask_out
 
     def get_symbol_rcnn(self, cfg, is_train=True):
@@ -330,18 +331,7 @@ class resnet_mx_101_e2e(Symbol):
 
             cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
                                             grad_scale=grad_scale)
-            # cls_prob = mx.sym.Custom(op_type='debug_data', datai1=cls_prob, 
-            #     datai2=label,
-            #     datai3=bbox_target,
-            #     datai4=gt_boxes,
-            #     datai5=im_info,
-            #     datai6=valid_ranges,
-            #     datai7=gt_masks,
-            #     datai8=rois,
-            #     datai9=bbox_pred,
-            #     datai10=data,
-            #     datai11=mask_rois,
-            #     datai12=mask_ids)
+
             bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                         data=(bbox_pred - bbox_target))
             bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (188.0*16.0))
@@ -373,29 +363,22 @@ class resnet_mx_101_e2e(Symbol):
                                                             rois=mask_rois, trans=mask_offset_reshape, group_size=1, 
                                                             pooled_size=14, sample_per_part=4, no_trans=False, part_size=14,
                                                             output_dim=256, spatial_scale=0.0625, trans_std=0.1)
+
+            mask_deformable_roi_pool = mx.sym.Cast(data=mask_deformable_roi_pool, dtype=np.float16)
             # Put the Mask head
             mask_pred = self.get_mask_head(mask_deformable_roi_pool)
 
             # Compute the mask targets
-            mask_targets, mask_weights = mx.sym.MaskRcnnTarget(rois=mask_rois, mask_polys=gt_masks, mask_ids=mask_ids,
+            mask_targets, mask_ncls_ids = mx.sym.MaskRcnnTarget(rois=mask_rois, mask_polys=gt_masks, mask_ids=mask_ids,
                 batch_size=cfg.TRAIN.BATCH_IMAGES, mask_size=28, num_proposals=50, max_polygon_len=500, max_num_gts=100,
                 num_classes=80)
 
-
-            # mask_targets = mx.sym.Custom(op_type='debug_data_mask', datai1=mask_targets,
-            #     datai2=data, 
-            #     datai3=mask_ids,
-            #     datai4=mask_rois,
-            #     datai5=gt_boxes,
-            #     datai6=im_info,
-            #     datai7=mask_weights)
-
-            logistics = mx.sym.LogisticRegressionOutput(data=mask_pred, label=mask_targets, name='mask_logistic',
-             grad_scale =  80.)
-            mask_loss = mx.sym.MakeLoss(name='mask_loss', data=logistics * mask_weights, grad_scale = 1.0)
+            mask_prob = mx.sym.SoftmaxOutput(data=mask_pred, label=mask_targets, multi_output=True,
+                                             normalization='valid', use_ignore=True, ignore_label=-1,
+                                                name="mask_cls_prob", grad_scale=0.5*grad_scale)
 
             group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label),
-             mask_loss, mx.sym.BlockGrad(mask_weights), mx.sym.BlockGrad(mask_targets)])
+             mask_prob, mx.sym.BlockGrad(mask_targets)])
         else:
             # ROI Proposal
             rpn_cls_prob = mx.sym.SoftmaxActivation(
@@ -504,23 +487,28 @@ class resnet_mx_101_e2e(Symbol):
                                                  workspace=workspace, memonger=memonger)
 
         return body
-    def init_weight_mask(self, cfg, arg_params, aux_params):
-        for i in range(4):
-            arg_params['mask_conv_3x3_{}_weight'.format(i+1)] = mx.random.normal(0, 0.01, \
-             shape=self.arg_shape_dict['mask_conv_3x3_{}_weight'.format(i+1)])
-            arg_params['mask_conv_3x3_{}_bias'.format(i+1)] =  mx.nd.zeros(shape=self.arg_shape_dict['mask_conv_3x3_{}_bias'.format(i+1)])
-        
-        arg_params['mask_deconv_weight'] = mx.random.normal(0, 0.01, \
-             shape=self.arg_shape_dict['mask_deconv_weight'])
 
-        arg_params['mask_out_weight'] = mx.random.normal(0, 0.01, \
-             shape=self.arg_shape_dict['mask_out_weight'])
+    def init_weight_mask(self, cfg, arg_params, aux_params):
+
+        #initializer=mx.init.MSRAPrelu()
+        arg_params['mask_out_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['mask_out_weight'])
+        #initializer(mx.init.InitDesc('mask_out_weight'), arg_params['mask_out_weight'])
+
+        for i in range(4):
+            arg_params['mask_conv_3x3_{}_weight'.format(i+1)] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['mask_conv_3x3_{}_weight'.format(i+1)])
+            #initializer(mx.init.InitDesc('mask_conv_3x3_{}_weight'.format(i+1)), arg_params['mask_conv_3x3_{}_weight'.format(i+1)])
+            arg_params['mask_conv_3x3_{}_bias'.format(i+1)] =  mx.nd.zeros(shape=self.arg_shape_dict['mask_conv_3x3_{}_bias'.format(i+1)])
+
+        #init = mx.init.Initializer()
+        arg_params['mask_deconv_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['mask_deconv_weight'])
+        #init._init_bilinear('mask_deconv_weight', arg_params['mask_deconv_weight'])
+
         arg_params['mask_out_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['mask_out_bias'])
         arg_params['mask_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['mask_offset_weight'])
         arg_params['mask_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['mask_offset_bias'])
 
     def init_weight_rcnn(self, cfg, arg_params, aux_params):
-        arg_params['stage4_unit1_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_weight'])
+        """arg_params['stage4_unit1_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_weight'])
         arg_params['stage4_unit1_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_bias'])
         arg_params['stage4_unit2_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_weight'])
         arg_params['stage4_unit2_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_bias'])
@@ -528,13 +516,13 @@ class resnet_mx_101_e2e(Symbol):
         arg_params['stage4_unit3_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit3_offset_bias'])
 
         arg_params['rpn_conv_3x3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_conv_3x3_weight'])
-        arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_conv_3x3_bias'])
+        arg_params['rpn_conv_3x3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_conv_3x3_bias'])"""
         arg_params['rpn_cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_cls_score_weight'])
         arg_params['rpn_cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_cls_score_bias'])
         arg_params['rpn_bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_bbox_pred_weight'])
         arg_params['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_bbox_pred_bias'])
         
-        arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
+        """arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
         arg_params['conv_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bias'])
         arg_params['offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_weight'])
         arg_params['offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_bias'])
@@ -542,17 +530,19 @@ class resnet_mx_101_e2e(Symbol):
         arg_params['fc_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_1_bias'])
         arg_params['fc_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_2_weight'])
         arg_params['fc_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['fc_new_2_bias'])
+        arg_params['bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['bbox_pred_weight'])
+        arg_params['bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['bbox_pred_bias'])"""
+
         arg_params['cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['cls_score_weight'])
         arg_params['cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['cls_score_bias'])
-        arg_params['bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['bbox_pred_weight'])
-        arg_params['bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['bbox_pred_bias'])
+
 
         ####### INIT WEIGHTS MASK
         self.init_weight_mask(cfg, arg_params, aux_params)
 
 
     def init_weight_rpn(self, cfg, arg_params, aux_params):        
-        arg_params['stage4_unit1_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_weight'])
+        """arg_params['stage4_unit1_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_weight'])
         arg_params['stage4_unit1_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit1_offset_bias'])
         arg_params['stage4_unit2_offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_weight'])
         arg_params['stage4_unit2_offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['stage4_unit2_offset_bias'])
@@ -564,7 +554,7 @@ class resnet_mx_101_e2e(Symbol):
         arg_params['rpn_cls_score_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_cls_score_weight'])
         arg_params['rpn_cls_score_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_cls_score_bias'])
         arg_params['rpn_bbox_pred_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['rpn_bbox_pred_weight'])
-        arg_params['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_bbox_pred_bias'])
+        arg_params['rpn_bbox_pred_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['rpn_bbox_pred_bias'])"""
 
         
 
