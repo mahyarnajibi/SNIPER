@@ -1,5 +1,4 @@
 import cPickle
-import cv2
 import os
 import json
 import numpy as np
@@ -9,10 +8,7 @@ from imdb import IMDB
 # coco api
 from .pycocotools.coco import COCO
 from .pycocotools.cocoeval import COCOeval
-from .pycocotools import mask as COCOmask
-from mask.mask_coco2voc import mask_coco2voc
 from mask.mask_voc2coco import mask_voc2coco
-from general_utils import tic, toc
 from bbox.bbox_transform import clip_boxes, bbox_overlaps_py
 import multiprocessing as mp
 

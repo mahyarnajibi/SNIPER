@@ -1,5 +1,4 @@
 import numpy as np
-from dataset import *
 import os
 import cPickle
 import gc
@@ -56,21 +55,7 @@ def add_chip_data(roidb,chip_meta_data_path=''):
         for k in imeta:
             iroidb[k] = imeta[k]
     assert len(chip_meta_data)==len(roidb), 'Length of chip meta data should be the same as roidb'
-    # for iroidb, imeta in zip(roidb,chip_meta_data):
-    #     for k in imeta:
-    #         iroidb[k] = imeta[k]
-    #     # Compute pid_2_chips
-    #     n_boxes = iroidb['boxes'].shape[0]
-    #     valid_in_chips = iroidb['valid_in_chips']
-    #     pid2chips = [np.array([],dtype=np.uint16) for _ in range(n_boxes)]
-    #     for chipid,valids in enumerate(valid_in_chips):
-    #         for v in valids:
-    #             pid2chips[v] = np.append(pid2chips[v],chipid)
-    #     # Shuffle the chip orders
-    #     for pid in range(n_boxes):
-    #         pid2chips[pid] = np.random.permutation(pid2chips[pid])
-    #     iroidb['pid2chips'] = pid2chips
-    # print('Done!')
+
 
 
 def remove_small_boxes(roidb,max_scale=3,min_size=10):
