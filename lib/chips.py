@@ -1,12 +1,10 @@
 from bbox.bbox_transform import clip_boxes, ignore_overlaps
 import numpy as np
 
-
 def genchipsones(width, height, boxes, chipsize):
     chips = []
     boxes = clip_boxes(boxes, np.array([height-1, width-1]))
     # ensure coverage of image for worst case
-
     # corners
     chips.append([max(width - chipsize, 0), 0, width - 1, min(chipsize, height-1)])
     chips.append([0, max(height - chipsize, 0), min(chipsize, width-1), height-1])
@@ -42,15 +40,9 @@ def genchipsones(width, height, boxes, chipsize):
     overlaps = ignore_overlaps(chips, boxes.astype(np.float))
     maxo = np.max(overlaps, axis=0)
 
-    #missing = np.where(maxo < 1)[0]
-    #if len(missing) > 0:
-    #    print('bulba')
-    #    assert False, 'bulba'
-
     chip_matches = []
     num_matches = []
     for j in range(len(chips)):
-        #nvids = np.where(overlaps[j, :] > 0.9)[0]
         nvids = np.where(overlaps[j, :] == 1)[0].tolist()
         for k in range(len(boxes)):
             if overlaps[j,k] == maxo[k]:
@@ -85,7 +77,6 @@ def genchips(width, height, boxes, chipsize):
     chips = []
     boxes = clip_boxes(boxes, np.array([height-1, width-1]))
     # ensure coverage of image for worst case
-
     # corners
     chips.append([max(width - chipsize, 0), 0, width - 1, min(chipsize, height-1)])
     chips.append([0, max(height - chipsize, 0), min(chipsize, width-1), height-1])
@@ -128,7 +119,6 @@ def genchips(width, height, boxes, chipsize):
     chip_matches = []
     num_matches = []
     for j in range(len(chips)):
-        #nvids = np.where(overlaps[j, :] > 0.9)[0]
         nvids = np.where(overlaps[j, :] == 1)[0]
         chip_matches.append(set(nvids.tolist()))
         num_matches.append(len(nvids))
@@ -155,25 +145,10 @@ def genchips(width, height, boxes, chipsize):
 
     return fchips
 
-tv1 = 0
-tv2 = 0
-tv3 = 0
-tv4 = 0
-act = 1
 
 def genscorechips(width, height, boxes, chipsize, scores):
-    import time
-    #global tv1
-    #global tv2
-    #global tv3
-    #global tv4
-    #global act
-    #t1 = time.time()
     chips = []
     boxes = clip_boxes(boxes, np.array([height-1, width-1]))
-
-    # ensure coverage of image for worst case
-
     # corners
     chips.append([max(width - chipsize, 0), 0, width - 1, min(chipsize, height-1)])
     chips.append([0, max(height - chipsize, 0), min(chipsize, width-1), height-1])
@@ -205,27 +180,14 @@ def genscorechips(width, height, boxes, chipsize, scores):
 
     p = np.random.permutation(chips.shape[0])
     chips = chips[p]
-    #t2 = time.time() - t1
-    #tv1 = tv1 + t2
-    t2f = time.time()
-    #print ('init time ' + str(tv1/act))
     overlaps = ignore_overlaps(chips, boxes.astype(np.float))
-    t2 = time.time() - t2f
-    #tv2 = tv2 + t2
-    #print ('overlap time ' + str(tv2/act))
-    t2f = time.time()
     chip_matches = []
     score_matches = []
-    num_matches = []
     for j in range(len(chips)):
         nvids = np.where(overlaps[j, :] > 0.8)[0]
         chip_matches.append(set(nvids.tolist()))
         score_matches.append(sum(scores[nvids]))
-        num_matches.append(len(nvids))
-    t2 = time.time() - t2f
-    #tv3 = tv3 + t2
-    #print ('match time ' + str(tv3/act))
-    #t2f = time.time()
+
     fchips = []
     ct = 0
     while True:
@@ -243,9 +205,5 @@ def genscorechips(width, height, boxes, chipsize, scores):
                 score_matches[j] = sum(scores[np.array(list(chip_matches[j]))])
             else:
                 score_matches[j] = 0
-    #t2 = time.time() - t2f
-    #tv4 = tv4 + t2
-    #print ('generate time ' + str(tv4/act))
-    #print ('total time ' + str((tv1+tv2+tv3+tv4)/act))
-    #act = act + 1
+
     return fchips
