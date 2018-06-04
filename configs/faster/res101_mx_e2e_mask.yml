@@ -1,10 +1,9 @@
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_rpn_resnet101_mx_bn"
+output_path: "./output/chips_resnet_101_mask"
 proposal_path: "proposals"
-symbol: resnet_mx_101_e2e
+symbol: resnet_mx_101_e2e_mask
 gpus: '0,1,2,3,4,5,6,7'
-
 CLASS_AGNOSTIC: true
 startMSTR: 9
 IS_DPN: false
@@ -53,30 +52,22 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: train2014+val2014
+  image_set: train2014+val2014 
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
-  # Visualization flags
-  # Whether to visualize intermediate training samples
-  visualize: true
-  # Path to save the visualization images
-  visualization_path: 'debug/visualization'
-  # Number of epochs between each visualization
-  visualization_freq: 100
-  
-
-  lr: 0.015 #0.002 #0.0005
+  WITH_MASK: true
+  lr: 0.015 
   lr_step: '5.33'
   warmup: true
   fp16: true
-  warmup_lr: 0.0005 #0.00005
+  warmup_lr: 0.0005 
   wd: 0.0001
   scale: 100.0
-  warmup_step: 1000 #4000 #1000
+  warmup_step: 1000
   begin_epoch: 0
-  end_epoch: 7 #9
+  end_epoch: 7 
   model_prefix: 'rcnn'
   # whether resume training
   RESUME: false
@@ -87,7 +78,7 @@ TRAIN:
   # whether use OHEM
   ENABLE_OHEM: true
   # size of images for each device, 2 for rcnn, 1 for rpn and e2e
-  BATCH_IMAGES: 16
+  BATCH_IMAGES: 10
   # e2e changes behavior of anchor loader and metric
   END2END: true
   # group images with similar aspect ratio

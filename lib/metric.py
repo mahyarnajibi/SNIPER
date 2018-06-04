@@ -16,6 +16,10 @@ def get_rpn_names():
     label = ['rpn_label', 'rpn_bbox_target', 'rpn_bbox_weight']
     return pred, label
 
+def get_mask_names():
+    pred = ['mask_prob', 'mask_targets']
+    label = []
+    return pred, label
 
 def get_rcnn_names(cfg):
     pred = ['rcnn_cls_prob', 'rcnn_bbox_loss']
@@ -26,6 +30,11 @@ def get_rcnn_names(cfg):
         rpn_pred, rpn_label = get_rpn_names()
         pred = rpn_pred + pred
         label = rpn_label
+        if cfg.TRAIN.WITH_MASK:
+            mask_pred, mask_label = get_mask_names()
+            pred += mask_pred
+            label += mask_label
+
     return pred, label
 
 
@@ -33,6 +42,7 @@ def get_rcnn_names_4vis(cfg):
     pred,label = get_rcnn_names(cfg)
     pred += ['rcnn_bbox_pred', 'rois', 'rcnn_label']
     return pred, label
+
 
 
 class RPNAccMetric(mx.metric.EvalMetric):
@@ -108,6 +118,32 @@ class RCNNAccFgMetric(mx.metric.EvalMetric):
 
         self.sum_metric += np.sum(pred_label.flat == label.flat)
         self.num_inst += len(pred_label.flat)
+
+class MaskLogLossMetric(mx.metric.EvalMetric):
+    def __init__(self, config):
+        super(MaskLogLossMetric, self).__init__('MaskLogLoss')
+        self.pred, self.label = get_rcnn_names(config)
+
+    def update(self, labels, preds):
+        pred = preds[self.pred.index('mask_prob')]
+        label = preds[self.pred.index('mask_targets')]
+
+        # label (b, p)
+        label = label.asnumpy().astype('int32').reshape((-1))
+        # pred (b, c, p) or (b, c, h, w) --> (b, p, c) --> (b*p, c)
+        pred = pred.asnumpy().reshape((pred.shape[0], pred.shape[1], -1)).transpose((0, 2, 1))
+        pred = pred.reshape((label.shape[0], -1))
+
+        # filter with keep_inds
+        keep_inds = np.where(label != -1)[0]
+        label = label[keep_inds]
+        cls = pred[keep_inds, label]
+
+        cls += 1e-14
+        cls_loss = -1 * np.log(cls)
+        cls_loss = np.sum(cls_loss)
+        self.sum_metric += cls_loss
+        self.num_inst += label.shape[0]
 
 class RPNLogLossMetric(mx.metric.EvalMetric):
     def __init__(self):

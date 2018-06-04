@@ -13,7 +13,7 @@ from .pycocotools import mask as COCOmask
 from mask.mask_coco2voc import mask_coco2voc
 from mask.mask_voc2coco import mask_voc2coco
 from general_utils import tic, toc
-from bbox.bbox_transform import clip_boxes
+from bbox.bbox_transform import clip_boxes, bbox_overlaps_py
 import multiprocessing as mp
 
 
@@ -59,7 +59,7 @@ def coco_results_one_category_kernel(data_pack):
 
 
 class coco(IMDB):
-    def __init__(self, image_set, root_path, data_path, result_path=None, mask_size=-1, binary_thresh=None):
+    def __init__(self, image_set, root_path, data_path, result_path=None, mask_size=-1, binary_thresh=None, load_mask=False):
         """
         fill basic information to initialize imdb
         :param image_set: train2014, val2014, test2015
@@ -86,6 +86,7 @@ class coco(IMDB):
         print 'num_images', self.num_images
         self.mask_size = mask_size
         self.binary_thresh = binary_thresh
+        self.load_mask = load_mask
 
         # deal with data name
         view_map = {'minival2014': 'val2014',
@@ -137,7 +138,7 @@ class coco(IMDB):
                 vids.append(ct)
             ct = ct + 1
         self.image_set_index = valid_id
-        #gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
+
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         with open(index_file, 'wb') as fid:
@@ -146,10 +147,19 @@ class coco(IMDB):
             cPickle.dump(vids, fid, cPickle.HIGHEST_PROTOCOL)
 
         print 'wrote gt roidb to {}'.format(cache_file)
-
         return gt_roidb
 
     def _load_coco_annotation(self, index):
+        def _polys2boxes(polys):
+            boxes_from_polys = np.zeros((len(polys), 4), dtype=np.float32)
+            for i in range(len(polys)):
+                poly = polys[i]
+                x0 = min(min(p[::2]) for p in poly)
+                x1 = max(max(p[::2]) for p in poly)
+                y0 = min(min(p[1::2]) for p in poly)
+                y1 = max(max(p[1::2]) for p in poly)
+                boxes_from_polys[i, :] = [x0, y0, x1, y1]
+            return boxes_from_polys
         """
         coco ann: [u'segmentation', u'area', u'iscrowd', u'image_id', u'bbox', u'category_id', u'id']
         iscrowd:
@@ -230,81 +240,25 @@ class coco(IMDB):
                    'max_classes': overlaps.argmax(axis=1),
                    'max_overlaps': overlaps.max(axis=1),
                    'flipped': False}
+        if self.load_mask:
+            # we only care about valid polygons
+
+            segs = []
+            for obj in objs:
+                if not isinstance(obj['segmentation'], list):
+                    # This is a crowd box
+                    segs.append([])
+                else:
+                    segs.append([np.array(p) for p in obj['segmentation'] if len(p)>=6])
+            
+            roi_rec['gt_masks'] =  segs
+
+            # Uncomment if you need to compute gts based on segmentation masks
+            # seg_boxes = _polys2boxes(segs)
+            # roi_rec['mask_boxes'] = seg_boxes
         return roi_rec, flag
 
-    def mask_path_from_index(self, index):
-        """
-        given image index, cache high resolution mask and return full path of masks
-        :param index: index of a specific image
-        :return: full path of this mask
-        """
-        if self.data_name == 'val':
-            return []
-        cache_file = os.path.join(self.cache_path, 'COCOMask', self.data_name)
-        if not os.path.exists(cache_file):
-            os.makedirs(cache_file)
-        # instance level segmentation
-        filename = 'COCO_%s_%012d' % (self.data_name, index)
-        gt_mask_file = os.path.join(cache_file, filename + '.hkl')
-        return gt_mask_file
-
-    def load_coco_sds_annotation(self, index):
-        """
-        coco ann: [u'segmentation', u'area', u'iscrowd', u'image_id', u'bbox', u'category_id', u'id']
-        iscrowd:
-            crowd instances are handled by marking their overlaps with all categories to -1
-            and later excluded in training
-        bbox:
-            [x1, y1, w, h]
-        :param index: coco image id
-        :return: roidb entry
-        """
-        im_ann = self.coco.loadImgs(index)[0]
-        width = im_ann['width']
-        height = im_ann['height']
-
-        # only load objs whose iscrowd==false
-        annIds = self.coco.getAnnIds(imgIds=index, iscrowd=False)
-        objs = self.coco.loadAnns(annIds)
-
-        # sanitize bboxes
-        valid_objs = []
-        for obj in objs:
-            x, y, w, h = obj['bbox']
-            x1 = np.max((0, x))
-            y1 = np.max((0, y))
-            x2 = np.min((width - 1, x1 + np.max((0, w - 1))))
-            y2 = np.min((height - 1, y1 + np.max((0, h - 1))))
-            if obj['area'] > 0 and x2 >= x1 and y2 >= y1:
-                obj['clean_bbox'] = [x1, y1, x2, y2]
-                valid_objs.append(obj)
-        objs = valid_objs
-        num_objs = len(objs)
-
-        boxes = np.zeros((num_objs, 4), dtype=np.uint16)
-        gt_classes = np.zeros((num_objs), dtype=np.int32)
-        overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
-
-        for ix, obj in enumerate(objs):
-            cls = self._coco_ind_to_class_ind[obj['category_id']]
-            boxes[ix, :] = obj['clean_bbox']
-            gt_classes[ix] = cls
-            if obj['iscrowd']:
-                overlaps[ix, :] = -1.0
-            else:
-                overlaps[ix, cls] = 1.0
-
-        sds_rec = {'image': self.image_path_from_index(index),
-                   'height': height,
-                   'width': width,
-                   'boxes': boxes,
-                   'gt_classes': gt_classes,
-                   'gt_overlaps': overlaps,
-                   'max_classes': overlaps.argmax(axis=1),
-                   'max_overlaps': overlaps.max(axis=1),
-                   'cache_seg_inst': self.mask_path_from_index(index),
-                   'flipped': False}
-        return sds_rec, objs
+    
 
     def evaluate_detections(self, detections, ann_type='bbox', all_masks=None, extra_path=''):
         """ detections_val2014_results.json """
