@@ -126,13 +126,11 @@ def roidb_anchor_worker(data):
     vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
 
     ids = filter_boxes(gt_boxes, 10)
-    if len(ids)>0:        
-        gt_boxes = gt_boxes[ids]
-        classes = classes[ids]
-    else:
+    if len(ids) == 0:
         gt_boxes = np.zeros((0, 4))
         classes = np.zeros((0, 1))
 
+    #bug fix, wont work without mask
     if has_mask:
         mask_polys = data[8]
         im_path = data[9]
@@ -140,11 +138,31 @@ def roidb_anchor_worker(data):
         mask_polys = crop_polys(mask_polys, cur_crop, im_info[:2], im_scale, im_path)
         # Create the padded encoded array
         if len(ids) > 0:
-            mask_polys = [mask_polys[i] for i in ids]
+            polylen = len(mask_polys)
+            tmask_polys = []
+            tgt_boxes = []
+            tclasses = []
+            for i in ids:
+                if i < polylen:
+                    tmask_polys.append(mask_polys[i])
+                    tgt_boxes.append(gt_boxes[i])
+                    tclasses.append(classes[i])
+            if len(gt_boxes) > 0:
+                gt_boxes = np.array(tgt_boxes)
+                classes = np.array(tclasses).reshape(len(tclasses), 1)
+                mask_polys = tmask_polys
+            else:
+                gt_boxes = np.zeros((0, 4))
+                classes = np.zeros((0, 1))
+
             encoded_polys = poly_encoder(mask_polys, classes[:,0]-1,
                     max_poly_len=max_poly_len, max_n_gts=max_n_gts)
         else:
             encoded_polys = -np.ones((max_n_gts, max_poly_len), dtype=np.float32)
+    else:
+        if len(ids) > 0:
+            gt_boxes = gt_boxes[ids]
+            classes = classes[ids]
 
 
     agt_boxes = gt_boxes.copy()
@@ -164,7 +182,6 @@ def roidb_anchor_worker(data):
     valid_gtids = np.where(mov == 1)[0]
     invalid_boxes = gt_boxes[invalid_gtids, :]
     gt_boxes = gt_boxes[valid_gtids, :]
-    #classes = classes[valid_gtids, :]
 
     def _unmap(data, count, inds, fill=0):
         """" unmap a subset inds of data into original data of size count """
