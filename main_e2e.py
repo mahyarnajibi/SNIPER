@@ -83,14 +83,14 @@ if __name__ == '__main__':
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
-    print('Initializing the model...')
-    sym_inst = resnet_mx_101_e2e(n_proposals=400, momentum=args.momentum)
-    sym = sym_inst.get_symbol_rcnn(config)
-
     # Creating the Logger
     logger, output_path = create_logger(config.output_path, args.cfg, config.dataset.image_set)
 
     # get list of fixed parameters
+    print('Initializing the model...')
+    sym_inst = resnet_mx_101_e2e(n_proposals=400, momentum=args.momentum)
+    sym = sym_inst.get_symbol_rcnn(config)
+
     fixed_param_names = get_fixed_param_names(config.network.FIXED_PARAMS, sym)
 
     # Creating the module
