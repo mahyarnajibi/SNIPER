@@ -1,3 +1,8 @@
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# by Mahyar Najibi, Bharat Singh
+# --------------------------------------------------------------
 ---
 MXNET_VERSION: "mxnet"
 output_path: "./output/chips_resnet_101_mask"
@@ -5,7 +10,6 @@ proposal_path: "proposals"
 symbol: resnet_mx_101_e2e_mask
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
-startMSTR: 9
 IS_DPN: false
 SCALES:
 - !!python/tuple [800,1280]

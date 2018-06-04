@@ -1,10 +1,8 @@
-# --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2016 by Contributors
-# Copyright (c) 2017 Microsoft
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified by Yuwen Xiong, Bin Xiao
-# --------------------------------------------------------
+# Modified by Mahyar Najibi
+# --------------------------------------------------------------
 
 import yaml
 import numpy as np
@@ -12,8 +10,6 @@ from easydict import EasyDict as edict
 
 config = edict()
 config.proposal_path = 'proposals'
-config.startMSTR = 9
-config.mstr = False
 config.MXNET_VERSION = ''
 config.output_path = ''
 config.symbol = ''
@@ -195,23 +191,3 @@ def update_config(config_file):
             else:
                 raise ValueError("key must exist in config.py")
 
-def get_opt_params(cfg,db_len):
-    base_lr = cfg.TRAIN.lr
-    lr_step = cfg.TRAIN.lr_step
-    lr_factor = cfg.TRAIN.lr_factor
-    begin_epoch = cfg.TRAIN.begin_epoch
-    batch_size = cfg.TRAIN.BATCH_IMAGES
-    lr_epoch = [float(epoch) for epoch in lr_step.split(',')]
-    lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
-    lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
-    lr_iters = [int(epoch * db_len / batch_size) for epoch in lr_epoch_diff]
-    print('lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters)
-    lr_scheduler = WarmupMultiFactorScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
-    # optimizer
-    optimizer_params = {'momentum': cfg.TRAIN.momentum,
-                        'wd': cfg.TRAIN.wd,
-                        'learning_rate': lr,
-                        'lr_scheduler': lr_scheduler,
-                        'rescale_grad': 1.0,
-                        'clip_gradient': None}
-    return optimizer_params
