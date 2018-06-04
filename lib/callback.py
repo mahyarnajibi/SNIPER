@@ -8,7 +8,6 @@
 
 import time
 import logging
-import mxnet as mx
 
 
 class Speedometer(object):
@@ -46,17 +45,3 @@ class Speedometer(object):
             self.tic = time.time()
 
 
-def do_checkpoint(prefix, means, stds):
-    def _callback(iter_no, sym, arg, aux):
-        if 'rfcn_bbox_weight' in arg:
-            weight = arg['rfcn_bbox_weight']
-            bias = arg['rfcn_bbox_bias']
-            repeat = bias.shape[0] / means.shape[0]
-            arg['rfcn_bbox_weight_test'] = weight * mx.nd.repeat(mx.nd.array(stds), repeats=repeat).reshape((bias.shape[0], 1, 1, 1))
-            arg['rfcn_bbox_bias_test'] = arg['rfcn_bbox_bias'] * mx.nd.repeat(mx.nd.array(stds), repeats=repeat) + mx.nd.repeat(mx.nd.array(means), repeats=repeat)
-
-        mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
-        if 'rfcn_bbox_weight' in arg:
-            arg.pop('rfcn_bbox_weight_test')
-            arg.pop('rfcn_bbox_bias_test')
-    return _callback

@@ -4,23 +4,6 @@ import os
 import logging
 import time
 
-def get_optim_params_single_epoch(cfg):
-
-	# Create scheduler
-	base_lr = cfg.TRAIN.lr
-	lr_factor = cfg.TRAIN.lr_factor
-	lr_iters = [162855]
-	lr_scheduler = WarmupMultiFactorScheduler(lr_iters, lr_factor, cfg.TRAIN.warmup, cfg.TRAIN.warmup_lr, cfg.TRAIN.warmup_step)
-
-	optim_params = {'momentum': cfg.TRAIN.momentum,
-                        'wd': cfg.TRAIN.wd,
-                        'learning_rate': base_lr,
-                        'rescale_grad': 1.0,
-                        'clip_gradient': None,
-                        'lr_scheduler': lr_scheduler}
-
-	return optim_params
-
 def get_optim_params(cfg,roidb_len,batch_size):
 
 	# Create scheduler
@@ -54,18 +37,7 @@ def get_optim_params(cfg,roidb_len,batch_size):
                         'lr_scheduler': lr_scheduler}
 
 	return optim_params
-def checkpoint_callback(bbox_param_names, prefix, means, stds):
-	def _callback(iter_no, sym, arg, aux):
-		weight = arg[bbox_param_names[0]]
-		bias = arg[bbox_param_names[1]]
-		repeat = bias.shape[0] / means.shape[0]
 
-		arg[bbox_param_names[0]+'_test'] = weight * mx.nd.repeat(mx.nd.array(stds), repeats=repeat).reshape((bias.shape[0], 1, 1, 1))
-		arg[bbox_param_names[1]+'_test'] = bias * mx.nd.repeat(mx.nd.array(stds), repeats=repeat) + mx.nd.repeat(mx.nd.array(means), repeats=repeat)
-		mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
-		arg.pop(bbox_param_names[0]+'_test')
-		arg.pop(bbox_param_names[1]+'_test')
-	return _callback
 
 def _convert_context(params, ctx):
 	"""
@@ -141,17 +113,3 @@ def create_logger(root_output_path, cfg, image_set):
 	logger.setLevel(logging.DEBUG)
 
 	return logger, final_output_path
-
-
-def tic():
-    import time
-    global startTime_for_tictoc
-    startTime_for_tictoc = time.time()
-    return startTime_for_tictoc
-
-def toc():
-    if 'startTime_for_tictoc' in globals():
-        endTime = time.time()
-        return endTime - startTime_for_tictoc
-    else:
-        return None
