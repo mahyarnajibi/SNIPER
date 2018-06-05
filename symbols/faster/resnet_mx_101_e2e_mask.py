@@ -1,10 +1,15 @@
-import cPickle
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Inference Module
+# by Mahyar Najibi and Bharat Singh
+# --------------------------------------------------------------
+
 import mxnet as mx
 from lib.symbol import Symbol
 from operator_py.box_annotator_ohem import *
-# from operator_py.debug_data import *
-# from operator_py.debug_data_mask import *
 import numpy as np
+
 
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
     def _callback(iter_no, sym, arg, aux):
@@ -19,7 +24,7 @@ def checkpoint_callback(bbox_param_names, prefix, means, stds):
     return _callback
 
 
-class resnet_mx_101_e2e(Symbol):
+class resnet_mx_101_e2e_mask(Symbol):
     def __init__(self, n_proposals=400, momentum=0.95, fix_bn=False, test_nbatch=1):
         """
         Use __init__ to define parameter network needs
@@ -57,6 +62,7 @@ class resnet_mx_101_e2e(Symbol):
             bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, use_global_stats=True, name=name + '_bn3')
         else:
             bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=self.momentum, name=name + '_bn3')
+
         act3 = mx.sym.Activation(data=bn3, act_type='relu', name=name + '_relu3')
         conv3 = mx.sym.Convolution(data=act3, num_filter=num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0),
                                    no_bias=True,
@@ -113,12 +119,12 @@ class resnet_mx_101_e2e(Symbol):
             bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=self.momentum, name=name + '_bn1')
         act1 = mx.sym.Activation(data=bn1, act_type='relu', name=name + '_relu1')
         conv1 = mx.sym.Convolution(data=act1, num_filter=int(num_filter * 0.25), kernel=(1, 1), stride=(1, 1),
-                                   pad=(0, 0),
-                                   no_bias=True, workspace=workspace, name=name + '_conv1')
+                                   pad=(0, 0), no_bias=True, workspace=workspace, name=name + '_conv1')
         if self.fix_bn:
             bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, use_global_stats=True, name=name + '_bn2')
         else:
             bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=self.momentum, name=name + '_bn2')
+
         act2 = mx.sym.Activation(data=bn2, act_type='relu', name=name + '_relu2')
         offset = mx.symbol.Convolution(name=name + '_offset', data=act2,
                                        num_filter=72, pad=(2, 2), kernel=(3, 3), stride=(1, 1),
@@ -135,8 +141,7 @@ class resnet_mx_101_e2e(Symbol):
 
         act3 = mx.sym.Activation(data=bn3, act_type='relu', name=name + '_relu3')
         conv3 = mx.sym.Convolution(data=act3, num_filter=num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0),
-                                   no_bias=True,
-                                   workspace=workspace, name=name + '_conv3')
+                                   no_bias=True, workspace=workspace, name=name + '_conv3')
         if dim_match:
             shortcut = data
         else:
