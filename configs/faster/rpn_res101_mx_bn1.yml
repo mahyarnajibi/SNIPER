@@ -6,7 +6,6 @@
 ---
 MXNET_VERSION: "mxnet"
 output_path: "./output/chips_rpn_resnet101_mx_bn"
-proposal_path: "proposals"
 symbol: resnet_mx_101_rpn
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true

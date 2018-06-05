@@ -5,8 +5,7 @@
 # --------------------------------------------------------------
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_resnet_101_mask"
-proposal_path: "proposals"
+output_path: "./output/sniper_resnet_101_mask"
 symbol: resnet_mx_101_e2e_mask
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
@@ -56,7 +55,7 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: train2014+val2014 
+  image_set: minival2014 #train2014+val2014
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn

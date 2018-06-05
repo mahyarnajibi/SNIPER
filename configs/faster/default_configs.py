@@ -1,6 +1,7 @@
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
+# Modified from https://github.com/msracver/Deformable-ConvNets
 # Modified by Mahyar Najibi
 # --------------------------------------------------------------
 
@@ -9,8 +10,9 @@ import numpy as np
 from easydict import EasyDict as edict
 
 config = edict()
-config.proposal_path = 'proposals'
+config.proposal_path = 'data/proposals'
 config.MXNET_VERSION = ''
+
 config.output_path = ''
 config.symbol = ''
 config.gpus = ''
@@ -47,8 +49,10 @@ config.dataset.NUM_CLASSES = 21
 
 
 config.TRAIN = edict()
-
+config.TRAIN.visualize = False
+config.TRAIN.WITH_MASK = False
 config.TRAIN.lr = 0
+
 config.TRAIN.lr_step = ''
 config.TRAIN.scale = 1.0
 config.TRAIN.lr_factor = 0.1
