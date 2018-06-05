@@ -1,6 +1,5 @@
 import mxnet as mx
 
-
 def load_checkpoint(prefix, epoch):
     """
     Load model checkpoint from file.

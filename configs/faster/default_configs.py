@@ -52,6 +52,8 @@ config.TRAIN = edict()
 config.TRAIN.visualize = False
 config.TRAIN.WITH_MASK = False
 config.TRAIN.lr = 0
+config.TRAIN.VALID_RANGES = ((-1, 80), (32, 150), (120, -1))
+config.TRAIN.SCALES = (3.0, 1.667, 512.0)
 
 config.TRAIN.lr_step = ''
 config.TRAIN.scale = 1.0

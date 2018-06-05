@@ -23,7 +23,6 @@ class MNIteratorE2E(MNIteratorBase):
         if config.TRAIN.WITH_MASK:
             self.label_name.append('gt_masks')
         self.pool = Pool(64)
-        self.context_size = 320
         self.epiter = 0
         self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
         super(MNIteratorE2E, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
@@ -127,15 +126,16 @@ class MNIteratorE2E(MNIteratorBase):
             classes = processed_roidb[i]['max_classes'][gtids]
             if self.cfg.TRAIN.WITH_MASK:
                 gt_masks = processed_roidb[i]['gt_masks']
-            if im_scale == 3:
+
+            if im_scale == self.cfg.TRAIN.SCALES[0]:
                 srange[i, 0] = 0
-                srange[i, 1] = 80*3
-            elif im_scale == 1.667:
-                srange[i, 0] = 32*1.667
-                srange[i, 1] = 1.667*150
+                srange[i, 1] = self.cfg.TRAIN.VALID_RANGES[0][1] * self.cfg.TRAIN.SCALES[0] #80*3
+            elif im_scale == self.cfg.TRAIN.SCALES[1]: #1.667:
+                srange[i, 0] = self.cfg.TRAIN.VALID_RANGES[1][0] * self.cfg.TRAIN.SCALES[1] #32*1.667
+                srange[i, 1] = self.cfg.TRAIN.VALID_RANGES[1][1] * self.cfg.TRAIN.SCALES[1] #1.667*150
             else:
-                srange[i, 0] = 120*im_scale
-                srange[i, 1] = 512
+                srange[i, 0] = self.cfg.VALID_RANGES[2][0] * im_scale #120*im_scale
+                srange[i, 1] = self.cfg.TRAIN_SCALES[2] #512
             chipinfo[i, 0] = height
             chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale

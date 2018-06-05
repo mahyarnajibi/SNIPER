@@ -62,6 +62,18 @@ dataset:
 TRAIN:
   # Visualization flags
   # Whether to visualize intermediate training samples
+  WITH_MASK: false
+  SCALES:
+  - 3.0
+  - 1.667
+  - 512.0
+
+  # The training scale (high res scale, medium res scale, smallest size in the pyramid)
+  VALID_RANGES:
+  - !!python/tuple [-1,80]
+  - !!python/tuple [32,150]
+  - !!python/tuple [120,-1]
+
   visualize: true
   # Path to save the visualization images
   visualization_path: 'debug/visualization'

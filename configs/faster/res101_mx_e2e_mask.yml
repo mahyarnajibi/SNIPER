@@ -61,6 +61,17 @@ dataset:
   proposal: rpn
 TRAIN:
   WITH_MASK: true
+  # The training scale (high res scale, medium res scale, smallest size in the pyramid)
+   SCALES:
+  - 3.0
+  - 1.667
+  - 512.0
+
+  VALID_RANGES:
+  - !!python/tuple [-1,80]
+  - !!python/tuple [32,150]
+  - !!python/tuple [120,-1]
+
   lr: 0.015 
   lr_step: '5.33'
   warmup: true
