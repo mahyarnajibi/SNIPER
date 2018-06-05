@@ -1,8 +1,11 @@
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# by Mahyar Najibi
+# ---------------------------------------------------------------
 import numpy as np
-from scipy import misc
-import matplotlib.pyplot as plt
 
-def crop_polys(polys, crop, im_shape, im_scale, im_path):
+def crop_polys(polys, crop, im_scale):
 	new_polys = []
 	for poly in polys:
 		new_segs = []
@@ -14,7 +17,6 @@ def crop_polys(polys, crop, im_shape, im_scale, im_path):
 			new_segs.append(new_seg)
 		new_polys.append(new_segs)
 	return new_polys
-
 
 def poly_encoder(polys, cats, max_poly_len=500, max_n_gts=100):
 	all_encoded = -1 * np.ones((max_n_gts, max_poly_len), dtype=np.float32)
@@ -41,11 +43,6 @@ def poly_encoder(polys, cats, max_poly_len=500, max_n_gts=100):
 
 		all_encoded[i, 0:len(encoded)] = encoded
 	return all_encoded
-
-
-
-        
-        
 
 
 

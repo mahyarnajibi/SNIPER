@@ -1,7 +1,14 @@
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Modified from https://github.com/msracver/Deformable-ConvNets
+# Modified by Mahyar Najibi
+# ---------------------------------------------------------------
 import numpy as np
 import os
 import cPickle
 import gc
+from dataset import *
 
 def load_gt_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
                   flip=False):

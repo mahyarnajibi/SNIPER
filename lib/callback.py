@@ -1,14 +1,12 @@
-# --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2016 by Contributors
-# Copyright (c) 2017 Microsoft
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified by Yuwen Xiong
-# --------------------------------------------------------
+# Modified from https://github.com/msracver/Deformable-ConvNets
+# Modified by Mahyar Najibi
+# ---------------------------------------------------------------
 
 import time
 import logging
-
 
 class Speedometer(object):
     def __init__(self, batch_size, frequent=50):

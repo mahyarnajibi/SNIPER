@@ -1,3 +1,9 @@
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Inference Module
+# by Mahyar Najibi and Bharat Singh
+# --------------------------------------------------------------
 import cv2
 import mxnet as mx
 import numpy as np
@@ -5,7 +11,6 @@ from nms.nms import py_nms_wrapper, soft_nms
 from mask_utils import crop_polys, poly_encoder
 from generate_anchor import generate_anchors
 from bbox.bbox_transform import *
-from bbox.bbox_regression import expand_bbox_regression_targets
 import numpy.random as npr
 from chips import genchips
 import math
@@ -130,12 +135,10 @@ def roidb_anchor_worker(data):
         gt_boxes = np.zeros((0, 4))
         classes = np.zeros((0, 1))
 
-    #bug fix, wont work without mask
     if has_mask:
         mask_polys = data[8]
-        im_path = data[9]
         # Shift and crop the mask polygons
-        mask_polys = crop_polys(mask_polys, cur_crop, im_info[:2], im_scale, im_path)
+        mask_polys = crop_polys(mask_polys, cur_crop, im_scale)
         # Create the padded encoded array
         if len(ids) > 0:
             polylen = len(mask_polys)
@@ -163,7 +166,6 @@ def roidb_anchor_worker(data):
         if len(ids) > 0:
             gt_boxes = gt_boxes[ids]
             classes = classes[ids]
-
 
     agt_boxes = gt_boxes.copy()
     ids = filter_boxes(vgt_boxes, 10)
@@ -281,9 +283,6 @@ def roidb_worker(data):
     boxes = data[7]
     n_expected_roi = data[8]
     num_classes = data[9]
-    has_mask = True if len(data)>10 else False
-
-
 
     gt_boxes[:, 0] = gt_boxes[:, 0] - cur_crop[0]
     gt_boxes[:, 2] = gt_boxes[:, 2] - cur_crop[0]
@@ -301,20 +300,6 @@ def roidb_worker(data):
             mask_polys = [mask_polys[i] for i in ids]
     else:
         gt_boxes = np.zeros((0, 5))
-
-    if has_mask:
-        mask_polys = data[10]
-        # Shift and crop the mask polygons
-        mask_polys = crop_polys(polys, cur_crop, im_info[:2], im_scale)
-        # Create the padded encoded array
-        max_n_gts = 100
-        max_poly_len = 500
-        if len(ids) > 0:
-            mask_polys = [mask_polys[i] for i in ids]
-            encoded_polys = poly_encoder(mask_polys, gt_labs,
-                    max_poly_len=max_poly_len, max_n_gts=max_n_gts)
-        else:
-            encoded_polys = -np.ones((max_n_gts, max_poly_len), dtype=np.float32)
 
     crois = boxes.copy()
 
@@ -334,13 +319,6 @@ def roidb_worker(data):
 
     if len(ids) > 0:            
         rois = rois[ids, :]
-
-    #overlaps = ignore_overlaps(rois.astype(np.float), gt_boxes.astype(np.float))
-    #mov = np.max(overlaps)
-
-    #if mov < 1:
-    #    print 'Something Wrong 1'
-    #    import pdb;pdb.set_trace()
 
     fg_rois_per_image = len(rois)
     rois_per_image = fg_rois_per_image

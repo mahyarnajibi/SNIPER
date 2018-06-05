@@ -1,4 +1,10 @@
-import matplotlib
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Inference Module
+# by Mahyar Najibi and Bharat Singh
+# --------------------------------------------------------------
+
 import matplotlib.pyplot as plt
 import mxnet as mx
 import numpy as np
@@ -89,7 +95,6 @@ class MNIteratorE2E(MNIteratorBase):
                        self.crop_idx[self.inds[i]] % len(self.roidb[self.inds[i]]['chip_order'])] for i in
                    range(cur_from, cur_to)]
         n_batch = len(roidb)
-        crops = [roidb[i]['crops'][cropids[i]] for i in range(n_batch)]
 
         ims = []
         for i in range(n_batch):
@@ -102,13 +107,10 @@ class MNIteratorE2E(MNIteratorBase):
         for i in range(len(roidb)):
             tmp = roidb[i].copy()
             scale = roidb[i]['crops'][cropids[i]][1]
-            height = roidb[i]['crops'][cropids[i]][2]
-            width = roidb[i]['crops'][cropids[i]][3]                                      
             tmp['im_info'] = [self.crop_size[0], self.crop_size[1], scale]
             processed_roidb.append(tmp)
 
         processed_list = self.thread_pool.map_async(self.im_worker.worker, ims)
-
         worker_data = []
         srange = np.zeros((len(processed_roidb), 2))
         chipinfo = np.zeros((len(processed_roidb), 3))
@@ -123,7 +125,8 @@ class MNIteratorE2E(MNIteratorBase):
             height = processed_roidb[i]['crops'][cropid][2]
             width = processed_roidb[i]['crops'][cropid][3]
             classes = processed_roidb[i]['max_classes'][gtids]
-            gt_masks = processed_roidb[i]['gt_masks']
+            if self.cfg.TRAIN.WITH_MASK:
+                gt_masks = processed_roidb[i]['gt_masks']
             if im_scale == 3:
                 srange[i, 0] = 0
                 srange[i, 1] = 80*3
@@ -137,7 +140,9 @@ class MNIteratorE2E(MNIteratorBase):
             chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale
             argw = [processed_roidb[i]['im_info'], cur_crop, im_scale, nids, gtids, gt_boxes, boxes,
-             classes.reshape(len(classes), 1), gt_masks, processed_roidb[i]['image']]
+                    classes.reshape(len(classes), 1)]
+            if self.cfg.TRAIN.WITH_MASK:
+                argw += [gt_masks]
             worker_data.append(argw)
 
         all_labels = self.pool.map(roidb_anchor_worker, worker_data)
@@ -149,7 +154,8 @@ class MNIteratorE2E(MNIteratorBase):
         bbox_targets = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
         bbox_weights = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
         gt_boxes = -mx.nd.ones((n_batch, 100, 5))
-        encoded_masks = -mx.nd.ones((n_batch,100,500))
+        if self.cfg.TRAIN.WITH_MASK:
+            encoded_masks = -mx.nd.ones((n_batch,100,500))
 
         for i in range(len(all_labels)):
             labels[i] = all_labels[i][0][0]
@@ -158,25 +164,23 @@ class MNIteratorE2E(MNIteratorBase):
                 bbox_targets[i][pids[0], pids[1], pids[2]] = all_labels[i][1]
                 bbox_weights[i][pids[0], pids[1], pids[2]] = 1.0
             gt_boxes[i] = all_labels[i][3]
-            encoded_masks[i] = all_labels[i][4]
-
+            if self.cfg.TRAIN.WITH_MASK:
+                encoded_masks[i] = all_labels[i][4]
 
         im_tensor = mx.nd.zeros((n_batch, 3, self.crop_size[0], self.crop_size[1]), dtype=np.float32)
         processed_list = processed_list.get()
         for i in range(len(processed_list)):
             im_tensor[i] = processed_list[i]
 
-
         self.data = [im_tensor, mx.nd.array(srange), mx.nd.array(chipinfo)]
-        self.label = [labels, bbox_targets, bbox_weights, gt_boxes, 
-        mx.nd.array(encoded_masks)]
+        self.label = [labels, bbox_targets, bbox_weights, gt_boxes]
+        if self.cfg.TRAIN.WITH_MASK:
+            self.label.append(mx.nd.array(encoded_masks))
 
         return mx.io.DataBatch(data=self.data, label=self.label, pad=self.getpad(), index=self.getindex(),
                                provide_data=self.provide_data, provide_label=self.provide_label)
 
-
     def visualize(self, im_tensor, boxes):
-        # import pdb;pdb.set_trace()
         im_tensor = im_tensor.asnumpy()
         boxes = boxes.asnumpy()
 
@@ -187,7 +191,6 @@ class MNIteratorE2E(MNIteratorBase):
             # Visualize positives
             plt.imshow(im)
             cboxes = boxes[imi]
-            # cboxes = boxes[imi][:, 0:4]
             for box in cboxes:
                 rect = plt.Rectangle((box[0], box[1]),
                                      box[2] - box[0],
@@ -195,7 +198,6 @@ class MNIteratorE2E(MNIteratorBase):
                                      edgecolor='green', linewidth=3.5)
                 plt.gca().add_patch(rect)
             num = np.random.randint(100000)
-            # plt.show()
             plt.savefig('debug/visualization/test_{}_pos.png'.format(num))
             plt.cla()
             plt.clf()
