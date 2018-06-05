@@ -1,26 +1,21 @@
-"""
-General image database
-An image database creates a list of relative image path called image_set_index and
-transform index to absolute image path. As to training, it is necessary that ground
-truth and proposals are mixed together for training.
-roidb
-basic format [image_index]
-['image', 'height', 'width', 'flipped',
-'boxes', 'gt_classes', 'gt_overlaps', 'max_classes', 'max_overlaps', 'bbox_targets']
-"""
-
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Modified from https://github.com/msracver/Deformable-ConvNets
+# Modified by Mahyar Najibi
+# ---------------------------------------------------------------
 import os
 import cPickle
 import numpy as np
 from PIL import Image
 from bbox.bbox_transform import bbox_overlaps, ignore_overlaps
-from multiprocessing import Pool, cpu_count
-import pdb
 from nms.nms import py_nms_wrapper, nmsp
 from multiprocessing import Pool
 
+
 def get_flipped_entry_outclass_wrapper(IMDB_instance, seg_rec):
     return IMDB_instance.get_flipped_entry(seg_rec)
+
 
 class IMDB(object):
     def __init__(self, name, image_set, root_path, dataset_path, result_path=None):
@@ -83,9 +78,9 @@ class IMDB(object):
         return self.image_path_from_index(self.image_set_index[index])
 
 
-    def load_rpn_data(self, proposal_path='proposals', full=False):
-        rpn_file = os.path.join(proposal_path,'dpn92',self.name + '_rpn.pkl')
-        nms_cache_file = os.path.join(proposal_path,'dpn92',self.name+'_rpn_after_nms.pkl')
+    def load_rpn_data(self, proposal_path='data/proposals', full=False):
+        rpn_file = os.path.join(proposal_path, self.name + '_rpn.pkl')
+        nms_cache_file = os.path.join(proposal_path, self.name+'_rpn_after_nms.pkl')
 
         if os.path.isfile(nms_cache_file):
             print('Reading cached proposals after ***NMS**** from {}'.format(nms_cache_file))

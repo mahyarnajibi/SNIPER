@@ -1,3 +1,9 @@
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# Modified from https://github.com/msracver/Deformable-ConvNets
+# Modified by Mahyar Najibi
+# ---------------------------------------------------------------
 import cPickle
 import os
 import json
