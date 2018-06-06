@@ -18,8 +18,8 @@ class MNIteratorFaster(MNIteratorBase):
         roidb = data['roidb'].copy()
 
 
-        target_size = self.cfg.SCALES[0][0]
-        max_size = self.cfg.SCALES[0][1]
+        target_size = self.cfg.TRAIN.SCALES[0][0]
+        max_size = self.cfg.TRAIN.SCALES[0][1]
 
         im_shape = im.shape
         im_size_min = np.min(im_shape[0:2])
@@ -130,11 +130,11 @@ class MNIteratorFaster(MNIteratorBase):
         max_height = np.array([p['im'].shape[0] for p in processed_list]).max()
         max_width = np.array([p['im'].shape[1] for p in processed_list]).max()
         if max_width>=max_height:
-            max_width = self.cfg.SCALES[0][1]
-            max_height = self.cfg.SCALES[0][0]
+            max_width = self.cfg.TRAIN.SCALES[0][1]
+            max_height = self.cfg.TRAIN.SCALES[0][0]
         else:
-            max_width = self.cfg.SCALES[0][0]
-            max_height = self.cfg.SCALES[0][1]
+            max_width = self.cfg.TRAIN.SCALES[0][0]
+            max_height = self.cfg.TRAIN.SCALES[0][1]
 
         im_tensor = mx.ndarray.zeros((n_batch,
             3,max_height,max_width))

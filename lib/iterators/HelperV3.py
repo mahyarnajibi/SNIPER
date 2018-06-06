@@ -58,12 +58,10 @@ class im_worker(object):
         rim = np.zeros((3, crop_size, crop_size), dtype=np.float32)
         d1m = min(im.shape[0], crop_size)
         d2m = min(im.shape[1], crop_size)
-        if not self.cfg.IS_DPN:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2-j] - pixel_means[2-j]
-        else:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = (im[:d1m, :d2m, 2-j] - pixel_means[2-j]) * 0.0167
+
+        for j in range(3):
+            rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2-j] - pixel_means[2-j]
+
 
 
         return mx.nd.array(rim, dtype='float32')

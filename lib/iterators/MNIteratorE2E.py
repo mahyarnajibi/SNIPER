@@ -134,8 +134,8 @@ class MNIteratorE2E(MNIteratorBase):
                 srange[i, 0] = self.cfg.TRAIN.VALID_RANGES[1][0] * self.cfg.TRAIN.SCALES[1] #32*1.667
                 srange[i, 1] = self.cfg.TRAIN.VALID_RANGES[1][1] * self.cfg.TRAIN.SCALES[1] #1.667*150
             else:
-                srange[i, 0] = self.cfg.VALID_RANGES[2][0] * im_scale #120*im_scale
-                srange[i, 1] = self.cfg.TRAIN_SCALES[2] #512
+                srange[i, 0] = self.cfg.TRAIN.VALID_RANGES[2][0] * im_scale #120*im_scale
+                srange[i, 1] = self.cfg.TRAIN.SCALES[2] #512
             chipinfo[i, 0] = height
             chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale
