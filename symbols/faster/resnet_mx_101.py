@@ -1,9 +1,7 @@
-import cPickle
 import mxnet as mx
 from lib.symbol import Symbol
-#from operator_py.debug import *
 from operator_py.box_annotator_ohem import *
-from operator_py.debug_data import *
+
 
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
     def _callback(iter_no, sym, arg, aux):
@@ -15,6 +13,7 @@ def checkpoint_callback(bbox_param_names, prefix, means, stds):
         arg.pop(bbox_param_names[0]+'_test')
         arg.pop(bbox_param_names[1]+'_test')
     return _callback
+
 
 class resnet_mx_101(Symbol):
     def __init__(self, n_proposals=400, momentum=0.95, fix_bn=False):

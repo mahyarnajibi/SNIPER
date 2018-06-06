@@ -1,9 +1,6 @@
-import cPickle
 import mxnet as mx
 from lib.symbol import Symbol
 from operator_py.box_annotator_ohem import *
-from operator_py.debug_data import *
-
 import numpy as np
 
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
