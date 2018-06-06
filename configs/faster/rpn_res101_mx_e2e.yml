@@ -9,31 +9,18 @@ output_path: "./output/chips_rpn_resnet101_mx_bn"
 symbol: resnet_mx_101_e2e
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
-IS_DPN: false
-SCALES:
-- !!python/tuple [800,1280]
-- !!python/tuple [800,1280]
-- !!python/tuple [800,1280]
 default:
   frequent: 100
   kvstore: device
 network:
-  deform: true
-  pretrained: "./data/pretrained_model/resnet_mx_101"  
+  pretrained: "./data/pretrained_model/resnet_mx_101_open"
   pretrained_epoch: 0
   PIXEL_MEANS:
   - 103.939
   - 116.779
   - 123.68
-  IMAGE_STRIDE: 0
-  RCNN_FEAT_STRIDE: 16
   RPN_FEAT_STRIDE: 16
   FIXED_PARAMS:
-  - conv0
-  - bn0
-  - stage1
-
-  FIXED_PARAMS_SHARED:
   - conv0
   - bn0
   - stage1
@@ -60,15 +47,20 @@ dataset:
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
-  # Visualization flags
-  # Whether to visualize intermediate training samples
+  # Multi-processing params
+  NUM_PROCESS: 64
+  NUM_THREAD: 8
+
+  # Whether to train with segmentation mask
   WITH_MASK: false
+
+  # Training scales(high res scale, medium res scale, smallest size in the pyramid)
   SCALES:
   - 3.0
   - 1.667
   - 512.0
 
-  # The training scale (high res scale, medium res scale, smallest size in the pyramid)
+  # Valid ranges in each scale
   VALID_RANGES:
   - !!python/tuple [-1,80]
   - !!python/tuple [32,150]
@@ -92,8 +84,7 @@ TRAIN:
   begin_epoch: 0
   end_epoch: 7 #9
   model_prefix: 'rcnn'
-  # whether resume training
-  RESUME: false
+
   # whether flip image
   FLIP: true
   # whether shuffle image
@@ -104,8 +95,6 @@ TRAIN:
   BATCH_IMAGES: 16
   # e2e changes behavior of anchor loader and metric
   END2END: true
-  # group images with similar aspect ratio
-  ASPECT_GROUPING: true
   # R-CNN
   # rcnn rois batch size
   BATCH_ROIS: -1

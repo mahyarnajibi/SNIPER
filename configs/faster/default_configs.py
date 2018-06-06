@@ -1,8 +1,7 @@
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified from https://github.com/msracver/Deformable-ConvNets
-# Modified by Mahyar Najibi
+# by Mahyar Najibi
 # --------------------------------------------------------------
 
 import yaml
@@ -17,11 +16,8 @@ config.output_path = ''
 config.symbol = ''
 config.gpus = ''
 config.CLASS_AGNOSTIC = True
-config.SCALES = [(600, 1000)]  # first is scale (the shorter side); second is max size
-config.IS_DPN = False
 # default training
 config.default = edict()
-config.default.frequent = 20
 config.default.kvstore = 'device'
 
 # network related params
@@ -29,11 +25,8 @@ config.network = edict()
 config.network.pretrained = ''
 config.network.pretrained_epoch = 0
 config.network.PIXEL_MEANS = np.array([0, 0, 0])
-config.network.IMAGE_STRIDE = 0
 config.network.RPN_FEAT_STRIDE = 16
-config.network.RCNN_FEAT_STRIDE = 16
 config.network.FIXED_PARAMS = ['gamma', 'beta']
-config.network.FIXED_PARAMS_SHARED = ['gamma', 'beta']
 config.network.ANCHOR_SCALES = (8, 16, 32)
 config.network.ANCHOR_RATIOS = (0.5, 1, 2)
 config.network.NUM_ANCHORS = len(config.network.ANCHOR_SCALES) * len(config.network.ANCHOR_RATIOS)
@@ -88,8 +81,6 @@ config.TRAIN.ALTERNATE.rpn3_lr = 0
 config.TRAIN.ALTERNATE.rpn3_lr_step = ''    # recommend '2'
 config.TRAIN.ALTERNATE.rpn3_epoch = 0       # recommend 3
 
-# whether resume training
-config.TRAIN.RESUME = False
 # whether flip image
 config.TRAIN.FLIP = True
 # whether shuffle image
@@ -100,8 +91,7 @@ config.TRAIN.ENABLE_OHEM = False
 config.TRAIN.BATCH_IMAGES = 2
 # e2e changes behavior of anchor loader and metric
 config.TRAIN.END2END = False
-# group images with similar aspect ratio
-config.TRAIN.ASPECT_GROUPING = True
+
 
 # R-CNN
 # rcnn rois batch size

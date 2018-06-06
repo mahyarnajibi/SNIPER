@@ -9,35 +9,22 @@ output_path: "./output/sniper_resnet_101_mask"
 symbol: resnet_mx_101_e2e_mask
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
-IS_DPN: false
-SCALES:
-- !!python/tuple [800,1280]
-- !!python/tuple [800,1280]
-- !!python/tuple [800,1280]
+
 default:
   frequent: 100
   kvstore: device
 network:
-  deform: true
   pretrained: "./data/pretrained_model/resnet_mx_101"  
   pretrained_epoch: 0
   PIXEL_MEANS:
   - 103.939
   - 116.779
   - 123.68
-  IMAGE_STRIDE: 0
-  RCNN_FEAT_STRIDE: 16
   RPN_FEAT_STRIDE: 16
   FIXED_PARAMS:
   - conv0
   - bn0
   - stage1
-
-  FIXED_PARAMS_SHARED:
-  - conv0
-  - bn0
-  - stage1
-
   ANCHOR_RATIOS:
   - 0.5
   - 1
@@ -51,6 +38,7 @@ network:
   - 16
   - 24
   NUM_ANCHORS: 21
+
 dataset:
   NUM_CLASSES: 81
   dataset: coco
@@ -59,14 +47,22 @@ dataset:
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn
+
 TRAIN:
+  # Multi-processing params
+  NUM_PROCESS: 64
+  NUM_THREAD: 8
+
+  # Whether to train with segmentation mask
   WITH_MASK: true
+
   # The training scale (high res scale, medium res scale, smallest size in the pyramid)
    SCALES:
   - 3.0
   - 1.667
   - 512.0
 
+  # Valid ranges in each scale
   VALID_RANGES:
   - !!python/tuple [-1,80]
   - !!python/tuple [32,150]
@@ -84,7 +80,6 @@ TRAIN:
   end_epoch: 7 
   model_prefix: 'rcnn'
   # whether resume training
-  RESUME: false
   # whether flip image
   FLIP: true
   # whether shuffle image
@@ -95,8 +90,7 @@ TRAIN:
   BATCH_IMAGES: 10
   # e2e changes behavior of anchor loader and metric
   END2END: true
-  # group images with similar aspect ratio
-  ASPECT_GROUPING: true
+
   # R-CNN
   # rcnn rois batch size
   BATCH_ROIS: -1
