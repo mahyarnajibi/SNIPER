@@ -10,7 +10,6 @@ import json
 import numpy as np
 
 from imdb import IMDB
-
 # coco api
 from .pycocotools.coco import COCO
 from .pycocotools.cocoeval import COCOeval

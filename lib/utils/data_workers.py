@@ -14,12 +14,14 @@ from bbox.bbox_transform import *
 import numpy.random as npr
 from chips import genchips
 import math
+
+
 class im_worker(object):
     def __init__(self, cfg, crop_size=None, target_size=None):
         self.cfg = cfg
         self.crop_size = crop_size
         if not target_size:
-            self.target_size = self.cfg.SCALES[0]
+            self.target_size = self.cfg.TRAIN.SCALES[0]
         else:
             self.target_size = target_size
 
@@ -57,12 +59,10 @@ class im_worker(object):
         rim = np.zeros((3, max_size[0], max_size[1]), dtype=np.float32)
         d1m = min(im.shape[0], max_size[0])
         d2m = min(im.shape[1], max_size[1])
-        if not self.cfg.IS_DPN:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2 - j] - pixel_means[2 - j]
-        else:
-            for j in range(3):
-                rim[j, :d1m, :d2m] = (im[:d1m, :d2m, 2 - j] - pixel_means[2 - j]) * 0.0167
+
+        for j in range(3):
+            rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2 - j] - pixel_means[2 - j]
+
         if self.crop_size:
             return mx.nd.array(rim, dtype='float32')
         else:
@@ -90,7 +90,6 @@ all_anchors = all_anchors.reshape((K * A, 4))
 
 
 def roidb_anchor_worker(data):
-    
     im_info = data[0]
     cur_crop = data[1]
     im_scale = data[2]
