@@ -14,6 +14,29 @@ from bbox.bbox_transform import *
 import numpy.random as npr
 from chips import genchips
 import math
+import copy_reg
+import types
+
+
+# Pickle dumping recipe for using classes with multi-processing map
+def _unpickle_method(func_name, obj, cls):
+    for cls in cls.mro():
+        try:
+            func = cls.__dict__[func_name]
+        except KeyError:
+            pass
+        else:
+            break
+    return func.__get__(obj, cls)
+
+
+def _pickle_method(method):
+    func_name = method.im_func.__name__
+    obj = method.im_self
+    cls = method.im_class
+    return _unpickle_method, (func_name, obj, cls)
+
+copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
 class im_worker(object):
