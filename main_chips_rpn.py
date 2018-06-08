@@ -10,14 +10,12 @@ import sys
 
 sys.path.insert(0, 'lib')
 from symbols.faster.resnet_mx_101_rpn import resnet_mx_101_rpn, checkpoint_callback
-#from symbols.faster.symbol_dpn_98_cls import symbol_dpn_98_cls, checkpoint_callback
 from configs.faster.default_configs import config, update_config, get_opt_params
 import mxnet as mx
 import metric, callback
-import numpy as np
 from general_utils import get_optim_params, get_fixed_param_names, create_logger
 from iterators.PrefetchingIter import PrefetchingIter
-from iterators.MNIteratorChipsRPN import MNIteratorChips
+from iterators.MNIteratorRPN import MNIteratorChips
 from load_data import load_proposal_roidb, merge_roidb, filter_roidb, add_chip_data, remove_small_boxes
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser

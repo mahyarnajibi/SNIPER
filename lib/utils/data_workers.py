@@ -547,7 +547,7 @@ def props_in_chip_worker(r):
     chip_counter = 0
     for chips, cscale in zip([neg_chips1, neg_chips2, neg_chips3], [im_scale_1, im_scale_2, im_scale_3]):
         for chip in chips:
-            if len(neg_props_in_chips[chip_counter]) > 40:
+            if len(neg_props_in_chips[chip_counter]) > 25 or (len(neg_props_in_chips[chip_counter]) > 10 and cscale != im_scale_1):
                 final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
                 if cscale != im_scale_3:
                     neg_chips.append([chip, cscale, 512, 512])

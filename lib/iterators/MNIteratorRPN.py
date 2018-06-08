@@ -1,19 +1,12 @@
-import matplotlib
-
-#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import mxnet as mx
-import cv2
 import numpy as np
 import math
-from bbox.bbox_regression import expand_bbox_regression_targets
 from MNIteratorBase import MNIteratorBase
 from bbox.bbox_transform import bbox_overlaps, bbox_pred, bbox_transform, clip_boxes, filter_boxes, ignore_overlaps
-from bbox.bbox_regression import compute_bbox_regression_targets
 from chips import genchips
 from multiprocessing import Pool
-import time
-from HelperV3 import im_worker, roidb_worker, roidb_anchor_worker
+from utils.data_workers import im_worker, roidb_anchor_worker
 
 
 def clip_boxes_with_chip(boxes, chip):
@@ -425,7 +418,7 @@ class MNIteratorChips(MNIteratorBase):
         self.pool = Pool(64)
         self.context_size = 320
         self.epiter = 0
-        self.im_worker = im_worker(crop_size=self.crop_size[0],cfg=config)
+        self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
         super(MNIteratorChips, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
     def reset(self):
