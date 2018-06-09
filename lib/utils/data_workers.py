@@ -372,41 +372,52 @@ def roidb_worker(data):
         rval.append(encoded_polys)
     return rval
 
-def chip_worker(r):
-    width = r['width']
-    height = r['height']
-    im_size_max = max(width, height)
-    im_scale_1 = 3
-    im_scale_2 = 1.667
-    im_scale_3 = 512.0 / float(im_size_max)
 
-    gt_boxes = r['boxes'][np.where(r['max_overlaps'] == 1)[0], :]
+class chip_worker(object):
 
-    ws = (gt_boxes[:, 2] - gt_boxes[:, 0]).astype(np.int32)
-    hs = (gt_boxes[:, 3] - gt_boxes[:, 1]).astype(np.int32)
-    area = np.sqrt(ws * hs)
-    ms = np.maximum(ws, hs)
+    def __init__(self, cfg, chip_size):
+        self.valid_ranges = cfg.TRAIN.VALID_RANGES
+        self.scales = cfg.TRAIN.SCALES
+        self.chip_size = chip_size
 
-    ids1 = np.where((area < 80) & (ms < 450.0 / im_scale_1) & (ws >= 2) & (hs >= 2))[0]
-    ids2 = np.where((area >= 32) & (area < 150) & (ms < 450.0 / im_scale_2))[0]
-    ids3 = np.where((area >= 120))[0]
+    def worker(self, r):
+        width = r['width']
+        height = r['height']
+        im_size_max = max(width, height)
 
-    chips1 = genchips(int(r['width'] * im_scale_1), int(r['height'] * im_scale_1), gt_boxes[ids1, :] * im_scale_1, 512)
-    chips2 = genchips(int(r['width'] * im_scale_2), int(r['height'] * im_scale_2), gt_boxes[ids2, :] * im_scale_2, 512)
-    chips3 = genchips(int(r['width'] * im_scale_3), int(r['height'] * im_scale_3), gt_boxes[ids3, :] * im_scale_3, 512)
-    chips1 = np.array(chips1) / im_scale_1
-    chips2 = np.array(chips2) / im_scale_2
-    chips3 = np.array(chips3) / im_scale_3
+        gt_boxes = r['boxes'][np.where(r['max_overlaps'] == 1)[0], :]
 
-    chip_ar = []
-    for chip in chips1:
-        chip_ar.append([chip, im_scale_1, 512, 512])
-    for chip in chips2:
-        chip_ar.append([chip, im_scale_2, 512, 512])
-    for chip in chips3:
-        chip_ar.append([chip, im_scale_3, int(r['height'] * im_scale_3), int(r['width'] * im_scale_3)])
+        ws = (gt_boxes[:, 2] - gt_boxes[:, 0]).astype(np.int32)
+        hs = (gt_boxes[:, 3] - gt_boxes[:, 1]).astype(np.int32)
+        area = np.sqrt(ws * hs)
+        ms = np.maximum(ws, hs)
 
-    return chip_ar
+        chip_ar = []
+        for i, im_scale in enumerate(self.scales):
+            if i == len(self.scales)-1:
+                # The coarsest (or possibly the only scale)
+                im_scale /= float(im_size_max)
+                ids = np.where((area >= self.valid_ranges[i][0]))[0]
+            elif i == 0:
+                # The finest scale (but not the only scale)
+                ids = np.where((area < self.valid_ranges[i][1]) & (ms < 450.0 / im_scale) & (ws >= 2)
+                               & (hs >= 2))[0]
+            else:
+                # An intermediate scale
+                ids = np.where((area >= self.valid_ranges[i][0]) & (area < self.valid_ranges[i][1])
+                       & (ms < 450.0 / im_scale))[0]
+
+            cur_chips = genchips(int(r['width'] * im_scale), int(r['height'] * im_scale), gt_boxes[ids, :] * im_scale,
+                                 self.chip_size)
+            cur_chips = np.array(cur_chips) / im_scale
+            if i != len(self.scales) - 1:
+                for chip in cur_chips:
+                    chip_ar.append([chip, im_scale, self.chip_size, self.chip_size])
+            else:
+                for chip in cur_chips:
+                    chip_ar.append([chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale)])
+
+        return chip_ar
 
 def props_in_chip_worker(r):
     props_in_chips = [[] for _ in range(len(r['crops']))]

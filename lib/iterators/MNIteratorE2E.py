@@ -25,13 +25,14 @@ class MNIteratorE2E(MNIteratorBase):
         self.pool = Pool(64)
         self.epiter = 0
         self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
+        self.chip_worker = chip_worker(chip_size=self.crop_size[0], cfg=config)
         super(MNIteratorE2E, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
     def reset(self):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
-        chips = self.pool.map(chip_worker, self.roidb)
+        chips = self.pool.map(self.chip_worker.worker, self.roidb)
         chip_count = 0
         for i, r in enumerate(self.roidb):
             cs = chips[i]
