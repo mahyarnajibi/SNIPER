@@ -42,7 +42,7 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: minival2014 #train2014+val2014
+  image_set: train2014+val2014
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn
@@ -54,7 +54,9 @@ TRAIN:
   # Whether to train with segmentation mask
   WITH_MASK: false
 
-  # Training scales(high res scale, medium res scale, smallest size in the pyramid)
+  # Training scales
+  # The last scale (or the only scale) should be the desired max size in pixels
+  # Other scales should be scaling coefficients
   SCALES:
   - 3.0
   - 1.667
@@ -66,12 +68,13 @@ TRAIN:
   - !!python/tuple [32,150]
   - !!python/tuple [120,-1]
 
+
   visualize: true
   # Path to save the visualization images
   visualization_path: 'debug/visualization'
   # Number of epochs between each visualization
   visualization_freq: 100
-  
+
 
   lr: 0.015 #0.002 #0.0005
   lr_step: '5.33'
