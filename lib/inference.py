@@ -12,7 +12,6 @@ import cPickle
 from utils.data_workers import nms_worker
 from nms.nms import py_nms_wrapper, soft_nms
 from utils.visualization import visualize_dets
-from multiprocessing import Pool
 from tqdm import tqdm
 import math
 from multiprocessing import Pool

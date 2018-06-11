@@ -1,7 +1,7 @@
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Inference Module
+# SNIPER end-to-end training iterator
 # by Mahyar Najibi and Bharat Singh
 # --------------------------------------------------------------
 
@@ -10,7 +10,7 @@ import mxnet as mx
 import numpy as np
 from MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
-from utils.data_workers import roidb_anchor_worker, im_worker, props_in_chip_worker, chip_worker
+from utils.data_workers import roidb_anchor_worker, im_worker, chip_worker
 
 class MNIteratorE2E(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
@@ -32,14 +32,13 @@ class MNIteratorE2E(MNIteratorBase):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
-        chips = self.pool.map(self.chip_worker.worker, self.roidb)
+        chips = self.pool.map(self.chip_worker.chip_extractor, self.roidb)
         chip_count = 0
         for i, r in enumerate(self.roidb):
             cs = chips[i]
             chip_count += len(cs)
             r['crops'] = cs
-
-        all_props_in_chips = self.pool.map(props_in_chip_worker, self.roidb)
+        all_props_in_chips = self.pool.map(self.chip_worker.box_assigner, self.roidb)
 
         for (props_in_chips, neg_chips, neg_props_in_chips), cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = props_in_chips

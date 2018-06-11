@@ -8,7 +8,7 @@ import init
 import matplotlib
 matplotlib.use('Agg')
 from load_model import load_param
-from symbols.faster.resnet_mx_101_e2e_v2 import resnet_mx_101_e2e, checkpoint_callback
+from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
 from configs.faster.default_configs import config, update_config
 from load_data import load_proposal_roidb
 import mxnet as mx
@@ -34,7 +34,6 @@ def main():
     args = parser()
     update_config(args.cfg)
     context = [mx.gpu(int(gpu)) for gpu in config.gpus.split(',')]
-    nGPUs = len(context)
 
     if not os.path.isdir(config.output_path):
         os.mkdir(config.output_path)

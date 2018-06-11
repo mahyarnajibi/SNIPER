@@ -1,10 +1,7 @@
 import os
-
 os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 # os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
-import init
-from iterators.MNIteratorChipsV3NegR2 import MNIteratorChips
 from load_model import load_param
 import sys
 
@@ -19,8 +16,6 @@ from iterators.MNIteratorRPN import MNIteratorChips
 from load_data import load_proposal_roidb, merge_roidb, filter_roidb, add_chip_data, remove_small_boxes
 from bbox.bbox_regression import add_bbox_regression_targets
 from argparse import ArgumentParser
-import cPickle
-
 
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
@@ -49,40 +44,26 @@ if __name__ == '__main__':
         os.mkdir(config.output_path)
 
     # Create roidb
-    config.debug = False
-    if config.debug == False:
-        image_sets = [iset for iset in config.dataset.image_set.split('+')]
-        roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path,
+
+    image_sets = [iset for iset in config.dataset.image_set.split('+')]
+    roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path,
                                       config.dataset.dataset_path,
                                       proposal=config.dataset.proposal, append_gt=True, flip=True,
                                       result_path=config.output_path,
                                       proposal_path=config.proposal_path)
-                  for image_set in image_sets]
+                for image_set in image_sets]
 
-        roidb = merge_roidb(roidbs)
-        # roidb = remove_small_boxes(roidb,max_scale=3,min_size=2)
-        roidb = filter_roidb(roidb, config)
-        bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
-    else:
-        args.display = 20
-        with open('/home/ubuntu/bigminival2014.pkl', 'rb') as file:
-            roidb = cPickle.load(file)
-        bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+    roidb = merge_roidb(roidbs)
+    roidb = filter_roidb(roidb, config)
+    bbox_means, bbox_stds = add_bbox_regression_targets(roidb, config)
+
 
     print('Creating Iterator with {} Images'.format(len(roidb)))
     train_iter = MNIteratorChips(roidb=roidb, config=config, batch_size=batch_size, nGPUs=nGPUs, threads=32,
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
-    #for data in train_iter:
-    # 	print 'Yes'
-    #import time
-    #t1 = time.time()
-    #for i,batch in enumerate(train_iter):
-    #    t2 = time.time() - t1
-    #    print 128.0 / t2
-    #    t1 = time.time()
-    # exit(0)
+
 
 
     print('Initializing the model...')
@@ -118,7 +99,6 @@ if __name__ == '__main__':
     eval_metrics.add(eval_metric)
     eval_metrics.add(cls_metric)
     eval_metrics.add(bbox_metric)
-    # eval_metrics.add(vis_metric)
 
     optimizer_params = get_optim_params(config, len(train_iter), batch_size)
     print ('Optimizer params: {}'.format(optimizer_params))
