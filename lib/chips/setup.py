@@ -1,3 +1,8 @@
+# --------------------------------------------------------------
+# SNIPER: Efficient Multi-Scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# by Mahyar Najibi and Bharat Singh
+# --------------------------------------------------------------
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
@@ -9,12 +14,10 @@ extra_info = {
     'language': 'c++',
 }
 
-
 ext_modules = [Extension('chips',
                          ['chips.pyx', 'cchips.cpp'],
                          **extra_info
                         )]
-
 setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = ext_modules,

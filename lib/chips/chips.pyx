@@ -14,8 +14,10 @@ from libcpp.vector cimport vector
 
 
 cdef extern from 'cchips.h' namespace 'chips':
-    vector[vector[float]] cgenerate(int width, int height, int chipsize, vector[vector[float]]& boxes, int num_boxes)
+    vector[vector[float]] cgenerate(int width, int height, int chipsize, vector[vector[float]]& boxes, int num_boxes, int stride)
 
-def generate(numpy.ndarray[float,ndim=2] boxes, int width, int height, int chipsize, int num_boxes):
-    res = cgenerate(width, height, chipsize, boxes, num_boxes)
+def generate(numpy.ndarray[float,ndim=2] boxes, int width, int height, int chipsize, int stride):
+    res = cgenerate(width, height, chipsize, boxes, boxes.shape[0], stride)
     return res
+
+

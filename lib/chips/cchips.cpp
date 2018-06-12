@@ -51,7 +51,7 @@ namespace chips{
         }
       }
     }
-    std::vector<std::vector<float> > cgenerate(int width, int height, int chipsize, std::vector<std::vector<float> >& boxes, int num_boxes)
+    std::vector<std::vector<float> > cgenerate(int width, int height, int chipsize, std::vector<std::vector<float> >& boxes, int num_boxes, int stride)
     {
        if (boxes.size() == 0 || boxes[0].size() == 0)
             return std::vector<std::vector<float> >();
@@ -79,8 +79,6 @@ namespace chips{
       tmp[3] = height-1;
 
       chips.push_back(tmp);
-
-      int stride = 32;
 
       for (int i = 0; i < width - chipsize; i = i + stride) {
         for (int j = 0; j < height - chipsize; j = j + stride) {
