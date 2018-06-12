@@ -12,7 +12,7 @@ from mask_utils import crop_polys, poly_encoder
 from generate_anchor import generate_anchors
 from bbox.bbox_transform import *
 import numpy.random as npr
-from chips import genchips
+from chips.chip_generator import chip_generator
 import math
 import copy_reg
 import types
@@ -378,7 +378,7 @@ class chip_worker(object):
         self.valid_ranges = cfg.TRAIN.VALID_RANGES
         self.scales = cfg.TRAIN.SCALES
         self.chip_size = chip_size
-
+        self.chip_generator = chip_generator(chip_stride=32, use_cpp=cfg.TRAIN.CPP_CHIPS)
     def chip_extractor(self, r):
         width = r['width']
         height = r['height']
@@ -406,7 +406,7 @@ class chip_worker(object):
                 ids = np.where((area >= self.valid_ranges[i][0]) & (area < self.valid_ranges[i][1])
                        & (ms < 450.0 / im_scale))[0]
 
-            cur_chips = genchips(int(r['width'] * im_scale), int(r['height'] * im_scale), gt_boxes[ids, :] * im_scale,
+            cur_chips = self.chip_generator.generate(gt_boxes[ids, :] * im_scale, int(r['width'] * im_scale), int(r['height'] * im_scale),
                                  self.chip_size)
             cur_chips = np.array(cur_chips) / im_scale
             if i != len(self.scales) - 1:
@@ -488,8 +488,8 @@ class chip_worker(object):
         for scale_i, im_scale in enumerate(self.scales):
             if scale_i == len(self.scales) - 1:
                 im_scale /= float(im_size_max)
-            chips = genchips(int(r['width'] * im_scale), int(r['height'] * im_scale),
-                             rem_valid_boxes[scale_i] * im_scale, self.chip_size)
+            chips = self.chip_generator.generate(rem_valid_boxes[scale_i] * im_scale, int(r['width'] * im_scale),
+                                        int(r['height'] * im_scale), self.chip_size)
             neg_chips.append(np.array(chips, dtype=np.float) / im_scale)
             neg_props_in_chips += [[] for _ in chips]
             neg_chip_ids.append(np.arange(first_available_chip_id,first_available_chip_id+len(chips)))

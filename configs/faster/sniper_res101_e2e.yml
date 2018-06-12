@@ -47,6 +47,8 @@ dataset:
   test_image_set: test-dev2015
   proposal: rpn
 TRAIN:
+  # Whether to use C++ or python code for chip generation
+  CPP_CHIPS: true
   # Multi-processing params
   NUM_PROCESS: 64
   NUM_THREAD: 8
@@ -85,7 +87,7 @@ TRAIN:
   scale: 100.0
   warmup_step: 1000 #4000 #1000
   begin_epoch: 0
-  end_epoch: 7 #9
+  end_epoch: 7
   model_prefix: 'rcnn'
 
   # whether flip image

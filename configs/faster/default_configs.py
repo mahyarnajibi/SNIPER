@@ -42,6 +42,7 @@ config.dataset.NUM_CLASSES = 21
 
 
 config.TRAIN = edict()
+config.TRAIN.CPP_CHIPS = False
 config.TRAIN.visualize = False
 config.TRAIN.WITH_MASK = False
 config.TRAIN.lr = 0
