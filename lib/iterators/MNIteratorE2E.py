@@ -33,7 +33,7 @@ class MNIteratorE2E(MNIteratorBase):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
-
+        self.chip_worker.reset()
         chips = self.pool.map(self.chip_worker.chip_extractor, self.roidb)
         chip_count = 0
         for i, r in enumerate(self.roidb):

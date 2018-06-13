@@ -123,8 +123,7 @@ class anchor_worker(object):
         self.num_fg = int(self.batch_size * cfg.TRAIN.RPN_FG_FRACTION)
 
     def worker(self, data):
-        im_info, cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes = data
-        import pdb;pdb.set_trace()
+        im_info, cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes = data[0:8]
         has_mask = True if len(data) > 8 else False
 
         anchors = self.all_anchors.copy()
@@ -291,7 +290,6 @@ class anchor_worker(object):
             fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
 
         rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
-        import pdb;pdb.set_trace()
         if has_mask:
             rval.append(mx.nd.array(encoded_polys))
         return rval
@@ -382,9 +380,13 @@ class chip_worker(object):
         self.scales = cfg.TRAIN.SCALES
         self.chip_size = chip_size
         self.use_cpp = cfg.TRAIN.CPP_CHIPS
-        self.chip_stride = 32
+        self.chip_stride = np.random.randint(56, 60)
         self.chip_generator = chip_generator(chip_stride=self.chip_stride, use_cpp=self.use_cpp)
         self.use_neg_chips = cfg.TRAIN.USE_NEG_CHIPS
+
+    def reset(self):
+        self.chip_stride = np.random.randint(56, 60)
+        self.chip_generator = chip_generator(chip_stride=self.chip_stride, use_cpp=self.use_cpp)
 
     def chip_extractor(self, r):
         width = r['width']
