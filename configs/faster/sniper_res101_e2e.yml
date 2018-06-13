@@ -48,7 +48,10 @@ dataset:
   proposal: rpn
 TRAIN:
   # Whether to use C++ or python code for chip generation
-  CPP_CHIPS: true
+  CPP_CHIPS: false
+  # Whether to extract negative chips during training
+  USE_NEG_CHIPS: true
+
   # Multi-processing params
   NUM_PROCESS: 64
   NUM_THREAD: 8
@@ -57,7 +60,7 @@ TRAIN:
   WITH_MASK: false
 
   # Training scales
-  # The last scale (or the only scale) should be the desired max size in pixels
+  # The last scale (or the only scale) should be the desired max resolution in pixels
   # Other scales should be scaling coefficients
   SCALES:
   - 3.0

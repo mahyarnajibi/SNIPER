@@ -49,6 +49,11 @@ dataset:
   proposal: rpn
 
 TRAIN:
+  # Whether to use C++ or python code for chip generation
+  CPP_CHIPS: true
+  # Whether to extract negative chips during training
+  USE_NEG_CHIPS: true
+
   # Multi-processing params
   NUM_PROCESS: 64
   NUM_THREAD: 8
