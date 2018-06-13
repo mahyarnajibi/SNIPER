@@ -10,7 +10,7 @@ import mxnet as mx
 import numpy as np
 from MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
-from utils.data_workers import roidb_anchor_worker, im_worker, chip_worker
+from utils.data_workers import anchor_worker, im_worker, chip_worker
 
 class MNIteratorE2E(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
@@ -26,41 +26,49 @@ class MNIteratorE2E(MNIteratorBase):
         self.epiter = 0
         self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
         self.chip_worker = chip_worker(chip_size=self.crop_size[0], cfg=config)
+        self.anchor_worker = anchor_worker(chip_size=self.crop_size[0] ,cfg=config)
         super(MNIteratorE2E, self).__init__(roidb, config, batch_size, threads, nGPUs, pad_rois_to, False)
 
     def reset(self):
         self.cur_i = 0
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
+
         chips = self.pool.map(self.chip_worker.chip_extractor, self.roidb)
         chip_count = 0
         for i, r in enumerate(self.roidb):
             cs = chips[i]
             chip_count += len(cs)
             r['crops'] = cs
+
         all_props_in_chips = self.pool.map(self.chip_worker.box_assigner, self.roidb)
 
-        for (props_in_chips, neg_chips, neg_props_in_chips), cur_roidb in zip(all_props_in_chips, self.roidb):
-            cur_roidb['props_in_chips'] = props_in_chips
-            cur_roidb['neg_crops'] = neg_chips
-            cur_roidb['neg_props_in_chips'] = neg_props_in_chips
-
-        # Append negative chips
+        for ps, cur_roidb in zip(all_props_in_chips, self.roidb):
+            cur_roidb['props_in_chips'] = ps[0]
+            if self.cfg.TRAIN.USE_NEG_CHIPS:
+                cur_roidb['neg_crops'] = ps[1]
+                cur_roidb['neg_props_in_chips'] = ps[2]
         chipindex = []
-        for i, r in enumerate(self.roidb):
-            cs = r['neg_crops']
-            if len(cs) > 0:
-                sel_inds = np.arange(len(cs))
-                if len(cs) > self.n_neg_per_im:
-                    sel_inds = np.random.permutation(sel_inds)[0:self.n_neg_per_im]
-                for ind in sel_inds:
-                    chip_count = chip_count + 1
-                    r['crops'].append(r['neg_crops'][ind])
-                    r['props_in_chips'].append(r['neg_props_in_chips'][ind].astype(np.int32))
-            all_crops = r['crops']
-            for j in range(len(all_crops)):
-                chipindex.append(i)
-        print('Number of extracted chips: {}'.format(chip_count))
+        if self.cfg.TRAIN.USE_NEG_CHIPS:
+            # Append negative chips
+            for i, r in enumerate(self.roidb):
+                cs = r['neg_crops']
+                if len(cs) > 0:
+                    sel_inds = np.arange(len(cs))
+                    if len(cs) > self.n_neg_per_im:
+                        sel_inds = np.random.permutation(sel_inds)[0:self.n_neg_per_im]
+                    for ind in sel_inds:
+                        chip_count = chip_count + 1
+                        r['crops'].append(r['neg_crops'][ind])
+                        r['props_in_chips'].append(r['neg_props_in_chips'][ind].astype(np.int32))
+                for j in range(len(r['crops'])):
+                    chipindex.append(i)
+        else:
+            for i, r in enumerate(self.roidb):
+                for j in range(len(r['crops'])):
+                    chipindex.append(i)
+
+        print('Total number of extracted chips: {}'.format(chip_count))
         blocksize = self.batch_size
         chipindex = np.array(chipindex)
         if chipindex.shape[0] % blocksize > 0:
@@ -127,15 +135,20 @@ class MNIteratorE2E(MNIteratorBase):
             if self.cfg.TRAIN.WITH_MASK:
                 gt_masks = processed_roidb[i]['gt_masks']
 
-            if im_scale == self.cfg.TRAIN.SCALES[0]:
-                srange[i, 0] = 0
-                srange[i, 1] = self.cfg.TRAIN.VALID_RANGES[0][1] * self.cfg.TRAIN.SCALES[0] #80*3
-            elif im_scale == self.cfg.TRAIN.SCALES[1]: #1.667:
-                srange[i, 0] = self.cfg.TRAIN.VALID_RANGES[1][0] * self.cfg.TRAIN.SCALES[1] #32*1.667
-                srange[i, 1] = self.cfg.TRAIN.VALID_RANGES[1][1] * self.cfg.TRAIN.SCALES[1] #1.667*150
-            else:
-                srange[i, 0] = self.cfg.TRAIN.VALID_RANGES[2][0] * im_scale #120*im_scale
-                srange[i, 1] = self.cfg.TRAIN.SCALES[2] #512
+            for scalei, cscale in enumerate(self.cfg.TRAIN.SCALES):
+                if scalei == len(self.cfg.TRAIN.SCALES) - 1:
+                    # Last or only scale
+                    srange[i, 0] = 0 if self.cfg.TRAIN.VALID_RANGES[scalei][0] < 0 else \
+                        self.cfg.TRAIN.VALID_RANGES[scalei][0] * im_scale
+                    srange[i, 1] = self.crop_size[1] if self.cfg.TRAIN.VALID_RANGES[scalei][1] < 0 else \
+                        self.cfg.TRAIN.VALID_RANGES[scalei][1] * im_scale  # max scale
+                elif im_scale == cscale:
+                    # Intermediate scale
+                    srange[i, 0] = 0 if self.cfg.TRAIN.VALID_RANGES[scalei][0] < 0 else \
+                        self.cfg.TRAIN.VALID_RANGES[scalei][0] * self.cfg.TRAIN.SCALES[scalei]
+                    srange[i, 1] = self.crop_size[1] if self.cfg.TRAIN.VALID_RANGES[scalei][1] < 0 else \
+                        self.cfg.TRAIN.VALID_RANGES[scalei][1] * self.cfg.TRAIN.SCALES[scalei]
+                    break
             chipinfo[i, 0] = height
             chipinfo[i, 1] = width
             chipinfo[i, 2] = im_scale
@@ -145,15 +158,15 @@ class MNIteratorE2E(MNIteratorBase):
                 argw += [gt_masks]
             worker_data.append(argw)
 
-        all_labels = self.pool.map(roidb_anchor_worker, worker_data)
+        all_labels = self.pool.map(self.anchor_worker.worker, worker_data)
 
-        A = 21
-        feat_height = 32
-        feat_width = 32
-        labels = mx.nd.zeros((n_batch, A * feat_height * feat_width), mx.cpu(0))
-        bbox_targets = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
-        bbox_weights = mx.nd.zeros((n_batch, A * 4, feat_height, feat_width), mx.cpu(0))
+        feat_width = self.crop_size[1] / self.cfg.network.RPN_FEAT_STRIDE
+        feat_height = self.crop_size[0] / self.cfg.network.RPN_FEAT_STRIDE
+        labels = mx.nd.zeros((n_batch, self.cfg.network.NUM_ANCHORS * feat_height * feat_width), mx.cpu(0))
+        bbox_targets = mx.nd.zeros((n_batch, self.cfg.network.NUM_ANCHORS * 4, feat_height, feat_width), mx.cpu(0))
+        bbox_weights = mx.nd.zeros((n_batch, self.cfg.network.NUM_ANCHORS * 4, feat_height, feat_width), mx.cpu(0))
         gt_boxes = -mx.nd.ones((n_batch, 100, 5))
+
         if self.cfg.TRAIN.WITH_MASK:
             encoded_masks = -mx.nd.ones((n_batch,100,500))
 

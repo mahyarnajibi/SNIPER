@@ -94,205 +94,208 @@ class im_worker(object):
 def nms_worker(worker_args):
     return soft_nms(worker_args[0], sigma=worker_args[1], method=2)
 
-# Compute all anchors
-scales = np.array([2, 4, 7, 10, 13, 16, 24], dtype=np.float32)
-ratios = (0.5, 1, 2)
-feat_stride = 16
-base_anchors = generate_anchors(base_size=feat_stride, ratios=list(ratios), scales=list(scales))
-num_anchors = base_anchors.shape[0]
-feat_width = 32
-feat_height = 32
-shift_x = np.arange(0, feat_width) * feat_stride
-shift_y = np.arange(0, feat_height) * feat_stride
-shift_x, shift_y = np.meshgrid(shift_x, shift_y)
-shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
-A = num_anchors
-K = shifts.shape[0]
-all_anchors = base_anchors.reshape((1, A, 4)) + shifts.reshape((1, K, 4)).transpose((1, 0, 2))
-all_anchors = all_anchors.reshape((K * A, 4))
 
+class anchor_worker(object):
+    def __init__(self, cfg, chip_size, max_n_gts=100, max_poly_len=500):
+        self.scales = np.array(cfg.network.ANCHOR_SCALES, dtype=np.float32)
+        self.ratios = cfg.network.ANCHOR_RATIOS
+        feat_stride = cfg.network.RPN_FEAT_STRIDE
+        self.max_n_gts = max_n_gts
+        self.max_poly_len = max_poly_len
 
-def roidb_anchor_worker(data):
-    im_info = data[0]
-    cur_crop = data[1]
-    im_scale = data[2]
-    nids = data[3]
-    gtids = data[4]
-    gt_boxes = data[5]
-    boxes = data[6]
-    classes = data[7]
-    max_n_gts = 100
-    max_poly_len = 500
+        # Initializing anchors
+        base_anchors = generate_anchors(base_size=feat_stride, ratios=list(self.ratios),
+                                             scales=list(self.scales))
+        self.num_anchors = base_anchors.shape[0]
+        self.feat_width = chip_size / cfg.network.RPN_FEAT_STRIDE
+        self.feat_height = chip_size / cfg.network.RPN_FEAT_STRIDE
+        shift_x = np.arange(0, self.feat_width) * feat_stride
+        shift_y = np.arange(0, self.feat_height) * feat_stride
+        shift_x, shift_y = np.meshgrid(shift_x, shift_y)
+        shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
+        self.K = shifts.shape[0]
+        all_anchors = base_anchors.reshape((1, self.num_anchors, 4)) + \
+                      shifts.reshape((1, self.K, 4)).transpose((1, 0, 2))
+        self.all_anchors = all_anchors.reshape((self.K * self.num_anchors, 4))
+        self.batch_size = cfg.TRAIN.RPN_BATCH_SIZE
+        self.pos_thresh = cfg.TRAIN.RPN_POSITIVE_OVERLAP
+        self.neg_thresh = cfg.TRAIN.RPN_NEGATIVE_OVERLAP
+        self.num_fg = int(self.batch_size * cfg.TRAIN.RPN_FG_FRACTION)
 
-    has_mask = True if len(data) > 8 else False
-    
-    anchors = all_anchors.copy()
-    inds_inside = np.where((anchors[:, 0] >= -32) &
-                           (anchors[:, 1] >= -32) &
-                           (anchors[:, 2] < im_info[0]+32) &
-                           (anchors[:, 3] < im_info[1]+32))[0]
+    def worker(self, data):
+        im_info, cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes = data
+        import pdb;pdb.set_trace()
+        has_mask = True if len(data) > 8 else False
 
-    anchors = anchors[inds_inside, :]
-    labels = np.empty((len(inds_inside),), dtype=np.float32)
-    labels.fill(-1)
-    total_anchors = int(K * A)
+        anchors = self.all_anchors.copy()
+        inds_inside = np.where((anchors[:, 0] >= -32) &
+                               (anchors[:, 1] >= -32) &
+                               (anchors[:, 2] < im_info[0] + 32) &
+                               (anchors[:, 3] < im_info[1] + 32))[0]
 
-    gt_boxes[:, 0] = gt_boxes[:, 0] - cur_crop[0]
-    gt_boxes[:, 2] = gt_boxes[:, 2] - cur_crop[0]
-    gt_boxes[:, 1] = gt_boxes[:, 1] - cur_crop[1]
-    gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
+        anchors = anchors[inds_inside, :]
+        labels = np.empty((len(inds_inside),), dtype=np.float32)
+        labels.fill(-1)
+        total_anchors = int(self.K * self.num_anchors)
 
-    vgt_boxes = boxes[np.intersect1d(gtids, nids)]
+        gt_boxes[:, 0] -= cur_crop[0]
+        gt_boxes[:, 2] -= cur_crop[0]
+        gt_boxes[:, 1] -= cur_crop[1]
+        gt_boxes[:, 3] -= cur_crop[1]
 
-    vgt_boxes[:, 0] = vgt_boxes[:, 0] - cur_crop[0]
-    vgt_boxes[:, 2] = vgt_boxes[:, 2] - cur_crop[0]
-    vgt_boxes[:, 1] = vgt_boxes[:, 1] - cur_crop[1]
-    vgt_boxes[:, 3] = vgt_boxes[:, 3] - cur_crop[1]
+        vgt_boxes = boxes[np.intersect1d(gtids, nids)]
 
-    gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
-    vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
+        vgt_boxes[:, 0] -= cur_crop[0]
+        vgt_boxes[:, 2] -= cur_crop[0]
+        vgt_boxes[:, 1] -= cur_crop[1]
+        vgt_boxes[:, 3] -= cur_crop[1]
 
-    ids = filter_boxes(gt_boxes, 10)
-    if len(ids) == 0:
-        gt_boxes = np.zeros((0, 4))
-        classes = np.zeros((0, 1))
+        gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
+        vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
 
-    if has_mask:
-        mask_polys = data[8]
-        # Shift and crop the mask polygons
-        mask_polys = crop_polys(mask_polys, cur_crop, im_scale)
-        # Create the padded encoded array
-        if len(ids) > 0:
-            polylen = len(mask_polys)
-            tmask_polys = []
-            tgt_boxes = []
-            tclasses = []
-            for i in ids:
-                if i < polylen:
-                    tmask_polys.append(mask_polys[i])
-                    tgt_boxes.append(gt_boxes[i])
-                    tclasses.append(classes[i])
-            if len(gt_boxes) > 0:
-                gt_boxes = np.array(tgt_boxes)
-                classes = np.array(tclasses).reshape(len(tclasses), 1)
-                mask_polys = tmask_polys
+        ids = filter_boxes(gt_boxes, 10)
+        if len(ids) == 0:
+            gt_boxes = np.zeros((0, 4))
+            classes = np.zeros((0, 1))
+
+        if has_mask:
+            mask_polys = data[8]
+            # Shift and crop the mask polygons
+            mask_polys = crop_polys(mask_polys, cur_crop, im_scale)
+            # Create the padded encoded array
+            if len(ids) > 0:
+                polylen = len(mask_polys)
+                tmask_polys = []
+                tgt_boxes = []
+                tclasses = []
+                for i in ids:
+                    if i < polylen:
+                        tmask_polys.append(mask_polys[i])
+                        tgt_boxes.append(gt_boxes[i])
+                        tclasses.append(classes[i])
+                if len(gt_boxes) > 0:
+                    gt_boxes = np.array(tgt_boxes)
+                    classes = np.array(tclasses).reshape(len(tclasses), 1)
+                    mask_polys = tmask_polys
+                else:
+                    gt_boxes = np.zeros((0, 4))
+                    classes = np.zeros((0, 1))
+
+                encoded_polys = poly_encoder(mask_polys, classes[:, 0] - 1,
+                                             max_poly_len=self.max_poly_len, max_n_gts=self.max_n_gts)
             else:
-                gt_boxes = np.zeros((0, 4))
-                classes = np.zeros((0, 1))
-
-            encoded_polys = poly_encoder(mask_polys, classes[:,0]-1,
-                    max_poly_len=max_poly_len, max_n_gts=max_n_gts)
+                encoded_polys = -np.ones((self.max_n_gts, self.max_poly_len), dtype=np.float32)
         else:
-            encoded_polys = -np.ones((max_n_gts, max_poly_len), dtype=np.float32)
-    else:
+            if len(ids) > 0:
+                gt_boxes = gt_boxes[ids]
+                classes = classes[ids]
+
+        agt_boxes = gt_boxes.copy()
+        ids = filter_boxes(vgt_boxes, 10)
         if len(ids) > 0:
-            gt_boxes = gt_boxes[ids]
-            classes = classes[ids]
-
-    agt_boxes = gt_boxes.copy()
-    ids = filter_boxes(vgt_boxes, 10)
-    if len(ids) > 0:
-        vgt_boxes = vgt_boxes[ids]
-    else:
-        vgt_boxes = np.zeros((0, 4))
-
-    if len(vgt_boxes) > 0:
-        ov = bbox_overlaps(np.ascontiguousarray(gt_boxes).astype(float), np.ascontiguousarray(vgt_boxes).astype(float))
-        mov = np.max(ov, axis=1)
-    else:
-        mov = np.zeros((len(gt_boxes)))
-
-    invalid_gtids = np.where(mov < 1)[0]
-    valid_gtids = np.where(mov == 1)[0]
-    invalid_boxes = gt_boxes[invalid_gtids, :]
-    gt_boxes = gt_boxes[valid_gtids, :]
-
-    def _unmap(data, count, inds, fill=0):
-        """" unmap a subset inds of data into original data of size count """
-        if len(data.shape) == 1:
-            ret = np.empty((count,), dtype=np.float32)
-            ret.fill(fill)
-            ret[inds] = data
+            vgt_boxes = vgt_boxes[ids]
         else:
-            ret = np.empty((count,) + data.shape[1:], dtype=np.float32)
-            ret.fill(fill)
-            ret[inds, :] = data
-        return ret
+            vgt_boxes = np.zeros((0, 4))
 
-    if gt_boxes.size > 0:
-        # overlap between the anchors and the gt boxes
-        # overlaps (ex, gt)
-        overlaps = bbox_overlaps(anchors.astype(np.float), gt_boxes.astype(np.float))
-        if invalid_boxes is not None:
+        if len(vgt_boxes) > 0:
+            ov = bbox_overlaps(np.ascontiguousarray(gt_boxes).astype(float),
+                               np.ascontiguousarray(vgt_boxes).astype(float))
+            mov = np.max(ov, axis=1)
+        else:
+            mov = np.zeros((len(gt_boxes)))
+
+        invalid_gtids = np.where(mov < 1)[0]
+        valid_gtids = np.where(mov == 1)[0]
+        invalid_boxes = gt_boxes[invalid_gtids, :]
+        gt_boxes = gt_boxes[valid_gtids, :]
+
+        def _unmap(data, count, inds, fill=0):
+            """" unmap a subset inds of data into original data of size count """
+            if len(data.shape) == 1:
+                ret = np.empty((count,), dtype=np.float32)
+                ret.fill(fill)
+                ret[inds] = data
+            else:
+                ret = np.empty((count,) + data.shape[1:], dtype=np.float32)
+                ret.fill(fill)
+                ret[inds, :] = data
+            return ret
+
+        if gt_boxes.size > 0:
+            # overlap between the anchors and the gt boxes
+            # overlaps (ex, gt)
+            overlaps = bbox_overlaps(anchors.astype(np.float), gt_boxes.astype(np.float))
+            if invalid_boxes is not None:
+                if len(invalid_boxes) > 0:
+                    overlapsn = bbox_overlaps(anchors.astype(np.float), invalid_boxes.astype(np.float))
+                    argmax_overlapsn = overlapsn.argmax(axis=1)
+                    max_overlapsn = overlapsn[np.arange(len(inds_inside)), argmax_overlapsn]
+            argmax_overlaps = overlaps.argmax(axis=1)
+            max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
+            gt_argmax_overlaps = overlaps.argmax(axis=0)
+            gt_max_overlaps = overlaps[gt_argmax_overlaps, np.arange(overlaps.shape[1])]
+            gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
+
+            labels[max_overlaps < self.neg_thresh] = 0
+            labels[gt_argmax_overlaps] = 1
+
+            # fg label: above threshold IoU
+            labels[max_overlaps >= self.pos_thresh] = 1
+
+            if invalid_boxes is not None:
+                if len(invalid_boxes) > 0:
+                    labels[max_overlapsn > 0.3] = -1
+        else:
+            labels[:] = 0
             if len(invalid_boxes) > 0:
                 overlapsn = bbox_overlaps(anchors.astype(np.float), invalid_boxes.astype(np.float))
                 argmax_overlapsn = overlapsn.argmax(axis=1)
                 max_overlapsn = overlapsn[np.arange(len(inds_inside)), argmax_overlapsn]
-        argmax_overlaps = overlaps.argmax(axis=1)
-        max_overlaps = overlaps[np.arange(len(inds_inside)), argmax_overlaps]
-        gt_argmax_overlaps = overlaps.argmax(axis=0)
-        gt_max_overlaps = overlaps[gt_argmax_overlaps, np.arange(overlaps.shape[1])]
-        gt_argmax_overlaps = np.where(overlaps == gt_max_overlaps)[0]
-
-        labels[max_overlaps < 0.4] = 0
-        labels[gt_argmax_overlaps] = 1
-
-        # fg label: above threshold IoU
-        labels[max_overlaps >= 0.5] = 1
-
-        if invalid_boxes is not None:
-            if len(invalid_boxes) > 0:
-                labels[max_overlapsn > 0.3] = -1
-    else:
-        labels[:] = 0
-        if len(invalid_boxes) > 0:
-            overlapsn = bbox_overlaps(anchors.astype(np.float), invalid_boxes.astype(np.float))
-            argmax_overlapsn = overlapsn.argmax(axis=1)
-            max_overlapsn = overlapsn[np.arange(len(inds_inside)), argmax_overlapsn]
-            if len(invalid_boxes) > 0:
-                labels[max_overlapsn > 0.3] = -1
+                if len(invalid_boxes) > 0:
+                    labels[max_overlapsn > 0.3] = -1
 
         # subsample positive labels if we have too many
-    num_fg = 128
-    fg_inds = np.where(labels == 1)[0]
-    if len(fg_inds) > num_fg:
-        disable_inds = npr.choice(fg_inds, size=(len(fg_inds) - num_fg), replace=False)
-        labels[disable_inds] = -1
+        fg_inds = np.where(labels == 1)[0]
+        if len(fg_inds) > self.num_fg:
+            disable_inds = npr.choice(fg_inds, size=(len(fg_inds) - self.num_fg), replace=False)
+            labels[disable_inds] = -1
 
-    # subsample negative labels if we have too many
-    num_bg = 256 - np.sum(labels == 1)
-    bg_inds = np.where(labels == 0)[0]
-    if len(bg_inds) > num_bg:
-        disable_inds = npr.choice(bg_inds, size=(len(bg_inds) - num_bg), replace=False)
-        labels[disable_inds] = -1
+        # subsample negative labels if we have too many
+        num_bg = self.batch_size - np.sum(labels == 1)
+        bg_inds = np.where(labels == 0)[0]
+        if len(bg_inds) > num_bg:
+            disable_inds = npr.choice(bg_inds, size=(len(bg_inds) - num_bg), replace=False)
+            labels[disable_inds] = -1
 
-    bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
-    if gt_boxes.size > 0:
-        bbox_targets[:] = bbox_transform(anchors, gt_boxes[argmax_overlaps, :4])
+        bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
+        if gt_boxes.size > 0:
+            bbox_targets[:] = bbox_transform(anchors, gt_boxes[argmax_overlaps, :4])
 
-    bbox_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
-    bbox_weights[labels == 1, :] = np.array([1.0, 1.0, 1.0, 1.0])
+        bbox_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
+        bbox_weights[labels == 1, :] = np.array([1.0, 1.0, 1.0, 1.0])
 
-    # map up to original set of anchors
-    labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
-    bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
-    bbox_weights = _unmap(bbox_weights, total_anchors, inds_inside, fill=0)
+        # map up to original set of anchors
+        labels = _unmap(labels, total_anchors, inds_inside, fill=-1)
+        bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)
+        bbox_weights = _unmap(bbox_weights, total_anchors, inds_inside, fill=0)
 
-    labels = labels.reshape((1, feat_height, feat_width, A)).transpose(0, 3, 1, 2)
-    labels = labels.reshape((1, A * feat_height * feat_width)).astype(np.float16)
-    bbox_targets = bbox_targets.reshape((feat_height, feat_width, A * 4)).transpose(2, 0, 1)
-    bbox_weights = bbox_weights.reshape((feat_height, feat_width, A * 4)).transpose((2, 0, 1))
-    pids = np.where(bbox_weights == 1)
-    bbox_targets = bbox_targets[pids]
+        labels = labels.reshape((1, self.feat_height, self.feat_width, self.num_anchors)).transpose(0, 3, 1, 2)
+        labels = labels.reshape((1, self.num_anchors * self.feat_height * self.feat_width)).astype(np.float16)
+        bbox_targets = bbox_targets.reshape((self.feat_height, self.feat_width, self.num_anchors * 4)).transpose(2, 0, 1)
+        bbox_weights = bbox_weights.reshape((self.feat_height, self.feat_width, self.num_anchors * 4)).transpose((2, 0, 1))
+        pids = np.where(bbox_weights == 1)
+        bbox_targets = bbox_targets[pids]
 
-    fgt_boxes = -np.ones((100, 5))
-    if len(agt_boxes) > 0:
-        fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
+        fgt_boxes = -np.ones((100, 5))
+        if len(agt_boxes) > 0:
+            fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
 
-    rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
-    if has_mask:
-        rval.append(mx.nd.array(encoded_polys))
-    return rval
+        rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
+        import pdb;pdb.set_trace()
+        if has_mask:
+            rval.append(mx.nd.array(encoded_polys))
+        return rval
+
 
 def roidb_worker(data):
     im_i = data[0]
@@ -378,7 +381,11 @@ class chip_worker(object):
         self.valid_ranges = cfg.TRAIN.VALID_RANGES
         self.scales = cfg.TRAIN.SCALES
         self.chip_size = chip_size
-        self.chip_generator = chip_generator(chip_stride=32, use_cpp=cfg.TRAIN.CPP_CHIPS)
+        self.use_cpp = cfg.TRAIN.CPP_CHIPS
+        self.chip_stride = 32
+        self.chip_generator = chip_generator(chip_stride=self.chip_stride, use_cpp=self.use_cpp)
+        self.use_neg_chips = cfg.TRAIN.USE_NEG_CHIPS
+
     def chip_extractor(self, r):
         width = r['width']
         height = r['height']
@@ -399,12 +406,12 @@ class chip_worker(object):
                 ids = np.where((area >= self.valid_ranges[i][0]))[0]
             elif i == 0:
                 # The finest scale (but not the only scale)
-                ids = np.where((area < self.valid_ranges[i][1]) & (ms < 450.0 / im_scale) & (ws >= 2)
-                               & (hs >= 2))[0]
+                ids = np.where((area < self.valid_ranges[i][1]) &
+                               (ms < (self.chip_size - self.chip_stride - 1) / im_scale) & (ws >= 2) & (hs >= 2))[0]
             else:
                 # An intermediate scale
                 ids = np.where((area >= self.valid_ranges[i][0]) & (area < self.valid_ranges[i][1])
-                       & (ms < 450.0 / im_scale))[0]
+                       & (ms < (self.chip_size - self.chip_stride - 1) / im_scale))[0]
 
             cur_chips = self.chip_generator.generate(gt_boxes[ids, :] * im_scale, int(r['width'] * im_scale), int(r['height'] * im_scale),
                                  self.chip_size)
@@ -451,7 +458,8 @@ class chip_worker(object):
                 ids = np.where((area >= self.valid_ranges[scale_i][0]))[0]
             else:
                 # Other scales
-                ids = np.where((area < self.valid_ranges[scale_i][1]) & (max_sizes < 450.0 / im_scale) &
+                ids = np.where((area < self.valid_ranges[scale_i][1]) &
+                               (max_sizes < (self.chip_size - self.chip_stride - 1) / im_scale) &
                                (widths >= 2) & (heights >= 2))[0]
             valid_ids.append(ids)
         valid_boxes = [r['boxes'][ids].astype(np.float) for ids in valid_ids]
@@ -478,62 +486,65 @@ class chip_worker(object):
                         if x2 - x1 >= 1 and y2 - y1 >= 1 and area <= self.valid_ranges[scale_i][1]:
                             props_in_chips[all_chip_ids[scale_i][cid]].append(valid_ids[scale_i][pi])
                             covered_boxes[scale_i][pi] = True
+        if self.use_neg_chips:
+            # ** Generate negative chips based on remaining boxes
+            rem_valid_boxes = [valid_boxes[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
+            neg_chips = []
+            neg_props_in_chips = []
+            first_available_chip_id = 0
+            neg_chip_ids = []
+            for scale_i, im_scale in enumerate(self.scales):
+                if scale_i == len(self.scales) - 1:
+                    im_scale /= float(im_size_max)
+                chips = self.chip_generator.generate(rem_valid_boxes[scale_i] * im_scale, int(r['width'] * im_scale),
+                                            int(r['height'] * im_scale), self.chip_size)
+                neg_chips.append(np.array(chips, dtype=np.float) / im_scale)
+                neg_props_in_chips += [[] for _ in chips]
+                neg_chip_ids.append(np.arange(first_available_chip_id,first_available_chip_id+len(chips)))
+                first_available_chip_id += len(chips)
 
-        # ** Generate negative chips based on remaining boxes
-        rem_valid_boxes = [valid_boxes[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
-        neg_chips = []
-        neg_props_in_chips = []
-        first_available_chip_id = 0
-        neg_chip_ids = []
-        for scale_i, im_scale in enumerate(self.scales):
-            if scale_i == len(self.scales) - 1:
-                im_scale /= float(im_size_max)
-            chips = self.chip_generator.generate(rem_valid_boxes[scale_i] * im_scale, int(r['width'] * im_scale),
-                                        int(r['height'] * im_scale), self.chip_size)
-            neg_chips.append(np.array(chips, dtype=np.float) / im_scale)
-            neg_props_in_chips += [[] for _ in chips]
-            neg_chip_ids.append(np.arange(first_available_chip_id,first_available_chip_id+len(chips)))
-            first_available_chip_id += len(chips)
+            # ** Assign remaining boxes to negative chips based on max overlap
+            neg_ids = [valid_ids[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
+            for scale_i in range(len(self.scales)):
+                if neg_chips[scale_i].shape[0]>0:
+                    overlaps = ignore_overlaps(neg_chips[scale_i], rem_valid_boxes[scale_i])
+                    max_ids = overlaps.argmax(axis=0)
+                    for pi, cid in enumerate(max_ids):
+                        cur_chip = neg_chips[scale_i][cid]
+                        cur_box = rem_valid_boxes[scale_i][pi]
+                        x1, x2, y1, y2 = max(cur_chip[0], cur_box[0]), min(cur_chip[2], cur_box[2]), \
+                                         max(cur_chip[1], cur_box[1]), min(cur_chip[3], cur_box[3])
+                        area = math.sqrt(abs((x2 - x1) * (y2 - y1)))
+                        if scale_i == len(self.scales) - 1:
+                            if x2 - x1 >= 1 and y2 - y1 >= 1 and area >= self.valid_ranges[scale_i][0]:
+                                neg_props_in_chips[neg_chip_ids[scale_i][cid]].append(neg_ids[scale_i][pi])
+                        else:
+                            if x2 - x1 >= 1 and y2 - y1 >= 1 and area < self.valid_ranges[scale_i][1]:
+                                neg_props_in_chips[neg_chip_ids[scale_i][cid]].append(neg_ids[scale_i][pi])
+            # Final negative chips extracted:
+            final_neg_chips = []
+            # IDs of proposals which are valid inside each of the negative chips:
+            final_neg_props_in_chips = []
+            chip_counter = 0
+            for scale_i, chips in enumerate(neg_chips):
+                im_scale = self.scales[scale_i] / float(im_size_max) if scale_i == len(self.scales) - 1 else \
+                           self.scales[scale_i]
+                for chip in chips:
+                    if len(neg_props_in_chips[chip_counter]) > 25 or (
+                                    len(neg_props_in_chips[chip_counter]) > 10 and scale_i != 0):
+                        final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
+                        if scale_i != len(self.scales) - 1:
+                            final_neg_chips.append([chip, im_scale, self.chip_size, self.chip_size])
+                        else:
+                            final_neg_chips.append(
+                                [chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale)])
+                        chip_counter += 1
 
-        # ** Assign remaining boxes to negative chips based on max overlap
-        neg_ids = [valid_ids[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
-        for scale_i in range(len(self.scales)):
-            if neg_chips[scale_i].shape[0]>0:
-                overlaps = ignore_overlaps(neg_chips[scale_i], rem_valid_boxes[scale_i])
-                max_ids = overlaps.argmax(axis=0)
-                for pi, cid in enumerate(max_ids):
-                    cur_chip = neg_chips[scale_i][cid]
-                    cur_box = rem_valid_boxes[scale_i][pi]
-                    x1, x2, y1, y2 = max(cur_chip[0], cur_box[0]), min(cur_chip[2], cur_box[2]), \
-                                     max(cur_chip[1], cur_box[1]), min(cur_chip[3], cur_box[3])
-                    area = math.sqrt(abs((x2 - x1) * (y2 - y1)))
-                    if scale_i == len(self.scales) - 1:
-                        if x2 - x1 >= 1 and y2 - y1 >= 1 and area >= self.valid_ranges[scale_i][0]:
-                            neg_props_in_chips[neg_chip_ids[scale_i][cid]].append(neg_ids[scale_i][pi])
-                    else:
-                        if x2 - x1 >= 1 and y2 - y1 >= 1 and area < self.valid_ranges[scale_i][1]:
-                            neg_props_in_chips[neg_chip_ids[scale_i][cid]].append(neg_ids[scale_i][pi])
-        # Final negative chips extracted:
-        final_neg_chips = []
-        # IDs of proposals which are valid inside each of the negative chips:
-        final_neg_props_in_chips = []
-        chip_counter = 0
-        for scale_i, chips in enumerate(neg_chips):
-            im_scale = self.scales[scale_i] / float(im_size_max) if scale_i == len(self.scales) - 1 else \
-                       self.scales[scale_i]
-            for chip in chips:
-                if len(neg_props_in_chips[chip_counter]) > 25 or (
-                                len(neg_props_in_chips[chip_counter]) > 10 and scale_i != 0):
-                    final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
-                    if scale_i != len(self.scales) - 1:
-                        final_neg_chips.append([chip, im_scale, self.chip_size, self.chip_size])
-                    else:
-                        final_neg_chips.append(
-                            [chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale)])
-                    chip_counter += 1
-
-        r['neg_chips'] = final_neg_chips
-        r['neg_props_in_chips'] = final_neg_props_in_chips
+            r['neg_chips'] = final_neg_chips
+            r['neg_props_in_chips'] = final_neg_props_in_chips
         for j in range(len(props_in_chips)):
             props_in_chips[j] = np.array(props_in_chips[j], dtype=np.int32)
-        return props_in_chips, final_neg_chips, final_neg_props_in_chips
+        if self.use_neg_chips:
+            return props_in_chips, final_neg_chips, final_neg_props_in_chips
+        else:
+            return props_in_chips
