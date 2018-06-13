@@ -5,7 +5,7 @@
 # --------------------------------------------------------------
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/sniper_resnet_101_mask"
+output_path: "./output/sniper_res_101_bn_mask"
 symbol: resnet_mx_101_e2e_mask
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
@@ -14,7 +14,7 @@ default:
   frequent: 100
   kvstore: device
 network:
-  pretrained: "./data/pretrained_model/resnet_mx_101"  
+  pretrained: "./data/pretrained_model/resnet_mx_101_open"
   pretrained_epoch: 0
   PIXEL_MEANS:
   - 103.939
@@ -50,7 +50,7 @@ dataset:
 
 TRAIN:
   # Whether to use C++ or python code for chip generation
-  CPP_CHIPS: true
+  CPP_CHIPS: false
   # Whether to extract negative chips during training
   USE_NEG_CHIPS: true
 
@@ -61,8 +61,10 @@ TRAIN:
   # Whether to train with segmentation mask
   WITH_MASK: true
 
-  # The training scale (high res scale, medium res scale, smallest size in the pyramid)
-   SCALES:
+  # Training scales
+  # The last scale (or the only scale) should be the desired max resolution in pixels
+  # Other scales should be scaling coefficients
+  SCALES:
   - 3.0
   - 1.667
   - 512.0
