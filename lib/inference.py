@@ -9,14 +9,15 @@ from iterators.PrefetchingIter import PrefetchingIter
 import os
 import time
 import cPickle
-from utils.data_workers import nms_worker
+from data_utils.data_workers import nms_worker
 from nms.nms import py_nms_wrapper, soft_nms
-from utils.visualization import visualize_dets
+from data_utils.visualization import visualize_dets
 from tqdm import tqdm
 import math
 from multiprocessing import Pool
 from iterators.MNIteratorTest import MNIteratorTest
 import mxnet as mx
+
 
 class Tester(object):
     def __init__(self, module, imdb, roidb, test_iter, cfg, rcnn_output_names=None,rpn_output_names=None,

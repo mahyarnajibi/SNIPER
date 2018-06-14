@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use('Agg')
 from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
 from configs.faster.default_configs import config, update_config
-from load_data import load_proposal_roidb
+from data_utils.load_data import load_proposal_roidb
 import mxnet as mx
 from argparse import ArgumentParser
 from train_utils.utils import create_logger, load_param

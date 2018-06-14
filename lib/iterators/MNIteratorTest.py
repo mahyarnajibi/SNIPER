@@ -1,8 +1,7 @@
 import mxnet as mx
 import numpy as np
-from utils.data_workers import im_worker
+from data_utils.data_workers import im_worker
 from MNIteratorBase import MNIteratorBase
-from multiprocessing import Pool
 
 class MNIteratorTest(MNIteratorBase):
     def __init__(self, roidb, config, test_scale, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):

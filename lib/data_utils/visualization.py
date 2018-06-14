@@ -1,3 +1,8 @@
+# ---------------------------------------------------------------
+# SNIPER: Efficient Multi-scale Training
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# by Mahyar Najibi
+# ---------------------------------------------------------------
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

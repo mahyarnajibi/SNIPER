@@ -10,7 +10,7 @@ import mxnet as mx
 import numpy as np
 from MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
-from utils.data_workers import anchor_worker, im_worker, chip_worker
+from data_utils.data_workers import anchor_worker, im_worker, chip_worker
 
 class MNIteratorE2E(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):

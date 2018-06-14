@@ -6,7 +6,7 @@ from MNIteratorBase import MNIteratorBase
 from bbox.bbox_transform import bbox_overlaps, bbox_pred, bbox_transform, clip_boxes, filter_boxes, ignore_overlaps
 from chips import genchips
 from multiprocessing import Pool
-from utils.data_workers import im_worker, roidb_anchor_worker
+from data_utils.data_workers import im_worker, roidb_anchor_worker
 
 
 def clip_boxes_with_chip(boxes, chip):
