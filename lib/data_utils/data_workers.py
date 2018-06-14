@@ -7,7 +7,7 @@
 import cv2
 import mxnet as mx
 import numpy as np
-from nms.nms import py_nms_wrapper, py_sigma_nms_wrapper
+from nms.nms import nms_wrapper
 from data_utils.mask_utils import crop_polys, poly_encoder
 from generate_anchor import generate_anchors
 from bbox.bbox_transform import *
@@ -94,12 +94,10 @@ class im_worker(object):
 
 class nms_worker(object):
     def __init__(self, nms_thresh, nms_sigma):
-        assert nms_thresh < 0 or nms_sigma < 0, 'Either NMS thresh or the NMS sigma should be set to negative'
-        self.nms = py_nms_wrapper(nms_thresh) if nms_thresh > 0 else \
-            py_sigma_nms_wrapper(nms_sigma)
+        self.nms_wrapper = nms_wrapper(nms_thresh, nms_sigma)
 
     def worker(self, data):
-            return self.nms(data)
+            return self.nms_wrapper.nms(data)
 
 
 class anchor_worker(object):

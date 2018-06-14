@@ -12,6 +12,16 @@ def soft_nms(dets, sigma=0.6, Nt=0.3, threshold=0.001, method=2):
     return keep
 
 
+class nms_wrapper(object):
+    def __init__(self, thresh, sigma):
+        assert thresh < 0 or sigma < 0, 'Either nms sigma or nms thresh should be set to negative'
+        self.thresh = thresh
+        self.sigma = sigma
+
+    def nms(self, dets):
+        nms_dets = nms(dets, self.thresh) if self.thresh > 0 else soft_nms(dets, sigma=self.sigma, method=2)
+        return nms_dets
+
 def py_nms_wrapper(thresh):
     def _nms(dets):
         return nms(dets, thresh)
