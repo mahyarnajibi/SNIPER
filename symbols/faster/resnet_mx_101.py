@@ -1,5 +1,5 @@
 import mxnet as mx
-from lib.symbol import Symbol
+from symbols.symbol import Symbol
 from operator_py.box_annotator_ohem import *
 
 

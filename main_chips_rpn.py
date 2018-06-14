@@ -2,15 +2,13 @@ import os
 os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 # os.environ['MXNET_ENABLE_GPU_P2P'] = '0'
-from load_model import load_param
 import sys
-
 sys.path.insert(0, 'lib')
 from symbols.faster.resnet_mx_101_rpn import resnet_mx_101_rpn, checkpoint_callback
 from configs.faster.default_configs import config, update_config, get_opt_params
 import mxnet as mx
-import metric, callback
-from general_utils import get_optim_params, get_fixed_param_names, create_logger
+from train_utils import metric
+from train_utils.utils import get_optim_params, get_fixed_param_names, create_logger, load_param
 from iterators.PrefetchingIter import PrefetchingIter
 from iterators.MNIteratorRPN import MNIteratorChips
 from load_data import load_proposal_roidb, merge_roidb, filter_roidb, add_chip_data, remove_small_boxes

@@ -4,7 +4,6 @@
 # Training Module
 # by Mahyar Najibi and Bharat Singh
 # --------------------------------------------------------------
-
 import init
 import matplotlib
 matplotlib.use('Agg')
@@ -13,14 +12,13 @@ os.environ['PYTHONUNBUFFERED'] = '1'
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
 #os.environ['MXNET_ENABLE_GPU_P2P'] = '1'
 from iterators.MNIteratorE2E import MNIteratorE2E
-from load_model import load_param
 import sys
 sys.path.insert(0, 'lib')
 from symbols.faster import *
 from configs.faster.default_configs import config, update_config
 import mxnet as mx
-import metric, callback
-from general_utils import get_optim_params, get_fixed_param_names, create_logger
+from train_utils import metric
+from train_utils.utils import get_optim_params, get_fixed_param_names, create_logger, load_param
 from iterators.PrefetchingIter import PrefetchingIter
 
 from load_data import load_proposal_roidb, merge_roidb, filter_roidb
@@ -41,6 +39,9 @@ def parser():
 
 
 if __name__ == '__main__':
+
+
+
     args = parser()
     update_config(args.cfg)
     context = [mx.gpu(int(gpu)) for gpu in config.gpus.split(',')]

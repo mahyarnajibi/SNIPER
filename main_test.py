@@ -7,13 +7,12 @@
 import init
 import matplotlib
 matplotlib.use('Agg')
-from load_model import load_param
 from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
 from configs.faster.default_configs import config, update_config
 from load_data import load_proposal_roidb
 import mxnet as mx
 from argparse import ArgumentParser
-from general_utils import create_logger
+from train_utils.utils import create_logger, load_param
 from inference import imdb_detection_wrapper
 from inference import imdb_proposal_extraction_wrapper
 import os
