@@ -2,19 +2,25 @@ import numpy as np
 
 from cpu_nms import cpu_nms, cpu_soft_nms
 from gpu_nms import gpu_nms
-from gpu_nms import gpu_nmsp
+
 
 def soft_nms(dets, sigma=0.6, Nt=0.3, threshold=0.001, method=2):
-
     keep = cpu_soft_nms(np.ascontiguousarray(dets, dtype=np.float32),
                         np.float32(sigma), np.float32(Nt),
                         np.float32(threshold),
                         np.uint8(method))
     return keep
 
+
 def py_nms_wrapper(thresh):
     def _nms(dets):
         return nms(dets, thresh)
+    return _nms
+
+
+def py_sigma_nms_wrapper(sigma):
+    def _nms(dets):
+        return soft_nms(dets, sigma=sigma, method=2)
     return _nms
 
 

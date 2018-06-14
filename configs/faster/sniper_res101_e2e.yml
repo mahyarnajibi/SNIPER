@@ -5,7 +5,7 @@
 # --------------------------------------------------------------
 ---
 MXNET_VERSION: "mxnet"
-output_path: "./output/chips_rpn_resnet101_mx_bn"
+output_path: "./output/sniper_res101_bn"
 symbol: resnet_mx_101_e2e
 gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
@@ -189,7 +189,7 @@ TEST:
   # Use rpn to generate proposal
   HAS_RPN: true
 
-  # RPN proposal
+  # RPN Parameters
   RPN_NMS_THRESH: 0.7
   RPN_PRE_NMS_TOP_N: 6000
   RPN_POST_NMS_TOP_N: 300
@@ -199,10 +199,13 @@ TEST:
   PROPOSAL_POST_NMS_TOP_N: 2000
   PROPOSAL_MIN_SIZE: 0
 
-  # RCNN nms
-  NMS: 0.45
+  # NMS Parameters
+  # Whether to apply NMS based on
+  NMS: -1 #0.45
   NMS_SIGMA: 0.55
-  TEST_EPOCH: 6
+
+  # Which epoch of the training be used for testing
+  TEST_EPOCH: 7
 
   # VISUALIZATION CONFIG
   VISUALIZATION_PATH: './debug/visualization'

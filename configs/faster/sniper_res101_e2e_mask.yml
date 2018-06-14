@@ -43,7 +43,7 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: minival2014 #train2014+val2014
+  image_set: train2014+val2014
   root_path: "./data"
   test_image_set: test-dev2015
   proposal: rpn
@@ -184,7 +184,7 @@ TEST:
   # Use rpn to generate proposal
   HAS_RPN: true
 
-  # RPN proposal
+  # RPN Parameters
   RPN_NMS_THRESH: 0.7
   RPN_PRE_NMS_TOP_N: 6000
   RPN_POST_NMS_TOP_N: 300
@@ -194,10 +194,13 @@ TEST:
   PROPOSAL_POST_NMS_TOP_N: 2000
   PROPOSAL_MIN_SIZE: 0
 
-  # RCNN nms
-  NMS: 0.45
+  # NMS Parameters
+  # Whether to apply NMS based on
+  NMS: -1 #0.45
   NMS_SIGMA: 0.55
-  TEST_EPOCH: 6
+
+  # Which epoch of the training be used for testing
+  TEST_EPOCH: 7
 
   # VISUALIZATION CONFIG
   VISUALIZATION_PATH: './debug/visualization'

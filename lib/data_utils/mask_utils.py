@@ -18,6 +18,7 @@ def crop_polys(polys, crop, im_scale):
 		new_polys.append(new_segs)
 	return new_polys
 
+
 def poly_encoder(polys, cats, max_poly_len=500, max_n_gts=100):
 	all_encoded = -1 * np.ones((max_n_gts, max_poly_len), dtype=np.float32)
 	for i, (poly, cat) in enumerate(zip(polys, cats)):

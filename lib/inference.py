@@ -10,7 +10,6 @@ import os
 import time
 import cPickle
 from data_utils.data_workers import nms_worker
-from nms.nms import py_nms_wrapper, soft_nms
 from data_utils.visualization import visualize_dets
 from tqdm import tqdm
 import math
@@ -52,7 +51,7 @@ class Tester(object):
         self.class_names = imdb.classes
         self.num_images = len(roidb)
         self.imdb_name = imdb.name
-        self.nms = py_nms_wrapper(cfg.TEST.NMS)
+        self.nms_worker = nms_worker(cfg.TEST.NMS, cfg.TEST.NMS_SIGMA)
         self.batch_size = batch_size
         self.roidb = roidb
 
@@ -149,9 +148,9 @@ class Tester(object):
                     valid_ids = np.intersect1d(lvalid_ids,uvalid_ids)
                     cls_dets = cls_dets[valid_ids, :] if len(valid_ids) > 0 else cls_dets
                     agg_dets = np.vstack((agg_dets, cls_dets))
-                parallel_nms_args.append([agg_dets, self.cfg.TEST.NMS_SIGMA])
+                parallel_nms_args.append(agg_dets)
             # Apply nms
-            final_dets = nms_pool.map(nms_worker, parallel_nms_args)
+            final_dets = nms_pool.map(nms_worker.worker, parallel_nms_args)
             for j in range(1, self.num_classes):
                 all_boxes[j][i] = final_dets[j-1]
             if self.cfg.TEST.MAX_PER_IMAGE > 0:
@@ -210,7 +209,7 @@ class Tester(object):
                     cls_dets = np.hstack((rem_boxes, rem_scores))
 
                     if evaluate or vis:
-                        keep = self.nms(cls_dets)
+                        keep = self.nms_worker.worker(cls_dets)
                         cls_dets = cls_dets[keep, :]
 
                     all_boxes[j][im_id] = cls_dets
