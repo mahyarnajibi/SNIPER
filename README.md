@@ -1,11 +1,21 @@
 # SNIPER: Efficient Multi-Scale Training
 
+<p align="center">
+<img src="data/demo/sniper.gif" />
+ </p>
+
+SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
+Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
+This significantly speeds up the multi-scale training as it operates on low-resolution chips. 
+Moreover, SNIPER benefits from *Batch Normalization* during training as it makes larger batch-size possible for instance-level recognition tasks. 
+
 If you find [SNIPER](https://arxiv.org/abs/1805.09300) useful in your research please consider citing:
 ```
 SNIPER: Efficient Multi-Scale Training
-Bharat Singh*, Mahyar Najibi*, and Larry S. Davis
+Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)
 arXiv preprint arXiv:1805.09300, 2018.
 ```
+
 ### Contents
 1. [Installation](#install)
 2. [Training a model with SNIPER](#training)
