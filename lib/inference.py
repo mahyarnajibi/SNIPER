@@ -47,7 +47,7 @@ class Tester(object):
                 'im_ids': 'im_ids'
             }
         self.logger = logger
-        self.result_path = imdb.result_path
+        self.result_path = os.path.join(imdb.result_path, imdb.image_set)
         self.num_classes = imdb.num_classes
         self.class_names = imdb.classes
         self.num_images = len(roidb)
@@ -87,7 +87,6 @@ class Tester(object):
                 # Store predictions
                 scores.append(cscores)
                 rois.append(crois)
-        #print('Time to aggregate results in the batch: {}', time.time()-stime)
         return scores, rois, data, im_ids
 
     def detect(self, batch, scales):
@@ -127,18 +126,21 @@ class Tester(object):
         print(print_str)
         if self.logger: self.logger.info(print_str)
 
-    def aggregate(self, scale_cls_dets, vis=False, cache_name='cache', vis_path=None, vis_name=None):
+    def aggregate(self, scale_cls_dets, vis=False, cache_name='cache', vis_path=None, vis_name=None, pre_nms_db_divide=10):
         n_scales = len(scale_cls_dets)
         assert n_scales == len(self.cfg.TEST.VALID_RANGES), 'A valid range should be specified for each test scale'
         all_boxes = [[[] for _ in range(self.num_images)] for _ in range(self.num_classes)]
         nms_pool = Pool(32)
         if len(scale_cls_dets) > 1:
-            self.show_info('Aggregating detections from multiple scales...')
+            self.show_info('Aggregating detections from multiple scales and applying NMS...')
         else:
             self.show_info('Performing NMS on detections...')
 
-        for i in tqdm(range(self.num_images)):
-            parallel_nms_args = []
+        # Apply ranges and store detections per category
+        parallel_nms_args = [[] for _ in range(pre_nms_db_divide)]
+        n_roi_per_pool = math.ceil(self.num_images/float(pre_nms_db_divide))
+
+        for i in range(self.num_images):
             for j in range(1, self.num_classes):
                 agg_dets = np.empty((0,5),dtype=np.float32)
                 for all_cls_dets, valid_range in zip(scale_cls_dets, self.cfg.TEST.VALID_RANGES):
@@ -153,11 +155,20 @@ class Tester(object):
                     valid_ids = np.intersect1d(lvalid_ids,uvalid_ids)
                     cls_dets = cls_dets[valid_ids, :] if len(valid_ids) > 0 else cls_dets
                     agg_dets = np.vstack((agg_dets, cls_dets))
-                parallel_nms_args.append(agg_dets)
-            # Apply nms
-            final_dets = nms_pool.map(self.nms_worker.worker, parallel_nms_args)
-            for j in range(1, self.num_classes):
-                all_boxes[j][i] = final_dets[j-1]
+                parallel_nms_args[int(i/n_roi_per_pool)].append(agg_dets)
+
+        # Divide roidb and perform NMS in parallel to reduce the memory usage
+        im_offset = 0
+        for part in tqdm(range(pre_nms_db_divide)):
+            final_dets = nms_pool.map(self.nms_worker.worker, parallel_nms_args[part])
+            n_part_im = int(len(final_dets)/(self.num_classes-1))
+            for i in range(n_part_im):
+                for j in range(1, self.num_classes):
+                    all_boxes[j][im_offset+i] = final_dets[i*(self.num_classes-1)+(j-1)]
+            im_offset += n_part_im
+        nms_pool.close()
+        # Limit number of detections to MAX_PER_IMAGE if requested and visualize if vis is True
+        for i in range(self.num_images):
             if self.cfg.TEST.MAX_PER_IMAGE > 0:
                 image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1, self.num_classes)])
                 if len(image_scores) > self.cfg.TEST.MAX_PER_IMAGE:
@@ -179,7 +190,6 @@ class Tester(object):
                                save_path=os.path.join(visualization_path, '{}.png'.format(vis_name if vis_name else i)),
                                transform=False)
 
-        nms_pool.close()
         if cache_name:
             cache_path = os.path.join(self.result_path, cache_name)
             if not os.path.isdir(cache_path):
@@ -256,14 +266,7 @@ class Tester(object):
                                                                                post_time / data_counter ))
         if self.thread_pool:
             self.thread_pool.close()
-        if cache_name:
-            cache_path = os.path.join(self.result_path, cache_name)
-            if not os.path.isdir(cache_path):
-                os.makedirs(cache_path)
-            cache_path = os.path.join(cache_path, 'detections.pkl')
-            self.show_info('Done! Saving detections into: {}'.format(cache_path))
-            with open(cache_path, 'wb') as detfile:
-                cPickle.dump(all_boxes, detfile)
+
         return all_boxes
 
     def extract_proposals(self, n_proposals=300, cache_name= 'cache', vis=False):
@@ -364,6 +367,15 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
             for i in range(1,len(detection_list)):
                 for j in range(imdb.num_classes):
                     tmp_dets[j] += detection_list[i][j]
+
+            # Cache detections...
+            cache_path = os.path.join(imdb.result_path, 'dets_scale_{}x{}'.format(scale[0],scale[1]))
+            if not os.path.isdir(cache_path):
+                os.makedirs(cache_path)
+            cache_path = os.path.join(cache_path, 'detections.pkl')
+            print('Done! Saving detections into: {}'.format(cache_path))
+            with open(cache_path, 'wb') as detfile:
+                cPickle.dump(tmp_dets, detfile)
             detections.append(tmp_dets)
         pool.close()
 
