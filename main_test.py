@@ -22,7 +22,7 @@ def parser():
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
     							default='configs/faster/sniper_res101_e2e.yml',type=str)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
-                            default='CRCNN', type=str)
+                            default='SNIPER', type=str)
     arg_parser.add_argument('--vis', dest='vis', help='Whether to visualize the detections',
                             action='store_true')
     return arg_parser.parse_args()
