@@ -11,7 +11,7 @@ from easydict import EasyDict as edict
 config = edict()
 config.proposal_path = 'data/proposals'
 config.MXNET_VERSION = ''
-
+config.USE_3KCLS = True
 config.output_path = ''
 config.symbol = ''
 config.gpus = ''

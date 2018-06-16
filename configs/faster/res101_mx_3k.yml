@@ -1,0 +1,213 @@
+# --------------------------------------------------------------
+# R-FCN-3000@30FPS: Decoupling Classification and Detection
+# Licensed under The Apache-2.0 License [see LICENSE for details]
+# by Mahyar Najibi, Bharat Singh and Hengduo Li
+# --------------------------------------------------------------
+---
+MXNET_VERSION: "mxnet"
+output_path: "./output/chips_resnet101_3k"
+symbol: resnet_mx_101_e2e_3k
+#gpus: '0,1,2,3,4,5,6,7'
+gpus: '0'
+CLASS_AGNOSTIC: true
+default:
+  frequent: 100
+  kvstore: device
+network:
+  pretrained: "./data/pretrained_model/soft"
+  pretrained_epoch: 0
+  PIXEL_MEANS:
+  - 103.939
+  - 116.779
+  - 123.68
+  RPN_FEAT_STRIDE: 16
+  FIXED_PARAMS:
+  - conv0
+  - bn0
+  - stage1
+
+  ANCHOR_RATIOS:
+  - 0.5
+  - 1
+  - 2
+  ANCHOR_SCALES:
+  - 4
+  - 8
+  - 16
+  - 24
+  NUM_ANCHORS: 12
+dataset:
+  NUM_CLASSES: 3130
+  dataset: imagenet
+  dataset_path: "./data/imagenet"
+  image_set: fall11_whole
+  root_path: "./data"
+  test_image_set: ILSVRC2013_DET_val
+  proposal: rpn
+TRAIN:
+  # Whether to use C++ or python code for chip generation
+  CPP_CHIPS: false
+  # Whether to extract negative chips during training
+  USE_NEG_CHIPS: true
+
+  # Multi-processing params
+  NUM_PROCESS: 64
+  NUM_THREAD: 8
+
+  # Whether to train with segmentation mask
+  WITH_MASK: false
+
+  # Training scales(high res scale, medium res scale, smallest size in the pyramid)
+  SCALES:
+  - 512.0
+
+  # Valid ranges in each scale
+  VALID_RANGES:
+  - !!python/tuple [0,-1]
+
+  visualize: false
+  # Path to save the visualization images
+  visualization_path: 'debug/visualization'
+  # Number of epochs between each visualization
+  visualization_freq: 100
+  
+
+  lr: 0.015 #0.002 #0.0005
+  lr_step: '5.33'
+  warmup: true
+  fp16: true
+  warmup_lr: 0.0005 #0.00005
+  wd: 0.0001
+  scale: 100.0
+  warmup_step: 1000 #4000 #1000
+  begin_epoch: 0
+  end_epoch: 7 #9
+  model_prefix: 'rcnn'
+
+  # whether flip image
+  FLIP: true
+  # whether shuffle image
+  SHUFFLE: true
+  # whether use OHEM
+  ENABLE_OHEM: true
+  # size of images for each device, 2 for rcnn, 1 for rpn and e2e
+  BATCH_IMAGES: 16
+  # e2e changes behavior of anchor loader and metric
+  END2END: true
+  # R-CNN
+  # rcnn rois batch size
+  BATCH_ROIS: -1
+  BATCH_ROIS_OHEM: 256
+  # rcnn rois sampling params
+  FG_FRACTION: 0.25
+  FG_THRESH: 0.5
+  BG_THRESH_HI: 0.5
+  BG_THRESH_LO: 0.0
+  # rcnn bounding box regression params
+  BBOX_REGRESSION_THRESH: 0.5
+  BBOX_WEIGHTS:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+
+  # RPN anchor loader
+  # rpn anchors batch size
+  RPN_BATCH_SIZE: 256
+  # rpn anchors sampling params
+  RPN_FG_FRACTION: 0.5
+  RPN_POSITIVE_OVERLAP: 0.5
+  RPN_NEGATIVE_OVERLAP: 0.4
+  RPN_CLOBBER_POSITIVES: false
+  # rpn bounding box regression params
+  RPN_BBOX_WEIGHTS:
+  - 1.0
+  - 1.0
+  - 1.0
+  - 1.0
+  RPN_POSITIVE_WEIGHT: -1.0
+  # used for end2end training
+  # RPN proposal
+  CXX_PROPOSAL: false
+  RPN_NMS_THRESH: 0.7
+  RPN_PRE_NMS_TOP_N: 6000
+  RPN_POST_NMS_TOP_N: 300
+  RPN_MIN_SIZE: 0
+  # approximate bounding box regression
+  BBOX_NORMALIZATION_PRECOMPUTED: true
+  BBOX_MEANS:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  BBOX_STDS:
+  - 0.1
+  - 0.1
+  - 0.2
+  - 0.2
+TEST:
+  # Maximum number of detections per image
+  # Set to -1 to disable
+  MAX_PER_IMAGE: 200
+
+  # Whether to do multi-scale inference
+  SCALES:
+  - !!python/tuple [512, 512]
+
+  # Number of images per gpu for each scale
+  BATCH_IMAGES:
+  - 6
+
+  # Number of concurrent jobs used for inference
+  # if greater than 1, the roidb is distributed over
+  # concurrent jobs to increase throughput
+  CONCURRENT_JOBS: 3
+
+  # Ranges to specify valid proposal length
+  # in each of the test scale, square area
+  # would be computed based on the lengths
+  # to invalidate, -1 means unbounded, use
+  # -1 everywhere if you want to have all proposals
+  VALID_RANGES:
+  - !!python/tuple [0,-1]
+
+  # Use rpn to generate proposal
+  HAS_RPN: true
+
+  # RPN proposal
+  RPN_NMS_THRESH: 0.7
+  RPN_PRE_NMS_TOP_N: 6000
+  RPN_POST_NMS_TOP_N: 300
+  RPN_MIN_SIZE: 0
+  PROPOSAL_NMS_THRESH: 0.7
+  PROPOSAL_PRE_NMS_TOP_N: 20000
+  PROPOSAL_POST_NMS_TOP_N: 2000
+  PROPOSAL_MIN_SIZE: 0
+
+  # RCNN nms
+  NMS: -1 #0.45
+  NMS_SIGMA: 0.55
+  TEST_EPOCH: 7
+
+  # VISUALIZATION CONFIG
+  VISUALIZATION_PATH: './debug/visualization'
+  # Whether to visualize all intermediate scales
+  # before aggregation (when doing multi-scale inference)
+  # If False, only final detections are saved to 
+  # VISUALIZATION_PATH
+  VISUALIZE_INTERMEDIATE_SCALES: True
+
+  # PROPOSAL EXTRACTION FLAGS
+  # If true only would extract proposals
+  EXTRACT_PROPOSALS: false
+
+  # The folder path to be used for saving proposals
+  PROPOSAL_SAVE_PATH: 'output/proposals'
+
+  # Number of proposals extracted per scale
+  # SCALES and BATCH_IMAGES above would be used to
+  # Specify scales and number of images per batch for
+  # each scale, no valid ranges would be applied for
+  # aggregating proposals
+  N_PROPOSAL_PER_SCALE: 300
+

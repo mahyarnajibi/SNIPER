@@ -245,8 +245,8 @@ class IMDB(object):
                      'gt_overlaps': roidb[i]['gt_overlaps'],
                      'max_classes': roidb[i]['max_classes'],
                      'max_overlaps': roidb[i]['max_overlaps'],
-                     'flipped': True,
-                     'proposal_scores': roidb[i]['proposal_scores']}
+                     'flipped': True}
+                     #'proposal_scores': roidb[i]['proposal_scores']}
 
             # if roidb has mask
             if 'cache_seg_inst' in roi_rec:

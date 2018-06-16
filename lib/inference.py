@@ -37,7 +37,8 @@ class Tester(object):
             self.rcnn_output_names = {
                 'cls' : 'cls_prob_reshape_output',
                 'bbox': 'bbox_pred_reshape_output',
-                'im_ids': 'im_ids'
+                'im_ids': 'im_ids',
+                'subcls': 'subcls_prob_reshape_output'
             }
         self.rpn_output_names = rpn_output_names
         if not self.rpn_output_names:
@@ -48,7 +49,7 @@ class Tester(object):
             }
         self.logger = logger
         self.result_path = os.path.join(imdb.result_path, imdb.image_set)
-        self.num_classes = imdb.num_classes
+        self.num_classes = imdb.num_sub_classes - 1
         self.class_names = imdb.classes
         self.num_images = len(roidb)
         self.imdb_name = imdb.name
@@ -100,26 +101,30 @@ class Tester(object):
             gpu_rois = gpu_out[self.rpn_output_names['rois']].asnumpy()
             # Reshape crois
             nper_gpu = gpu_rois.shape[0] / self.batch_size
-            gpu_scores = gpu_out[self.rcnn_output_names['cls']].asnumpy()
+            gpu_fg_scores = gpu_out[self.rcnn_output_names['cls']].asnumpy()
+            gpu_cls_scores = gpu_out[self.rcnn_output_names['subcls']].asnumpy()            
             gpu_deltas = gpu_out[self.rcnn_output_names['bbox']].asnumpy()
+            gpu_deltas = gpu_deltas 
             im_ids = np.hstack((im_ids, gpu_out[self.rcnn_output_names['im_ids']].asnumpy().astype(int)))
             for idx in range(self.batch_size):
                 cids = np.where(gpu_rois[:, 0] == idx)[0]
                 assert len(cids) == nper_gpu, 'The number of rois per GPU should be fixed!'
                 crois = gpu_rois[cids, 1:]
-                cscores = gpu_scores[idx]
+                cls_scores = gpu_cls_scores[idx]
+                fg_scores = gpu_fg_scores[idx]
+
+                cscores = fg_scores[:, 1:] * cls_scores                
                 cdeltas = gpu_deltas[idx]
-
+                
                 # Apply deltas and clip predictions
-                cboxes = bbox_pred(crois, cdeltas)
+                cboxes = bbox_pred(crois, cdeltas*np.array([0.1, 0.1, 0.2, 0.2]))
                 cboxes = clip_boxes(cboxes, gpu_shapes[idx])
-
+                pids = np.where(fg_scores[:, 1] > 0.01)[0]
                 # Re-scale boxes
                 cboxes = cboxes / gpu_scales[idx]
-
                 # Store predictions
-                scores.append(cscores)
-                preds.append(cboxes)
+                scores.append(cscores[pids, :])
+                preds.append(cboxes[pids, :])
         return scores, preds, data, im_ids
 
     def show_info(self, print_str):
@@ -141,7 +146,7 @@ class Tester(object):
         n_roi_per_pool = math.ceil(self.num_images/float(pre_nms_db_divide))
 
         for i in range(self.num_images):
-            for j in range(1, self.num_classes):
+            for j in range(self.num_classes):
                 agg_dets = np.empty((0,5),dtype=np.float32)
                 for all_cls_dets, valid_range in zip(scale_cls_dets, self.cfg.TEST.VALID_RANGES):
                     cls_dets = all_cls_dets[j][i]
@@ -163,17 +168,17 @@ class Tester(object):
             final_dets = nms_pool.map(self.nms_worker.worker, parallel_nms_args[part])
             n_part_im = int(len(final_dets)/(self.num_classes-1))
             for i in range(n_part_im):
-                for j in range(1, self.num_classes):
+                for j in range(self.num_classes):
                     all_boxes[j][im_offset+i] = final_dets[i*(self.num_classes-1)+(j-1)]
             im_offset += n_part_im
         nms_pool.close()
         # Limit number of detections to MAX_PER_IMAGE if requested and visualize if vis is True
         for i in range(self.num_images):
             if self.cfg.TEST.MAX_PER_IMAGE > 0:
-                image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(1, self.num_classes)])
+                image_scores = np.hstack([all_boxes[j][i][:, -1] for j in range(self.num_classes)])
                 if len(image_scores) > self.cfg.TEST.MAX_PER_IMAGE:
                     image_thresh = np.sort(image_scores)[-self.cfg.TEST.MAX_PER_IMAGE]
-                    for j in range(1, self.num_classes):
+                    for j in range(self.num_classes):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
             if vis:
@@ -184,7 +189,7 @@ class Tester(object):
                 import cv2
                 im = cv2.cvtColor(cv2.imread(self.roidb[i]['image']), cv2.COLOR_BGR2RGB)
                 visualize_dets(im,
-                               [[]] + [all_boxes[j][i] for j in range(1, self.num_classes)],
+                               [[]] + [all_boxes[j][i] for j in range(self.num_classes)],
                                1.0,
                                self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
                                save_path=os.path.join(visualization_path, '{}.png'.format(vis_name if vis_name else i)),
@@ -221,7 +226,7 @@ class Tester(object):
             stime = time.time()
             for i, (cscores, cboxes, im_id) in enumerate(zip(scores, boxes, im_ids)):
                 parallel_nms_args = []
-                for j in range(1, self.num_classes):
+                for j in range(self.num_classes):
                     # Apply the score threshold
                     inds = np.where(cscores[:, j] > cls_thresh)[0]
                     rem_scores = cscores[inds, j, np.newaxis]
@@ -238,23 +243,23 @@ class Tester(object):
                         self.thread_pool = ThreadPool(8)
 
                     final_dets = self.thread_pool.map(self.nms_worker.worker, parallel_nms_args)
-                    for j in range(1, self.num_classes):
+                    for j in range(self.num_classes):
                         all_boxes[j][im_id] = final_dets[j - 1]
 
                 # Filter boxes based on max_per_image if needed
                 if evaluate and self.cfg.TEST.MAX_PER_IMAGE:
                     image_scores = np.hstack([all_boxes[j][im_id][:, -1]
-                                              for j in range(1, self.num_classes)])
+                                              for j in range(self.num_classes)])
                     if len(image_scores) > self.cfg.TEST.MAX_PER_IMAGE:
                         image_thresh = np.sort(image_scores)[-self.cfg.TEST.MAX_PER_IMAGE]
-                        for j in range(1, self.num_classes):
+                        for j in range(self.num_classes):
                             keep = np.where(all_boxes[j][im_id][:, -1] >= image_thresh)[0]
                             all_boxes[j][im_id] = all_boxes[j][im_id][keep, :]
                 if vis:
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
-                                   [[]]+[all_boxes[j][im_id] for j in range(1, self.num_classes)], im_info[i, 2],
+                                   [[]]+[all_boxes[j][im_id] for j in range(self.num_classes)], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
                                    save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
 
