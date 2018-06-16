@@ -156,12 +156,12 @@ TEST:
 
   # Number of images per gpu for each scale
   BATCH_IMAGES:
-  - 6
+  - 16
 
   # Number of concurrent jobs used for inference
   # if greater than 1, the roidb is distributed over
   # concurrent jobs to increase throughput
-  CONCURRENT_JOBS: 3
+  CONCURRENT_JOBS: 1
 
   # Ranges to specify valid proposal length
   # in each of the test scale, square area

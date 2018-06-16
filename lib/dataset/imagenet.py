@@ -137,7 +137,7 @@ class imagenet(IMDB):
                 return image_index
 
         else:
-            image_set_file = os.path.join(self._devkit_path, 'data', 'det_lists', 'val.txt')
+            image_set_file = os.path.join(self._devkit_path, 'data', 'det_lists', 'small_val.txt')
             with open(image_set_file) as f:
                 image_index = [x.strip().split(' ')[0] for x in f.readlines()]
         return image_index

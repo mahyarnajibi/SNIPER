@@ -146,19 +146,14 @@ class Tester(object):
         n_roi_per_pool = math.ceil(self.num_images/float(pre_nms_db_divide))
 
         for i in range(self.num_images):
+            #print (i)
+            #if (i == 1342):
+            #    import pdb
+            #    pdb.set_trace()
             for j in range(self.num_classes):
                 agg_dets = np.empty((0,5),dtype=np.float32)
                 for all_cls_dets, valid_range in zip(scale_cls_dets, self.cfg.TEST.VALID_RANGES):
                     cls_dets = all_cls_dets[j][i]
-                    heights = cls_dets[:, 2] - cls_dets[:, 0]
-                    widths = cls_dets[:, 3] - cls_dets[:, 1]
-                    areas = widths * heights
-                    lvalid_ids = np.where(areas > valid_range[0]*valid_range[0])[0] if valid_range[0] > 0 else \
-                        np.arange(len(areas))
-                    uvalid_ids = np.where(areas <= valid_range[1]*valid_range[1])[0] if valid_range[1] > 0 else \
-                        np.arange(len(areas))
-                    valid_ids = np.intersect1d(lvalid_ids,uvalid_ids)
-                    cls_dets = cls_dets[valid_ids, :] if len(valid_ids) > 0 else cls_dets
                     agg_dets = np.vstack((agg_dets, cls_dets))
                 parallel_nms_args[int(i/n_roi_per_pool)].append(agg_dets)
 
@@ -368,19 +363,13 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
                 roidbs[j], imdb, arg_params, aux_params, vis])
 
             detection_list = pool.map(detect_scale_worker, parallel_args)
+            print ("map is over, assigning detections")            
             tmp_dets = detection_list[0]
-            for i in range(1,len(detection_list)):
-                for j in range(imdb.num_classes):
-                    tmp_dets[j] += detection_list[i][j]
-
-            # Cache detections...
-            cache_path = os.path.join(imdb.result_path, 'dets_scale_{}x{}'.format(scale[0],scale[1]))
-            if not os.path.isdir(cache_path):
-                os.makedirs(cache_path)
-            cache_path = os.path.join(cache_path, 'detections.pkl')
-            print('Done! Saving detections into: {}'.format(cache_path))
-            with open(cache_path, 'wb') as detfile:
-                cPickle.dump(tmp_dets, detfile)
+            print ("assigning done")            
+            for k in range(1,len(detection_list)):
+                for l in range(imdb.num_classes):
+                    tmp_dets[l] += detection_list[k][l]
+            print ("appending is over, assigning detections")                    
             detections.append(tmp_dets)
         pool.close()
 
