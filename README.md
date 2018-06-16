@@ -6,8 +6,8 @@
 
 SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
-This significantly speeds up the multi-scale training as it operates on low-resolution chips. 
-Moreover, SNIPER benefits from *Batch Normalization* during training as it makes larger batch-size possible for instance-level recognition tasks. 
+This significantly speeds up multi-scale training as it operates on low-resolution chips. 
+Due to its memeory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
 If you find [SNIPER](https://arxiv.org/abs/1805.09300) useful in your research please consider citing:
 ```
@@ -15,6 +15,15 @@ SNIPER: Efficient Multi-Scale Training
 Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)
 arXiv preprint arXiv:1805.09300, 2018.
 ```
+### Features
+1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
+2. NO PYTHON LAYERS (Every layer is optimized for large batch sizes in CUDA/C++)
+3. HALF PRECISION TRAINING with no loss in accuracy
+4. 5 Images/second during inference on a single V100 GPU, 47.6/68.5 on COCO without training on segmentation masks
+5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet
+6. R-FCN-3K also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
+7. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
+
 
 ### Contents
 1. [Installation](#install)
