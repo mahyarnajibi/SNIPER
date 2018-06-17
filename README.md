@@ -39,7 +39,7 @@ SNIPER is released under Apache license. See LICENSE for details.
   title={An analysis of scale invariance in object detection-snip},
   author={Singh, Bharat and Davis, Larry S},
   journal={CVPR},
-  year={2017}
+  year={2018}
 }
 ```
 
@@ -161,7 +161,14 @@ python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 ```
 This would produce ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
-<a name="others"></a>
-### Other methods and branches in this repo (RFCN-3K, open-images)
-This repo also contains branches which implement the [R-FCN-3k](https://arxiv.org/abs/1712.01802), and modules to train and evaluate on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
-Please switch to the [3k](https://github.com/mahyarnajibi/CRCNN/tree/3k) and [openimages](https://github.com/mahyarnajibi/CRCNN/tree/openimages2) branches for specific instructions.
+
+## R-FCN-3K
+This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
+<p align="center">
+<img src="data/demo/readme_figs/pic3k.PNG" />
+</p>
+Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
+
+## OpenImagesV4
+This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
+Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/openimages2) branch for specific instructions.
