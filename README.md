@@ -34,7 +34,7 @@ SNIPER/output/chips_resnet101_3k/res101_mx_3k/fall11_whole/
 
 ## Training
 
-1. Please download [ImageNet Full Fall 2011 Release](http://academictorrents.com/details/564a77c1e1119da199ff32622a1609431b9f1c47/tech&dllist=1) and ILSVRC2013_DET datasets, together with the [bounding boxes](http://image-net.org/download-bboxes).
+1. Please download [ImageNet Full Fall 2011 Release](http://academictorrents.com/details/564a77c1e1119da199ff32622a1609431b9f1c47/tech&dllist=1) and [ILSVRC2013_DET](http://www.image-net.org/challenges/LSVRC/2013/download-images-rpa) validation images, together with the [bounding boxes](http://image-net.org/download-bboxes).
 
 2. Download the modified ILSVRC2014_devkit [[GoogleDrive]](https://drive.google.com/open?id=1hEG-GmMrvp--hWRU41RMBLB3gL-IdXs9)[[BaiduYun]](https://pan.baidu.com/s/1wEku413rss02YQ_R39gNGA) which contains essential files for training and evaluation. Please make them look like this:
 
