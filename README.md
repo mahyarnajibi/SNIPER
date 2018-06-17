@@ -1,7 +1,7 @@
 # SNIPER: Efficient Multi-Scale Training
 
 <p align="center">
-<img src="data/demo/sniper.gif" />
+<img src="data/demo/readme_figs/sniper.gif" />
  </p>
 
 SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
@@ -9,7 +9,7 @@ Instead of processing all pixels in an image pyramid, SNIPER selectively process
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
 Due to its memeory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
-If you find [SNIPER](https://arxiv.org/abs/1805.09300) useful in your research please consider citing:
+[SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
 ```
 SNIPER: Efficient Multi-Scale Training
 Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)
@@ -20,13 +20,22 @@ arXiv preprint arXiv:1805.09300, 2018.
 2. NO PYTHON LAYERS (Every layer is optimized for large batch sizes in CUDA/C++)
 3. HALF PRECISION TRAINING with no loss in accuracy
 4. 5 Images/second during inference on a single V100 GPU, 47.6/68.5 on COCO without training on segmentation masks
-5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet
-6. R-FCN-3K also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
-7. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
+5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet. This branch also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
+6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
+### Citing
+```
+@article{sniper2018,
+  title={{SNIPER}: Efficient Multi-Scale Training},
+  author={Singh, Bharat and Najibi, Mahyar and Davis, Larry S},
+  journal={arXiv preprint arXiv:1805.09300},
+  year={2018}
+}
+```
 
 ### Contents
 1. [Installation](#install)
+2. [Running the demo](#demo)
 2. [Training a model with SNIPER](#training)
 3. [Evaluting a trained model](#evaluating)
 4. [Other methods and branches in this repo (R-FCN-3K, open-images)](#others)
@@ -55,6 +64,26 @@ export PYTHONPATH=SNIPER-mxnet/python:$PYTHONPATH
 4. Install the required python packages:
 ```
 pip install -r requirements.txt
+```
+
+<a name="demo"> </a>
+### Running the demo
+For running the demo, you need to download the provided SNIPER model. The following script downloads the SNIPER model and extracts it into the default location:
+```
+bash download_sniper_detector.sh
+```
+After downloading the model, the following command would run the SNIPER detector with the default configs on the provided sample image:
+```
+python demo.py
+```
+If everything goes well you should be able to see the following detections:
+<p align="center">
+<img src="data/demo/readme_figs/demo_detections.png" />
+ </p>
+ 
+You can also run the detector on an arbitray image by providing its path to the script:
+```
+python demo.py --im_path [PATH to the image]
 ```
 
 <a name="training"></a>
@@ -106,6 +135,7 @@ bash download_sniper_detector.sh
 ```
 This script downloads the model weights and extracts them into ```data/sniper_models```. 
 To evaluate these models on coco dataset with the default configuration you can run the following script:
+
 ```
 python main_test.py --weight_path [PATH TO THE DOWNLOADED WEIGHTS]
 ```
