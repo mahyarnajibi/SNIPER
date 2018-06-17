@@ -71,7 +71,7 @@ class imagenet(IMDB):
         """
         :return: dict of {wnid: description}
         """
-        path = self._data_path + "/ILSVRC2012_devkit_t12/data/wnid_name_dict.txt"
+        path = self._devkit_path + "/data/wnid_name_dict.txt"
         assert os.path.exists(path)
         with open(path, 'rb') as f:
             wnid_name_dict = pickle.load(f)
@@ -81,8 +81,7 @@ class imagenet(IMDB):
         """
         return: dict of {wnid of subclass (fine-grained class): index of super class}
         """
-        path = self._data_path + "/ILSVRC2012_devkit_t12/data/3kcls_cluster_result1.txt"
-
+        path = self._devkit_path + "/data/3kcls_cluster_result1.txt"
         assert os.path.exists(path)
         with open(path, 'rb') as f:
             result = defaultdict(dict)
