@@ -161,7 +161,7 @@ TEST:
   # Number of concurrent jobs used for inference
   # if greater than 1, the roidb is distributed over
   # concurrent jobs to increase throughput
-  CONCURRENT_JOBS: 2
+  CONCURRENT_JOBS: 3
 
   # Ranges to specify valid proposal length
   # in each of the test scale, square area

@@ -18,6 +18,8 @@ from multiprocessing.pool import ThreadPool
 from iterators.MNIteratorTest import MNIteratorTest
 import mxnet as mx
 
+import pdb
+
 
 class Tester(object):
     def __init__(self, module, imdb, roidb, test_iter, cfg, rcnn_output_names=None,rpn_output_names=None,
@@ -83,6 +85,7 @@ class Tester(object):
             gpu_deltas = gpu_out[self.rcnn_output_names['bbox']].asnumpy()
             gpu_deltas = gpu_deltas 
             im_ids = np.hstack((im_ids, gpu_out[self.rcnn_output_names['im_ids']].asnumpy().astype(int)))
+
             for idx in range(self.batch_size):
                 cids = np.where(gpu_rois[:, 0] == idx)[0]
                 assert len(cids) == nper_gpu, 'The number of rois per GPU should be fixed!'
@@ -134,10 +137,10 @@ class Tester(object):
         im_offset = 0
         for part in tqdm(range(pre_nms_db_divide)):
             final_dets = nms_pool.map(self.nms_worker.worker, parallel_nms_args[part])
-            n_part_im = int(len(final_dets)/(self.num_classes-1))
+            n_part_im = int(len(final_dets)/(self.num_classes))
             for i in range(n_part_im):
                 for j in range(self.num_classes):
-                    all_boxes[j][im_offset+i] = final_dets[i*(self.num_classes-1)+(j-1)]
+                    all_boxes[j][im_offset+i] = final_dets[i*self.num_classes+j]
             im_offset += n_part_im
         nms_pool.close()
         # Limit number of detections to MAX_PER_IMAGE if requested and visualize if vis is True
@@ -158,7 +161,7 @@ class Tester(object):
                 import cv2
                 im = cv2.cvtColor(cv2.imread(self.roidb[i]['image']), cv2.COLOR_BGR2RGB)
                 visualize_dets(im,
-                               [[]] + [all_boxes[j][i] for j in range(self.num_classes)],
+                               [all_boxes[j][i] for j in range(self.num_classes)],
                                1.0,
                                self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
                                save_path=os.path.join(visualization_path, '{}.png'.format(vis_name if vis_name else i)),
@@ -214,7 +217,7 @@ class Tester(object):
 
                     final_dets = self.thread_pool.map(self.nms_worker.worker, parallel_nms_args)
                     for j in range(self.num_classes):
-                        all_boxes[j][im_id] = final_dets[j - 1]
+                        all_boxes[j][im_id] = final_dets[j]
 
                 # Filter boxes based on max_per_image if needed
                 if evaluate and self.cfg.TEST.MAX_PER_IMAGE:
@@ -229,7 +232,7 @@ class Tester(object):
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
                     visualize_dets(batch.data[0][i].asnumpy(),
-                                   [[]]+[all_boxes[j][im_id] for j in range(self.num_classes)], im_info[i, 2],
+                                   [all_boxes[j][im_id] for j in range(self.num_classes)], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
                                    save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
 
