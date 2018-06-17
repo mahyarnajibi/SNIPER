@@ -14,7 +14,6 @@ import mxnet as mx
 from argparse import ArgumentParser
 from train_utils.utils import create_logger, load_param
 from inference import imdb_detection_wrapper
-from inference import imdb_proposal_extraction_wrapper
 import os
 
 def parser():
@@ -50,11 +49,7 @@ def main():
     model_prefix = os.path.join(output_path, args.save_prefix)
     arg_params, aux_params = load_param(model_prefix, config.TEST.TEST_EPOCH,
                                         convert=True, process=True)
-
-    if config.TEST.EXTRACT_PROPOSALS:
-        imdb_proposal_extraction_wrapper(resnet_mx_101_e2e_3k, config, imdb, roidb, context, arg_params, aux_params, args.vis)
-    else:
-        imdb_detection_wrapper(resnet_mx_101_e2e_3k, config, imdb, roidb, context, arg_params, aux_params, args.vis)
+    imdb_detection_wrapper(resnet_mx_101_e2e_3k, config, imdb, roidb, context, arg_params, aux_params, args.vis)
 
 if __name__ == '__main__':
     main()

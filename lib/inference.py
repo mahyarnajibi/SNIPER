@@ -67,29 +67,6 @@ class Tester(object):
         return [dict(zip(self.module.output_names, i))
                 for i in zip(*self.module.get_outputs(merge_multi_context=False))]
 
-    def get_proposals(self, batch, scales):
-        data = dict(zip(self.data_names, batch.data))
-        outputs = self.forward(batch)
-        scores, rois = [], []
-        im_shapes = np.array([im.shape[-2:] for im in data['data']]).reshape(-1, self.batch_size, 2)
-        im_ids = np.array([], dtype=int)
-        for i, (gpu_out, gpu_scales, gpu_shapes) in enumerate(zip(outputs, scales, im_shapes)):
-
-            gpu_rois = gpu_out[self.rpn_output_names['rois']].asnumpy()
-            # Reshape crois
-            nper_gpu = gpu_rois.shape[0] / self.batch_size
-            gpu_scores = gpu_out[self.rpn_output_names['scores']].asnumpy()
-            im_ids = np.hstack((im_ids, gpu_out[self.rpn_output_names['im_ids']].asnumpy().astype(int)))
-            for idx in range(self.batch_size):
-                cids = np.where(gpu_rois[:, 0] == idx)[0]
-                assert len(cids) == nper_gpu, 'The number of rois per GPU should be fixed!'
-                crois = gpu_rois[cids, 1:]/gpu_scales[idx]
-                cscores = gpu_scores[cids]
-                # Store predictions
-                scores.append(cscores)
-                rois.append(crois)
-        return scores, rois, data, im_ids
-
     def detect(self, batch, scales):
         data = dict(zip(self.data_names, batch.data))
         outputs = self.forward(batch)
@@ -146,10 +123,6 @@ class Tester(object):
         n_roi_per_pool = math.ceil(self.num_images/float(pre_nms_db_divide))
 
         for i in range(self.num_images):
-            #print (i)
-            #if (i == 1342):
-            #    import pdb
-            #    pdb.set_trace()
             for j in range(self.num_classes):
                 agg_dets = np.empty((0,5),dtype=np.float32)
                 for all_cls_dets, valid_range in zip(scale_cls_dets, self.cfg.TEST.VALID_RANGES):
@@ -176,6 +149,7 @@ class Tester(object):
                     for j in range(self.num_classes):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
+            vis = False
             if vis:
                 visualization_path = vis_path if vis_path else os.path.join(self.cfg.TEST.VISUALIZATION_PATH,
                                                                             cache_name)
@@ -204,6 +178,7 @@ class Tester(object):
         all_boxes = [[[] for _ in range(self.num_images)] for _ in range(self.num_classes)]
         data_counter = 0
         detect_time, post_time = 0, 0
+        #vis = True        
         if vis:
             visualization_path = vis_path if vis_path else os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
 
@@ -269,50 +244,6 @@ class Tester(object):
 
         return all_boxes
 
-    def extract_proposals(self, n_proposals=300, cache_name= 'cache', vis=False):
-        all_boxes = [[] for _ in range(self.num_images)]
-        data_counter = 0
-        detect_time, post_time = 0, 0
-        if vis and not os.path.isdir(self.cfg.TEST.VISUALIZATION_PATH):
-            os.makedirs(self.cfg.TEST.VISUALIZATION_PATH)
-
-        for batch in self.test_iter:
-            im_info = batch.data[1].asnumpy()
-            scales = im_info[:,2].reshape(-1,self.batch_size)
-            # Run detection on the batch
-            stime = time.time()
-            scores, boxes, data, im_ids = self.get_proposals(batch, scales)
-            detect_time += time.time() - stime
-
-            stime = time.time()
-            for i, (cscores, cboxes, im_id) in enumerate(zip(scores, boxes, im_ids)):
-                # Keep the requested number of rois
-                rem_scores = cscores[0:n_proposals, np.newaxis]
-                rem_boxes = cboxes[0:n_proposals, 0:4]
-                cls_dets = np.hstack((rem_boxes, rem_scores)).astype(np.float32)
-                if vis:
-                    visualization_path = os.path.join(self.cfg.TEST.VISUALIZATION_PATH, cache_name)
-                    if not os.path.isdir(visualization_path):
-                        os.makedirs(visualization_path)
-                    visualize_dets(batch.data[0][i].asnumpy(),
-                                   [[]]+[cls_dets], im_info[i, 2],
-                                   self.cfg.network.PIXEL_MEANS, ['__background__','object'], threshold=0.5,
-                                   save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
-                all_boxes[im_id] = cls_dets
-            data_counter += self.test_iter.get_batch_size()
-            post_time += time.time() - stime
-            self.show_info('Tester: {}/{}, Forward: {:.4f}s, Post Processing: {:.4}s'.format(min(data_counter, self.num_images),
-                                                                               self.num_images,
-                                                                               detect_time / data_counter,
-                                                                               post_time / data_counter ))
-        cache_path = os.path.join(self.result_path, cache_name)
-        if not os.path.isdir(cache_path):
-            os.makedirs(cache_path)
-        cache_path=os.path.join(cache_path,'proposals.pkl')
-        self.show_info('Done! Saving detections into: {}'.format(cache_path))
-        with open(cache_path, 'wb') as detfile:
-            cPickle.dump(all_boxes, detfile)
-        return all_boxes
 
 
 def detect_scale_worker(arguments):
@@ -367,9 +298,9 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
             tmp_dets = detection_list[0]
             print ("assigning done")            
             for k in range(1,len(detection_list)):
-                for l in range(imdb.num_classes):
+                for l in range(imdb.num_sub_classes-1):
                     tmp_dets[l] += detection_list[k][l]
-            print ("appending is over, assigning detections")                    
+            print ("appending is over, assigning detections")
             detections.append(tmp_dets)
         pool.close()
 
@@ -381,74 +312,3 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
     imdb.evaluate_detections(all_boxes)
     print('All done!')
 
-
-def proposal_scale_worker(arguments):
-    [scale, nbatch, context, config, sym_def,\
-     roidb, imdb, arg_params, aux_params, vis] = arguments
-    print('Performing inference for scale: {}'.format(scale))
-    nGPUs= len(context)
-    sym_inst = sym_def(n_proposals=400, test_nbatch=nbatch)
-    sym = sym_inst.get_symbol_rpn(config, is_train=False)
-    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=nGPUs * nbatch, nGPUs=nGPUs, threads=32,
-                               pad_rois_to=400, crop_size=None, test_scale=scale)
-    # Create the module
-    shape_dict = dict(test_iter.provide_data_single)
-    sym_inst.infer_shape(shape_dict)
-    mod = mx.mod.Module(symbol=sym,
-                        context=context,
-                        data_names=[k[0] for k in test_iter.provide_data_single],
-                        label_names=None)
-    mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
-    mod.init_params(arg_params=arg_params, aux_params=aux_params)
-    # Create Tester
-    tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)
-    return tester.extract_proposals(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
-        cache_name='props_scale_{}x{}'.format(scale[0],scale[1]))
-
-
-def imdb_proposal_extraction_wrapper(sym_def, config, imdb, roidb, context, arg_params, aux_params, vis):
-    if vis and config.TEST.CONCURRENT_JOBS>1:
-        print('Visualization is only allowed with 1 CONCURRENT_JOBS')
-        print('Setting CONCURRENT_JOBS to 1')
-        config.TEST.CONCURRENT_JOBS = 1
-
-    proposals = []
-    if config.TEST.CONCURRENT_JOBS==1:
-        for nbatch, scale in zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES):
-            proposals.append(proposal_scale_worker([scale, nbatch, context, config, sym_def, \
-                roidb, imdb, arg_params, aux_params, vis]))
-    else:
-        im_per_job = int(math.ceil(float(len(roidb))/config.TEST.CONCURRENT_JOBS))
-        roidbs = []
-        pool = Pool(config.TEST.CONCURRENT_JOBS)
-        for i in range(config.TEST.CONCURRENT_JOBS):
-            roidbs.append([roidb[j] for j in range(im_per_job*i, min(im_per_job*(i+1), len(roidb)))])
-
-        for i, (nbatch, scale) in enumerate(zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES)):
-            parallel_args = []
-            for j in range(config.TEST.CONCURRENT_JOBS):
-                parallel_args.append([scale, nbatch, context, config, sym_def, \
-                roidbs[j], imdb, arg_params, aux_params, vis])
-                    
-            proposal_list = pool.map(proposal_scale_worker, parallel_args)
-            tmp_props = []
-            for prop in proposal_list:
-                tmp_props += prop
-            proposals.append(tmp_props)
-        pool.close()
-
-    if not os.path.isdir(config.TEST.PROPOSAL_SAVE_PATH):
-            os.makedirs(config.TEST.PROPOSAL_SAVE_PATH)
-
-    final_proposals = proposals[0]
-
-    if len(proposals) > 1:
-        for i in range(len(proposals[0])):
-            for j in range(1, len(proposals)):
-                final_proposals[i] = np.vstack((final_proposals[i], proposals[j][i]))
-    save_path = os.path.join(config.TEST.PROPOSAL_SAVE_PATH, '{}_{}_rpn.pkl'.format(config.dataset.dataset,
-                                                                                        config.dataset.test_image_set))
-    with open(save_path, 'wb') as file:
-         cPickle.dump(final_proposals, file)    
-
-    print('All done!')

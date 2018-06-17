@@ -1,5 +1,5 @@
 # --------------------------------------------------------
-# Written by Hengduo Li, Bharat Singh
+# Written by Hengduo Li
 # --------------------------------------------------------
 
 import os, sys
@@ -50,16 +50,14 @@ class imagenet(IMDB):
             self._wnid_image = self._wnid_image + (str(one),)
             self._classes_image = self._classes_image + (wnid_2_description[str(one)],)
 
-        self.classes = self._classes_image
-
         self._wnid_to_ind_image = dict(zip(self._wnid_image, xrange(num_of_subclasses)))
         self._class_to_ind_image = dict(zip(self._classes_image, xrange(num_of_subclasses)))
         self._image_ext = ['.JPEG']
-
         self._image_index = self._load_image_set_index()
 
         self.image_set_index = self._image_index
         self.num_images = len(self._image_index)
+        self.classes = self._classes_image
 
         # Specific config options
         self.config = {'cleanup'  : True,
@@ -137,7 +135,7 @@ class imagenet(IMDB):
                 return image_index
 
         else:
-            image_set_file = os.path.join(self._devkit_path, 'data', 'det_lists', 'small_val.txt')
+            image_set_file = os.path.join(self._devkit_path, 'data', 'det_lists', 'val.txt')
             with open(image_set_file) as f:
                 image_index = [x.strip().split(' ')[0] for x in f.readlines()]
         return image_index
@@ -214,9 +212,9 @@ class imagenet(IMDB):
 
         num_objs = len(objs)
 
-        boxes = np.zeros((num_objs, 4), dtype=np.float32)
-        gt_classes = np.zeros((num_objs), dtype=np.float32)
-        gt_subclasses = np.zeros((num_objs), dtype=np.float32)
+        boxes = np.zeros((num_objs, 4), dtype=np.int32)
+        gt_classes = np.zeros((num_objs), dtype=np.int32)
+        gt_subclasses = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
 
         # Load object bounding boxes into a data frame.
@@ -275,6 +273,16 @@ class imagenet(IMDB):
                         'flipped': False,
                         'width': width,
                         'height': height})
+
+        """roi_rec.update({'boxes': boxes,
+                        'gt_classes': gt_subclasses,
+                        #'gt_subclasses': gt_subclasses,
+                        #'gt_overlaps': overlaps,
+                        'max_classes': gt_subclasses,
+                        'max_overlaps': np.ones(len(gt_subclasses)),
+                        'flipped': False,
+                        'width': width,
+                        'height': height})"""
 
         return roi_rec
 
