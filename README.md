@@ -165,7 +165,7 @@ This would produce ```json``` file containing the detections on the ```test-dev`
 ## R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
-<img src="data/demo/readme_figs/pic3k.PNG" />
+<img src="data/demo/readme_figs/rfcn_3k.png" />
 </p>
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
 
