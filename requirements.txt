@@ -8,3 +8,4 @@ EasyDict
 protobuf
 argparse
 scikit-image
+tqdm
