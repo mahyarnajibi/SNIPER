@@ -46,9 +46,9 @@ SNIPER is released under Apache license. See LICENSE for details.
 ### Contents
 1. [Installation](#install)
 2. [Running the demo](#demo)
-2. [Training a model with SNIPER](#training)
-3. [Evaluting a trained model](#evaluating)
-4. [Other methods and branches in this repo (R-FCN-3K, open-images)](#others)
+3. [Training a model with SNIPER](#training)
+4. [Evaluting a trained model](#evaluating)
+5. [Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)](#others)
 
 <a name="install"> </a>
 ### Installation
@@ -78,6 +78,11 @@ pip install -r requirements.txt
 
 <a name="demo"> </a>
 ### Running the demo
+
+<p align="center">
+<img src="data/demo/readme_figs/sniper_detections.png" width="550px"/>
+</p>
+
 For running the demo, you need to download the provided SNIPER model. The following script downloads the SNIPER model and extracts it into the default location:
 ```
 bash download_sniper_detector.sh
@@ -87,9 +92,7 @@ After downloading the model, the following command would run the SNIPER detector
 python demo.py
 ```
 If everything goes well you should be able to see the following detections:
-<p align="center">
-<img src="data/demo/readme_figs/demo_detections.png" width="400px"/>
- </p>
+
  
 You can also run the detector on an arbitray image by providing its path to the script:
 ```
@@ -161,14 +164,22 @@ python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 ```
 This would produce ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
-
-## R-FCN-3K
+<a name="others"></a>
+## Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)
+#### R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
-<img src="data/demo/readme_figs/rfcn_3k.png" />
+<img src="data/demo/readme_figs/rfcn_3k.png" width="600px"/>
 </p>
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
 
-## OpenImagesV4
+#### SSH Face Detector (Comming Soon)
+The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
+
+<p align="center">
+<img src="data/demo/readme_figs/ssh_detections.png" width="600px"/>
+</p>
+
+#### OpenImagesV4
 This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
 Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/openimages2) branch for specific instructions.
