@@ -97,7 +97,7 @@ class nms_worker(object):
         self.nms_wrapper = nms_wrapper(nms_thresh, nms_sigma)
 
     def worker(self, data):
-            return self.nms_wrapper.nms(data)
+            return self.nms_wrapper.process(data)
 
 
 class anchor_worker(object):
@@ -298,85 +298,6 @@ class anchor_worker(object):
         if has_mask:
             rval.append(mx.nd.array(encoded_polys))
         return rval
-
-
-def roidb_worker(data):
-    im_i = data[0]
-    im_info = data[1]        
-    cur_crop = data[2]
-    im_scale = data[3]
-    nids = data[4]    
-    gt_boxes = data[5]
-    gt_labs = data[6]
-    boxes = data[7]
-    n_expected_roi = data[8]
-    num_classes = data[9]
-
-    gt_boxes[:, 0] = gt_boxes[:, 0] - cur_crop[0]
-    gt_boxes[:, 2] = gt_boxes[:, 2] - cur_crop[0]
-    gt_boxes[:, 1] = gt_boxes[:, 1] - cur_crop[1]
-    gt_boxes[:, 3] = gt_boxes[:, 3] - cur_crop[1]
-
-    gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
-    ids = filter_boxes(gt_boxes, 5)
-
-    if len(ids)>0:
-        gt_boxes = gt_boxes[ids]
-        gt_labs = gt_labs[ids]                
-        gt_boxes = np.hstack((gt_boxes, gt_labs.reshape(len(gt_labs), 1)))
-        if has_mask:
-            mask_polys = [mask_polys[i] for i in ids]
-    else:
-        gt_boxes = np.zeros((0, 5))
-
-    crois = boxes.copy()
-
-    crois[:, 0] = crois[:, 0] - cur_crop[0]
-    crois[:, 2] = crois[:, 2] - cur_crop[0]
-    crois[:, 1] = crois[:, 1] - cur_crop[1]
-    crois[:, 3] = crois[:, 3] - cur_crop[1]
-
-    rois = clip_boxes(np.round(crois * im_scale), im_info[:2])
-
-    ids = filter_boxes(rois, 10)
-    tids = np.intersect1d(ids, nids)
-    if len(nids) > 0:
-        ids = tids
-    else:
-        ids = nids
-
-    if len(ids) > 0:            
-        rois = rois[ids, :]
-
-    fg_rois_per_image = len(rois)
-    rois_per_image = fg_rois_per_image
-    rois, labels, bbox_targets, bbox_weights = sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes, gt_boxes=gt_boxes)
-
-    pad_roi = np.array([[0,0,100,100]])
-    pad_label = np.array(-1)
-    pad_weights = np.zeros((1, 8))
-    pad_targets = np.zeros((1, 8))
-
-    if rois.shape[0] > n_expected_roi:
-        rois = rois[0:n_expected_roi, :]
-        bbox_weights = bbox_weights[0:n_expected_roi, :]
-        bbox_targets = bbox_targets[0:n_expected_roi, :]
-        labels = labels[0:n_expected_roi]
-    elif rois.shape[0] < n_expected_roi:
-        n_pad = n_expected_roi - rois.shape[0]
-        rois = np.vstack((rois, np.repeat(pad_roi, n_pad, axis=0)))
-        labels = np.hstack((labels, np.repeat(pad_label, n_pad, axis=0)))
-        bbox_weights = np.vstack((bbox_weights, np.repeat(pad_weights, n_pad, axis=0)))
-        bbox_targets = np.vstack((bbox_targets, np.repeat(pad_targets, n_pad, axis=0)))
-
-    batch_index = im_i * np.ones((rois.shape[0], 1))
-    rois_array_this_image = np.hstack((batch_index, rois))
-    if rois_array_this_image.shape[0]==0:
-        print 'Something Wrong2'
-    rval = [mx.nd.array(rois_array_this_image), mx.nd.array(labels), mx.nd.array(bbox_targets), mx.nd.array(bbox_weights)]
-    if has_mask:
-        rval.append(encoded_polys)
-    return rval
 
 
 class chip_worker(object):

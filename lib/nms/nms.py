@@ -18,7 +18,7 @@ class nms_wrapper(object):
         self.thresh = thresh
         self.sigma = sigma
 
-    def nms(self, dets):
+    def process(self, dets):
         nms_dets = nms(dets, self.thresh) if self.thresh > 0 else soft_nms(dets, sigma=self.sigma, method=2)
         return nms_dets
 
