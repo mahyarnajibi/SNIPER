@@ -7,10 +7,10 @@ url="legacydirs.umiacs.umd.edu/~najibi/download.php"
 method_name="sniper_detector"
 file_name="sniper_models.tar.gz"
 cur_dir=${PWD##*/}
-target_dir="./data/"
+target_dir="./"
 
 if [ $cur_dir = "scripts" ]; then
-   target_dir="../data/"
+   target_dir="../"
 fi
 
 if [ ! -f ${file_name} ]; then
