@@ -11,6 +11,7 @@ import numpy as np
 from MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
 from data_utils.data_workers import anchor_worker, im_worker, chip_worker
+import math
 
 class MNIteratorE2E(MNIteratorBase):
     def __init__(self, roidb, config, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
@@ -22,7 +23,7 @@ class MNIteratorE2E(MNIteratorBase):
         self.label_name = ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
         if config.TRAIN.WITH_MASK:
             self.label_name.append('gt_masks')
-        self.pool = Pool(64)
+        self.pool = Pool(config.TRAIN.NUM_PROCESS)
         self.epiter = 0
         self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
         self.chip_worker = chip_worker(chip_size=self.crop_size[0], cfg=config)
@@ -34,14 +35,23 @@ class MNIteratorE2E(MNIteratorBase):
         self.n_neg_per_im = 2
         self.crop_idx = [0] * len(self.roidb)
         self.chip_worker.reset()
-        chips = self.pool.map(self.chip_worker.chip_extractor, self.roidb)
+
+        # Devide the dataset and  extract chips for each part
+        n_per_part = int(math.ceil(len(self.roidb) / float(self.cfg.TRAIN.CHIPS_DB_PARTS)))
+        chips = []
+        for i in range(self.cfg.TRAIN.CHIPS_DB_PARTS):
+            chips += self.pool.map(self.chip_worker.chip_extractor,
+                                   self.roidb[i*n_per_part:min((i+1)*n_per_part, len(self.roidb))])
+
         chip_count = 0
         for i, r in enumerate(self.roidb):
             cs = chips[i]
             chip_count += len(cs)
             r['crops'] = cs
-
-        all_props_in_chips = self.pool.map(self.chip_worker.box_assigner, self.roidb)
+        all_props_in_chips = []
+        for i in range(self.cfg.TRAIN.CHIPS_DB_PARTS):
+            all_props_in_chips += self.pool.map(self.chip_worker.box_assigner,
+                                   self.roidb[i*n_per_part:min((i+1)*n_per_part, len(self.roidb))])
 
         for ps, cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = ps[0]

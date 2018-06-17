@@ -50,11 +50,16 @@ dataset:
 
 TRAIN:
   # Whether to use C++ or python code for chip generation
-  CPP_CHIPS: false
+  CPP_CHIPS: true
   # Whether to extract negative chips during training
   USE_NEG_CHIPS: true
+  # How many parts the dataset should be divided to for parallel chip generation
+  # This is used to keep the memory limited
+  CHIPS_DB_PARTS: 20
 
   # Multi-processing params
+  # These parameters are used for parallel chip generation, NMS, etc.
+  # Please consider adjusting them for your system
   NUM_PROCESS: 64
   NUM_THREAD: 8
 
