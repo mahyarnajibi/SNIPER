@@ -33,14 +33,12 @@ def parser():
                             default=100, type=int)
     arg_parser.add_argument('--momentum', dest='momentum', help='BN momentum', default=0.995, type=float)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
-                            default='CRCNN', type=str)
+                            default='SNIPER', type=str)
 
     return arg_parser.parse_args()
 
 
 if __name__ == '__main__':
-
-
 
     args = parser()
     update_config(args.cfg)
@@ -67,8 +65,8 @@ if __name__ == '__main__':
 
 
     print('Creating Iterator with {} Images'.format(len(roidb)))
-    train_iter = MNIteratorE2E(roidb=roidb, config=config, batch_size=batch_size, nGPUs=nGPUs, threads=32,
-                                 pad_rois_to=400)
+    train_iter = MNIteratorE2E(roidb=roidb, config=config, batch_size=batch_size, nGPUs=nGPUs,
+                               threads=config.TRAIN.NUM_THREAD, pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
     # Creating the Logger
