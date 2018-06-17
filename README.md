@@ -1,118 +1,96 @@
-# SNIPER: Efficient Multi-Scale Training
+# R-FCN-3000 at 30fps: Decoupling Detection and Classification
 
 <p align="center">
-<img src="data/demo/sniper.gif" />
+<img src="data/demo/rfcn_3k.png" />
  </p>
 
-SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
-Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
-This significantly speeds up the multi-scale training as it operates on low-resolution chips. 
-Moreover, SNIPER benefits from *Batch Normalization* during training as it makes larger batch-size possible for instance-level recognition tasks. 
+R-FCN-3k is a real-time detector for up to 3,130 classes. The idea is to decouple object detection into objectness detection and fine-grained classification, which speeds up inference and training with only marginal mAP drop. It is trained on ImageNet Classification data with bounding boxes and obtains 34.9% mAP on ImageNet Detection Dataset (37.8% with SNIPER).
 
-If you find [SNIPER](https://arxiv.org/abs/1805.09300) useful in your research please consider citing:
-```
-SNIPER: Efficient Multi-Scale Training
-Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)
-arXiv preprint arXiv:1805.09300, 2018.
-```
+The generalization ability of objectness detection it demonstrates supports the hypothesis that it is possible to learn a universal objectness detector. With the universal objectness detector of R-FCN-3k, we can obtain a detector on anything in seconds by training a light classifier.
 
-### Contents
-1. [Installation](#install)
-2. [Training a model with SNIPER](#training)
-3. [Evaluting a trained model](#evaluating)
-4. [Other methods and branches in this repo (R-FCN-3K, open-images)](#others)
+If you find [R-FCN-3k](https://arxiv.org/abs/1712.01802) useful in your research, please consider citing:
 
-<a name="install"> </a>
-### Installation
-1. Clone the repository:
 ```
-git clone --recursive https://github.com/mahyarnajibi/SNIPER.git
+R-FCN-3000 at 30fps: Decoupling Detection and Classification
+Bharat Singh*, Hengduo Li*, Abhishek Sharma, Larry S. Davis (* denotes equal contribution)
+CVPR, 2018.
 ```
 
-2. Compile the provided mxnet fork in the repository:
+
+## Demo
+
+With the trained universal objectness detector, you can obtain a new detector simply by training a light linear classifier in seconds!
+
+1. Please download trained R-FCN-3k model [[GoogleDrive]](https://drive.google.com/file/d/10QOmpklDcY2eO-Lfc3IjY0b9XcTEiYY8/view?usp=sharing)[[BaiduYun]](https://pan.baidu.com/s/1JdxL6B1K3HD_8DjWcrAOwQ) and put them into
 ```
-cd SNIPER-mxnet
-mkdir build
-cd build
-cmake ..
-make
+SNIPER/output/chips_resnet101_3k/res101_mx_3k/fall11_whole/
 ```
 
-3. Add mxnet to the ```PYTHONPATH```:
+2. Download images [[GoogleDrive]](https://drive.google.com/open?id=1fYsCF6q-bctZMNrLPQkNHJEVxL5LpnYM)[[BaiduYun]](https://pan.baidu.com/s/13HmwE8NdksogxTJb_gFwiw) for new classes and put it in `demo/`.
+
+3. Run `python demo.py` to extract features and train the classifier on new classes. Visualization of detection results on evaluation images are saved in `vis_result`.
+
+4. You can use your own data to train the classifier and obtain a detector. Simply put image folders under `demo/images/` (like demo/images/cat/xxx.jpg) and run `python demo.py`. You may need to change train eval split strategy and hyper-parameters based on your own data and purpose.
+
+## Training
+
+1. Please download [ImageNet Full Fall 2011 Release](http://academictorrents.com/details/564a77c1e1119da199ff32622a1609431b9f1c47/tech&dllist=1) and ILSVRC2013_DET datasets, together with the [bounding boxes](http://image-net.org/download-bboxes).
+
+2. Download the modified ILSVRC2014_devkit [[GoogleDrive]](https://drive.google.com/open?id=1hEG-GmMrvp--hWRU41RMBLB3gL-IdXs9)[[BaiduYun]](https://pan.baidu.com/s/1wEku413rss02YQ_R39gNGA) which contains essential files for training and evaluation. Please make them look like this:
+
 ```
-export PYTHONPATH=SNIPER-mxnet/python:$PYTHONPATH
+    data
+    |__ imagenet
+        |__ fall11_whole
+            |__ n04233124
+                |__ xxx.JPEG
+                    ...
+                ...
+        |__ fall11_whole_bbox
+            |__ n04233124
+                |__ xxx.xml
+                    ...
+                ...
+        |__ ILSVRC2013_DET_val
+        |__ ILSVRC2013_DET_val_bbox
+        |__ ILSVRC2014_devkit
+            |__ data
+                |__ 3kcls_1C_words.txt
+                |__ 3kcls_cluster_interval1.txt
+                |__ 3kcls_index.txt
+                |__ wnid_name_dict.txt
+                |__ 3kcls_cluster_result1.txt
+                |__ meta_det.mat
+                |__ det_lists
+                    |__ val.txt
+                        ...
+            |__ evaluation
+                |__ eval_det_3k_1C.m
+                    ...
+                |__ 3k_1C_pred
+                    |__ 3k_1C_matching.txt
+                |__ cache
 ```
 
-4. Install the required python packages:
-```
-pip install -r requirements.txt
-```
 
-<a name="training"></a>
-### Training a model
-For training SNIPER on COCO, you would need to download the pre-trained models, the pre-computed proposals used for negative chip mining
-(you can also use any other set of proposals), and configure the dataset as described below.
-
-*Downloading pre-trained models*
-
-Running the following script downloads and extract the pre-trained models into the default path (```data/pretrained_model```):
+3. Run the following script downloads and extract the pre-trained models into the default path (```data/pretrained_model```):
 ```
 bash download_imgnet_models.sh
 ```
 
-*Downloading pre-computed proposals for negative chip mining*
-
-Running the following script downloads and extract the pre-computed proposals into the default path (```data/proposals```):
-```
-bash download_sniper_neg_props.sh
-```
-
-*Configuring the COCO dataset*
-
-Please follow the [official COCO dataset website](http://cocodataset.org/#download) to download the dataset. After downloading
-the dataset you should have the following directory structure:
- ```
-data
-   |--datasets
-         |--coco
-            |--annotations
-            |--images
-```
-
-To train a model with SNIPER and default parameters you can call the following script:
+4. To train R-FCN-3k, use the following command:
 ```
 python main_train.py
 ```
-The default settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
-The path to the configuration file can be passed as an argument to the above script with the ```--cfg``` flag .
 
+## Evaluation
 
-<a name="evaluating"></a>
-### Evaluating a trained model
-*Evaluating the provided SNIPER models*
+1. Please download trained R-FCN-3k model [[GoogleDrive]](https://drive.google.com/file/d/10QOmpklDcY2eO-Lfc3IjY0b9XcTEiYY8/view?usp=sharing)[[BaiduYun]](https://pan.baidu.com/s/1JdxL6B1K3HD_8DjWcrAOwQ) and put them into
+```
+/home/ubuntu/3ksniper/SNIPER/output/chips_resnet101_3k/res101_mx_3k/fall11_whole/
+```
 
-The repository provides a set of pre-trained SNIPER models which can be downloaded by running the following script:
+2. To evaluate trained model, use the following command:
 ```
-bash download_sniper_detector.sh
+python main_test.py
 ```
-This script downloads the model weights and extracts them into ```data/sniper_models```. 
-To evaluate these models on coco dataset with the default configuration you can run the following script:
-```
-python main_test.py --weight_path [PATH TO THE DOWNLOADED WEIGHTS]
-```
-The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
-(See the ```configs``` folder for examples). 
-
-*Evaluating a model trained with this repository*
-
-For evaluating a model trained with this repository, you can run the following script with the same configuration file used during the training.
-The test settings can be set by updating the ```TEST``` section of the configuration file (See the ```configs``` folder for examples).
-```
-python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
-```
-This would produce ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
-
-<a name="others"></a>
-### Other methods and branches in this repo (RFCN-3K, open-images)
-This repo also contains branches which implement the [R-FCN-3k](https://arxiv.org/abs/1712.01802), and modules to train and evaluate on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
-Please switch to the [3k](https://github.com/mahyarnajibi/CRCNN/tree/3k) and [openimages](https://github.com/mahyarnajibi/CRCNN/tree/openimages2) branches for specific instructions.
