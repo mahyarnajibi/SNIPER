@@ -24,6 +24,9 @@ Due to its memeory efficient design, SNIPER can benefit from *Batch Normalizatio
 5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet. This branch also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
 6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
+### License
+SNIPER is released under Apache license. See LICENSE for details.
+
 ### Citing
 ```
 @article{sniper2018,
@@ -31,6 +34,12 @@ Due to its memeory efficient design, SNIPER can benefit from *Batch Normalizatio
   author={Singh, Bharat and Najibi, Mahyar and Davis, Larry S},
   journal={arXiv preprint arXiv:1805.09300},
   year={2018}
+}
+@article{analysissnip2017,
+  title={An analysis of scale invariance in object detection-snip},
+  author={Singh, Bharat and Davis, Larry S},
+  journal={CVPR},
+  year={2017}
 }
 ```
 
