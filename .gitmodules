@@ -1,3 +1,3 @@
-[submodule "CRCNN-mxnet"]
-	path = CRCNN-mxnet
-	url = https://github.com/mahyarnajibi/CRCNN-mxnet.git
+[submodule "SNIPER-mxnet"]
+	path = SNIPER-mxnet
+	url = https://github.com/mahyarnajibi/SNIPER-mxnet
