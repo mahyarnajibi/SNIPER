@@ -10,11 +10,12 @@ This significantly speeds up multi-scale training as it operates on low-resoluti
 Due to its memeory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
 [SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
-```
-SNIPER: Efficient Multi-Scale Training
-Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)
-arXiv preprint arXiv:1805.09300, 2018.
-```
+<pre>
+<b>SNIPER: Efficient Multi-Scale Training</b>
+<b>Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)</b>
+<b>arXiv preprint arXiv:1805.09300, 2018.</b>
+</pre>
+
 ### Features
 1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
 2. NO PYTHON LAYERS (Every layer is optimized for large batch sizes in CUDA/C++)
@@ -78,7 +79,7 @@ python demo.py
 ```
 If everything goes well you should be able to see the following detections:
 <p align="center">
-<img src="data/demo/readme_figs/demo_detections.png" />
+<img src="data/demo/readme_figs/demo_detections.png" width="400px"/>
  </p>
  
 You can also run the detector on an arbitray image by providing its path to the script:
