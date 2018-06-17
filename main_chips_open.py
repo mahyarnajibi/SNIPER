@@ -11,7 +11,6 @@ import sys
 
 sys.path.insert(0, 'lib')
 from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
-#from symbols.faster.symbol_dpn_98_cls import symbol_dpn_98_cls, checkpoint_callback
 from configs.faster.default_configs import config, update_config, get_opt_params
 import mxnet as mx
 import metric, callback
@@ -28,7 +27,6 @@ import cPickle
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
-                            #default='configs/faster/dpn98_coco_chips.yml', type=str)
     							default='configs/faster/open_res101_mx_e2e.yml',type=str)
     arg_parser.add_argument('--display', dest='display', help='Number of epochs between displaying loss info',
                             default=100, type=int)
@@ -77,16 +75,6 @@ if __name__ == '__main__':
                                  pad_rois_to=400)
     print('The Iterator has {} samples!'.format(len(train_iter)))
 
-    #for data in train_iter:
-    # 	print 'Yes'
-    #import time
-    #t1 = time.time()
-    #for i,batch in enumerate(train_iter):
-    #    t2 = time.time() - t1
-    #    if i % 100 == 0:
-    #        print i
-    #    t1 = time.time()
-    # exit(0)
 
 
     print('Initializing the model...')
@@ -110,7 +98,7 @@ if __name__ == '__main__':
     sym_inst.infer_shape(shape_dict)
     arg_params, aux_params = load_param(config.network.pretrained, config.network.pretrained_epoch, convert=True)
 
-    #sym_inst.init_weight_rcnn(config, arg_params, aux_params)
+    sym_inst.init_weight_rcnn(config, arg_params, aux_params)
 
     # Creating the metrics
     eval_metric = metric.RPNAccMetric()
