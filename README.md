@@ -171,7 +171,7 @@ python main_test.py
 The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
 (See the ```configs``` folder for examples). 
 
-Please note that the evaluation is performed in a multi-image per batch and parallel model forwards. In case of lower GPU memory, please consider reducing the batch sizes for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
+Please note that the evaluation is performed in a multi-image per batch and parallel model forwards setting. In case of lower GPU memory, please consider reducing the batch sizes for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
 
 *Evaluating a model trained with this repository*
 
