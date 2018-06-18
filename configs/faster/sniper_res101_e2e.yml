@@ -196,7 +196,7 @@ TEST:
   PROPOSAL_MIN_SIZE: 0
 
   # NMS Parameters
-  # Whether to apply NMS based on
+  # Whether to apply NMS based on threshold or sigma
   NMS: -1 #0.45
   NMS_SIGMA: 0.55
 
