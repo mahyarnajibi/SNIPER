@@ -80,7 +80,7 @@ pip install -r requirements.txt
 ### Running the demo
 
 <p align="center">
-<img src="data/demo/readme_figs/sniper_detections.png" width="550px"/>
+<img src="data/demo/readme_figs/sniper_detections.jpg" width="700px"/>
 </p>
 
 For running the demo, you need to download the provided SNIPER model. The following script downloads the SNIPER model and extracts it into the default location:
@@ -169,7 +169,7 @@ This would produce ```json``` file containing the detections on the ```test-dev`
 #### R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
-<img src="data/demo/readme_figs/rfcn_3k.png" width="600px"/>
+<img src="data/demo/readme_figs/rfcn_3k.jpg" width="600px"/>
 </p>
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
 
@@ -177,7 +177,7 @@ Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr
 The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
 
 <p align="center">
-<img src="data/demo/readme_figs/ssh_detections.png" width="600px"/>
+<img src="data/demo/readme_figs/ssh_detections.jpg" width="650px"/>
 </p>
 
 #### OpenImagesV4
