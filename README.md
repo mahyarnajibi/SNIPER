@@ -106,9 +106,9 @@ After downloading the model, the following command would run the SNIPER detector
 ```
 python demo.py
 ```
-If everything goes well you should be able to see the following detections:
+If everything goes well, the sample detections would be saved as ```data/demo/demo_detections.png```.
 
-You can also run the detector on an arbitray image by providing its path to the script:
+You can also run the detector on an arbitary image by providing its path to the script:
 ```
 python demo.py --im_path [PATH to the image]
 ```
@@ -149,7 +149,7 @@ python main_train.py
 ```
 
 The default settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
-The path to the configuration file can be passed as an argument to the above script with the ```--cfg``` flag .
+The path to the configuration file can be passed as an argument to the above script using the ```--cfg``` flag .
 
 Please note that the default config file has the same settings used to train the released models. If you are using a GPU with less amount of memory, please consider reducing the training batch size (by setting ```TRAIN.BATCH_IMAGES``` in the config file). Also, multi-processing is used to process the data. For lower amounts of memory, you may need to reduce the number of processes and number of threads according to your system (by setting ```TRAIN.NUM_PROCESS``` and ```TRAIN.NUM_THREAD```).
 
@@ -171,7 +171,7 @@ python main_test.py
 The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
 (See the ```configs``` folder for examples). 
 
-Please note that the evaluation is performed in a multi-image per batch and parallel model forwards setting. In case of lower GPU memory, please consider reducing the batch sizes for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
+Please note that the evaluation is performed in a multi-image per batch and parallel model forward setting. In case of lower GPU memory, please consider reducing the batch size for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
 
 *Evaluating a model trained with this repository*
 
@@ -180,7 +180,7 @@ The test settings can be set by updating the ```TEST``` section of the configura
 ```
 python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 ```
-This would produce a ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
+By default, this would produce a ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
 <a name="others"></a>
 ## Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)
