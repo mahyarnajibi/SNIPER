@@ -6,9 +6,9 @@
 
 R-FCN-3k is a real-time detector for up to 3,130 classes. The idea is to decouple object detection into objectness detection and fine-grained classification, which speeds up inference and training with only marginal mAP drop. It is trained on ImageNet Classification data with bounding boxes and obtains 34.9% mAP on ImageNet Detection Dataset (37.8% with SNIPER).
 
-The generalization ability of objectness detection it demonstrates supports the hypothesis that it is possible to learn a universal objectness detector. With the universal objectness detector of R-FCN-3k, we can obtain a detector on anything in seconds by training a light classifier.
+With generalized objectness detection, we demonstrate that it is possible to learn a universal objectness detector. With the universal objectness detector of R-FCN-3k, we can obtain a detector on anything in seconds by learning only the classification layer.
 
-If you find [R-FCN-3k](https://arxiv.org/abs/1712.01802) useful in your research, please consider citing:
+[R-FCN-3k](https://arxiv.org/abs/1712.01802) is described in the following paper:
 
 ```
 R-FCN-3000 at 30fps: Decoupling Detection and Classification
@@ -93,4 +93,14 @@ python main_train.py
 2. To evaluate trained model, use the following command:
 ```
 python main_test.py
+```
+
+### Citing
+```
+@article{singh2017r,
+  title={R-FCN-3000 at 30fps: Decoupling Detection and Classification},
+  author={Singh, Bharat and Li, Hengduo and Sharma, Abhishek and Davis, Larry S},
+  journal={CVPR},
+  year={2018}
+}
 ```
