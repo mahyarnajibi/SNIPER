@@ -7,7 +7,7 @@
 import init
 import matplotlib
 matplotlib.use('Agg')
-from symbols.faster.resnet_mx_101_e2e import resnet_mx_101_e2e, checkpoint_callback
+from symbols.faster import *
 from configs.faster.default_configs import config, update_config
 from data_utils.load_data import load_proposal_roidb
 import mxnet as mx
@@ -51,10 +51,11 @@ def main():
     arg_params, aux_params = load_param(model_prefix, config.TEST.TEST_EPOCH,
                                         convert=True, process=True)
 
+    sym_inst = eval('{}.{}'.format(config.symbol, config.symbol))
     if config.TEST.EXTRACT_PROPOSALS:
-        imdb_proposal_extraction_wrapper(resnet_mx_101_e2e, config, imdb, roidb, context, arg_params, aux_params, args.vis)
+        imdb_proposal_extraction_wrapper(sym_inst, config, imdb, roidb, context, arg_params, aux_params, args.vis)
     else:
-        imdb_detection_wrapper(resnet_mx_101_e2e, config, imdb, roidb, context, arg_params, aux_params, args.vis)
+        imdb_detection_wrapper(sym_inst, config, imdb, roidb, context, arg_params, aux_params, args.vis)
 
 if __name__ == '__main__':
     main()

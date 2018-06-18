@@ -76,12 +76,17 @@ cmake ..
 make
 ```
 
-3. Add mxnet to the ```PYTHONPATH```:
+3. Compile the C++ files in the lib directory. The following script compiles them all:
+```
+bash scripts/compile.sh
+```
+
+4. Add mxnet to the ```PYTHONPATH```:
 ```
 export PYTHONPATH=SNIPER-mxnet/python:$PYTHONPATH
 ```
 
-4. Install the required python packages:
+5. Install the required python packages:
 ```
 pip install -r requirements.txt
 ```
@@ -103,7 +108,6 @@ python demo.py
 ```
 If everything goes well you should be able to see the following detections:
 
- 
 You can also run the detector on an arbitray image by providing its path to the script:
 ```
 python demo.py --im_path [PATH to the image]
@@ -111,12 +115,11 @@ python demo.py --im_path [PATH to the image]
 
 <a name="training"></a>
 ### Training a model
-For training SNIPER on COCO, you would need to download the pre-trained models, the pre-computed proposals used for negative chip mining
-(you can also use any other set of proposals), and configure the dataset as described below.
+For training SNIPER on COCO, you would need to download the pre-trained models, the pre-computed proposals used for negative chip mining (you can also use any other set of proposals), and configure the dataset as described below.
 
 *Downloading pre-trained models*
 
-Running the following script downloads and extract the pre-trained models into the default path (```data/pretrained_model```):
+Running the following script downloads and extracts the pre-trained models into the default path (```data/pretrained_model```):
 ```
 bash download_imgnet_models.sh
 ```
@@ -144,8 +147,11 @@ To train a model with SNIPER and default parameters you can call the following s
 ```
 python main_train.py
 ```
+
 The default settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
 The path to the configuration file can be passed as an argument to the above script with the ```--cfg``` flag .
+
+Please note that the default config file has the same settings used to train the released models. If you are using a GPU with less amount of memory, please consider reducing the training batch size (by setting ```TRAIN.BATCH_IMAGES``` in the config file). Also, multi-processing is used to process the data. For lower amounts of memory, you may need to reduce the number of processes and number of threads according to your system (by setting ```TRAIN.NUM_PROCESS``` and ```TRAIN.NUM_THREAD```).
 
 
 <a name="evaluating"></a>
@@ -156,23 +162,25 @@ The repository provides a set of pre-trained SNIPER models which can be download
 ```
 bash download_sniper_detector.sh
 ```
-This script downloads the model weights and extracts them into ```data/sniper_models```. 
-To evaluate these models on coco dataset with the default configuration you can run the following script:
+This script downloads the model weights and extracts them into the expected directory. 
+To evaluate these models on coco test-dev with the default configuration, you can run the following script:
 
 ```
-python main_test.py --weight_path [PATH TO THE DOWNLOADED WEIGHTS]
+python main_test.py
 ```
 The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
 (See the ```configs``` folder for examples). 
 
+Please note that the evaluation is performed in a multi-image per batch and parallel model forwards. In case of lower GPU memory, please consider reducing the batch sizes for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
+
 *Evaluating a model trained with this repository*
 
-For evaluating a model trained with this repository, you can run the following script with the same configuration file used during the training.
+For evaluating a model trained with this repository, you can run the following script by passing the same configuration file used during the training.
 The test settings can be set by updating the ```TEST``` section of the configuration file (See the ```configs``` folder for examples).
 ```
 python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 ```
-This would produce ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
+This would produce a ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
 <a name="others"></a>
 ## Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)
