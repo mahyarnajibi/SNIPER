@@ -24,6 +24,16 @@ Due to its memeory efficient design, SNIPER can benefit from *Batch Normalizatio
 5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet. This branch also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
 6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
+### Results
+Here are the coco test-dev results for SNIPER trained with this repository on the coco trainval set and using only the bounding box annotations.
+
+|                                 | <sub>pre-trained dataset</sub> | <sub>network structure</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
+|---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|
+| <sub>SNIPER </sub>           | <sub>ImageNet</sub> | <sub>ResNet101</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4  | 
+| <sub>SNIPER</sub> | <sub>OpenImages</sub> | <sub>ResNet101</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
+
+You can download the OpenImages pre-trained model and the SNIPER detector by running ```bash scripts/download_imgnet_models.sh``` and ```bash scripts/download_sniper_detector.sh``` respectively.
+
 ### License
 SNIPER is released under Apache license. See LICENSE for details.
 
