@@ -283,12 +283,9 @@ class RCNNL1LossCRCNNMetric(mx.metric.EvalMetric):
             else:
                 label = labels[self.label.index('rcnn_label')].asnumpy()
 
-        # calculate num_inst (average on those kept anchors)
         num_inst = np.sum(label != -1)
-        #num_inst = np.sum(label > 0)
         self.sum_metric += np.sum(bbox_loss)
-        #self.num_inst += num_inst
-        self.num_inst += num_inst #(self.cfg.TRAIN.BATCH_ROIS_OHEM*self.cfg.TRAIN.BATCH_IMAGES)
+        self.num_inst += num_inst
 
 class VisMetric(mx.metric.EvalMetric):
     def __init__(self, cfg):

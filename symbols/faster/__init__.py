@@ -1,4 +1,2 @@
 import resnet_mx_101_e2e
 import resnet_mx_101_e2e_mask
-import mobilenetv2
-import resnext_mx_101

@@ -316,11 +316,9 @@ class resnet_mx_101_e2e(Symbol):
             rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
                                             grad_scale=3 * grad_scale / float(
                                                 cfg.TRAIN.BATCH_IMAGES * cfg.TRAIN.RPN_BATCH_SIZE))
-            if not cfg.TRAIN.visualize:
-                group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label)])
-            else:
-                group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label),
-                    mx.sym.BlockGrad(bbox_pred), mx.sym.BlockGrad(rois), mx.sym.BlockGrad(rcnn_label)])
+
+            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label)])
+
         else:
             # ROI Proposal
             rpn_cls_prob = mx.sym.SoftmaxActivation(
