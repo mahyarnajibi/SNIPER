@@ -32,7 +32,7 @@ Here are the coco test-dev results for SNIPER trained with this repository on th
 | <sub>SNIPER </sub>           | <sub>ImageNet</sub> | <sub>ResNet101</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4  | 
 | <sub>SNIPER</sub> | <sub>OpenImages</sub> | <sub>ResNet101</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
 
-You can download the OpenImages pre-trained model and the SNIPER detector by running ```bash scripts/download_imgnet_models.sh``` and ```bash scripts/download_sniper_detector.sh``` respectively.
+You can download the OpenImages pre-trained model and the SNIPER detector by running ```bash scripts/download_pretrained_models.sh``` and ```bash scripts/download_sniper_detector.sh``` respectively.
 
 ### License
 SNIPER is released under Apache license. See LICENSE for details.
@@ -121,7 +121,7 @@ For training SNIPER on COCO, you would need to download the pre-trained models, 
 
 Running the following script downloads and extracts the pre-trained models into the default path (```data/pretrained_model```):
 ```
-bash download_imgnet_models.sh
+bash download_pretrained_models.sh
 ```
 
 *Downloading pre-computed proposals for negative chip mining*
