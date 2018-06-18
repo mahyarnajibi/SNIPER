@@ -4,9 +4,11 @@ from data_utils.data_workers import im_worker
 from MNIteratorBase import MNIteratorBase
 
 class MNIteratorTest(MNIteratorBase):
-    def __init__(self, roidb, config, test_scale, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512)):
+    def __init__(self, roidb, config, test_scale, batch_size=4, threads=8, nGPUs=1, pad_rois_to=400, crop_size=(512, 512),
+                 num_classes=None):
         self.crop_size = crop_size
-        self.num_classes = roidb[0]['gt_overlaps'].shape[1]
+
+        self.num_classes = num_classes if num_classes else roidb[0]['gt_overlaps'].shape[1]
         self.data_name = ['data', 'im_info', 'im_ids']
         self.label_name = None
         self.label = []
@@ -17,7 +19,11 @@ class MNIteratorTest(MNIteratorBase):
 
         self.reset()
 
-    
+    def set_scale(self, scale):
+        self.test_scale = scale
+        self.im_worker = im_worker(crop_size=None if not self.crop_size else self.crop_size[0], cfg=self.cfg,
+                                   target_size=scale)
+
     def _get_batch(self, roidb):
         n_batch = len(roidb)
         im_ids = np.array([self.inds[i % self.size] for i in range(self.cur_i, self.cur_i + self.batch_size)])
@@ -31,9 +37,7 @@ class MNIteratorTest(MNIteratorBase):
         for i in range(n_batch):
             ims.append([roidb[i]['image'], max_size ,roidb[i]['flipped']])
         im_info = np.zeros((n_batch, 3))
-        # processed_list = []
-        # for im in ims:
-        #     processed_list.append(self.im_worker.worker(im))
+
         processed_list = self.thread_pool.map(self.im_worker.worker, ims)
         im_tensor = mx.nd.zeros((n_batch, 3, max_size[0], max_size[1]), dtype=np.float32)
         for i,p in enumerate(processed_list):

@@ -47,7 +47,7 @@ class Tester(object):
                 'im_ids': 'im_ids'
             }
         self.logger = logger
-        self.result_path = os.path.join(imdb.result_path, imdb.image_set)
+        self.result_path = imdb.result_path
         self.num_classes = imdb.num_classes
         self.class_names = imdb.classes
         self.num_images = len(roidb)
@@ -121,6 +121,13 @@ class Tester(object):
                 scores.append(cscores)
                 preds.append(cboxes)
         return scores, preds, data, im_ids
+
+    def set_scale(self, scale):
+        if isinstance(self.test_iter, PrefetchingIter):
+            self.test_iter.iters[0].set_scale(scale)
+        else:
+            self.test_iter.set_scale(scale)
+        self.test_iter.reset()
 
     def show_info(self, print_str):
         print(print_str)
@@ -356,7 +363,7 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
         for i in range(config.TEST.CONCURRENT_JOBS):
             roidbs.append([roidb[j] for j in range(im_per_job*i, min(im_per_job*(i+1), len(roidb)))])
 
-        for i, (nbatch, scale) in enumerate(zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES)):
+        for _, (nbatch, scale) in enumerate(zip(config.TEST.BATCH_IMAGES, config.TEST.SCALES)):
             parallel_args = []
             for j in range(config.TEST.CONCURRENT_JOBS):
                 parallel_args.append([scale, nbatch, context, config, sym_def, \

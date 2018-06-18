@@ -36,8 +36,9 @@ def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, sav
                                  edgecolor=color, linewidth=3.5)
             plt.gca().add_patch(rect)
             plt.gca().text(bbox[0], bbox[1] - 2,
-                           '{:s} {:.3f}'.format(name, score),
-                           bbox=dict(facecolor=color, alpha=0.5), fontsize=12, color='white')
+                           '{:s} {:.1f}'.format(name, score),
+                           bbox=dict(facecolor=color, alpha=0.5), fontsize=10, color='white')
+    plt.axis('off')
     plt.savefig(save_path)
     plt.cla()
     plt.clf()
