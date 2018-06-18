@@ -1,7 +1,7 @@
 # R-FCN-3000 at 30fps: Decoupling Detection and Classification
 
 <p align="center">
-<img src="data/demo/rfcn_3k.png" />
+<img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/rfcn_3k.png" />
  </p>
 
 R-FCN-3k is a real-time detector for up to 3,130 classes. The idea is to decouple object detection into objectness detection and fine-grained classification, which speeds up inference and training with only marginal mAP drop. It is trained on ImageNet Classification data with bounding boxes and obtains 34.9% mAP on ImageNet Detection Dataset (37.8% with SNIPER).
