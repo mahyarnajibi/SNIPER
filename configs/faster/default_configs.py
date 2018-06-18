@@ -45,7 +45,6 @@ config.TRAIN = edict()
 config.TRAIN.CPP_CHIPS = False
 config.TRAIN.USE_NEG_CHIPS = True
 config.TRAIN.CHIPS_DB_PARTS = 20
-config.TRAIN.visualize = False
 config.TRAIN.WITH_MASK = False
 config.TRAIN.lr = 0
 config.TRAIN.VALID_RANGES = ((-1, 80), (32, 150), (120, -1))
@@ -108,7 +107,8 @@ config.TRAIN.BG_THRESH_LO = 0.0
 # rcnn bounding box regression params
 config.TRAIN.BBOX_REGRESSION_THRESH = 0.5
 config.TRAIN.BBOX_WEIGHTS = np.array([1.0, 1.0, 1.0, 1.0])
-
+config.TRAIN.visualization_path = 'debug/visualization'
+config.TRAIN.visualization_freq= 100
 # RPN anchor loader
 # rpn anchors batch size
 config.TRAIN.RPN_BATCH_SIZE = 256

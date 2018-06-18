@@ -11,7 +11,6 @@ gpus: '0,1,2,3,4,5,6,7'
 CLASS_AGNOSTIC: true
 
 default:
-  frequent: 100
   kvstore: device
 network:
   pretrained: "./data/pretrained_model/resnet_mx_101_open"
@@ -51,8 +50,6 @@ dataset:
 TRAIN:
   # Whether to use C++ or python code for chip generation
   CPP_CHIPS: true
-  # Whether to extract negative chips during training
-  USE_NEG_CHIPS: true
   # How many parts the dataset should be divided to for parallel chip generation
   # This is used to keep the memory limited
   CHIPS_DB_PARTS: 20
@@ -89,8 +86,7 @@ TRAIN:
   scale: 100.0
   warmup_step: 1000
   begin_epoch: 0
-  end_epoch: 7 
-  model_prefix: 'rcnn'
+  end_epoch: 7
   # whether resume training
   # whether flip image
   FLIP: true
@@ -213,7 +209,7 @@ TEST:
   # before aggregation (when doing multi-scale inference)
   # If False, only final detections are saved to 
   # VISUALIZATION_PATH
-  VISUALIZE_INTERMEDIATE_SCALES: True
+  VISUALIZE_INTERMEDIATE_SCALES: false
 
   # PROPOSAL EXTRACTION FLAGS
   # If true only would extract proposals
