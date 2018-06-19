@@ -4,6 +4,11 @@ Generate base anchors on index 0
 
 import numpy as np
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
 
 def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
                      scales=2 ** np.arange(3, 6)):

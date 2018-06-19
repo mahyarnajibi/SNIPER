@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 import numpy as np
 
-from cpu_nms import cpu_nms, cpu_soft_nms
-from gpu_nms import gpu_nms
+from .cpu_nms import cpu_nms, cpu_soft_nms
+from .gpu_nms import gpu_nms
 
 
 def soft_nms(dets, sigma=0.6, Nt=0.3, threshold=0.001, method=2):

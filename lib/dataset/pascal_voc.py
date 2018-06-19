@@ -12,6 +12,8 @@ and transform them into IMDB format. Selective search is used for proposals, see
 function. Results are written as the Pascal VOC format. Evaluation is based on mAP
 criterion.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import cPickle
 import cv2
@@ -19,9 +21,15 @@ import os
 import numpy as np
 import PIL
 
-from imdb import IMDB
-from pascal_voc_eval import voc_eval, voc_eval_sds
-from ds_utils import unique_boxes, filter_small_boxes
+from .imdb import IMDB
+from .pascal_voc_eval import voc_eval, voc_eval_sds
+from .ds_utils import unique_boxes, filter_small_boxes
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
 
 class PascalVOC(IMDB):
     def __init__(self, image_set, root_path, devkit_path, result_path=None, mask_size=-1, binary_thresh=None):
@@ -50,7 +58,7 @@ class PascalVOC(IMDB):
         self.num_classes = len(self.classes)
         self.image_set_index = self.load_image_set_index()
         self.num_images = len(self.image_set_index)
-        print 'num_images', self.num_images
+        print('num_images', self.num_images)
         self.mask_size = mask_size
         self.binary_thresh = binary_thresh
 
@@ -98,13 +106,13 @@ class PascalVOC(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self.load_pascal_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+        print('wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
 
@@ -117,13 +125,13 @@ class PascalVOC(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 segdb = cPickle.load(fid)
-            print '{} gt segdb loaded from {}'.format(self.name, cache_file)
+            print('{} gt segdb loaded from {}'.format(self.name, cache_file))
             return segdb
 
         gt_segdb = [self.load_pascal_segmentation_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_segdb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt segdb to {}'.format(cache_file)
+        print('wrote gt segdb to {}'.format(cache_file))
 
         return gt_segdb
 
@@ -210,18 +218,18 @@ class PascalVOC(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+            print('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         if append_gt:
-            print 'appending ground truth annotations'
+            print('appending ground truth annotations')
             ss_roidb = self.load_selective_search_roidb(gt_roidb)
             roidb = IMDB.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self.load_selective_search_roidb(gt_roidb)
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+        print('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -401,7 +409,7 @@ class PascalVOC(IMDB):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print 'Writing {} VOC results file'.format(cls)
+            print('Writing {} VOC results file'.format(cls))
             filename = self.get_result_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_set_index):
@@ -426,7 +434,7 @@ class PascalVOC(IMDB):
         aps = []
         # The PASCAL VOC metric changed in 2010
         use_07_metric = True if self.year == 'SDS' or int(self.year) < 2010 else False
-        print 'VOC07 metric? ' + ('Y' if use_07_metric else 'No')
+        print('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
         info_str += 'VOC07 metric? ' + ('Y' if use_07_metric else 'No')
         info_str += '\n'
         for cls_ind, cls in enumerate(self.classes):

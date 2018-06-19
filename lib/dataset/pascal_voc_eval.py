@@ -7,11 +7,17 @@
 """
 given a pascal voc imdb, compute mAP
 """
+from __future__ import print_function
 
 import numpy as np
 import os
 import cPickle
 from mask.mask_transform import mask_overlap
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 
 def parse_voc_rec(filename):
@@ -92,8 +98,8 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
         for ind, image_filename in enumerate(image_filenames):
             recs[image_filename] = parse_voc_rec(annopath.format(image_filename))
             if ind % 100 == 0:
-                print 'reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames))
-        print 'saving annotations cache to {:s}'.format(annocache)
+                print('reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames)))
+        print('saving annotations cache to {:s}'.format(annocache))
         with open(annocache, 'wb') as f:
             cPickle.dump(recs, f, protocol=cPickle.HIGHEST_PROTOCOL)
     else:
@@ -352,9 +358,9 @@ def check_voc_sds_cache(cache_dir, devkit_path, image_names, class_names):
                     record_list[cls][image_name] = []
                 record_list[cls][image_name].append(mask_dic)
             if i % 100 == 0:
-                print 'Reading annotation for {:d}/{:d}'.format(i + 1, len(image_names))
+                print('Reading annotation for {:d}/{:d}'.format(i + 1, len(image_names)))
 
-        print 'Saving cached annotations...'
+        print('Saving cached annotations...')
         for cls_ind, name in enumerate(class_names):
             if name == '__background__':
                 continue

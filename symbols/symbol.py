@@ -1,3 +1,4 @@
+from __future__ import print_function
 # ---------------------------------------------------------------
 # SNIPER: Efficient Multi-scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]

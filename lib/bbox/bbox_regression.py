@@ -10,10 +10,12 @@
 """
 This file has functions about generating bounding box regression targets
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import numpy as np
 
-from bbox_transform import bbox_overlaps, bbox_transform
+from .bbox_transform import bbox_overlaps, bbox_transform
 
 
 def compute_bbox_regression_targets(rois, overlaps, labels, cfg):
@@ -29,12 +31,12 @@ def compute_bbox_regression_targets(rois, overlaps, labels, cfg):
 
     # Sanity check
     if len(rois) != len(overlaps):
-        print 'bbox regression: this should not happen'
+        print('bbox regression: this should not happen')
 
     # Indices of ground-truth ROIs
     gt_inds = np.where(overlaps == 1)[0]
     if len(gt_inds) == 0:
-        print 'something wrong : zero ground truth rois'
+        print('something wrong : zero ground truth rois')
     # Indices of examples for which we try to make predictions
     ex_inds = np.where(overlaps >= cfg.TRAIN.BBOX_REGRESSION_THRESH)[0]
 
@@ -59,7 +61,7 @@ def add_bbox_regression_targets(roidb, cfg):
     :param roidb: roidb to be processed. must have gone through imdb.prepare_roidb
     :return: means, std variances of targets
     """
-    print 'add bounding box regression targets'
+    print('add bounding box regression targets')
     assert len(roidb) > 0
     assert 'max_classes' in roidb[0]
 
@@ -94,12 +96,12 @@ def add_bbox_regression_targets(roidb, cfg):
         # var(x) = E(x^2) - E(x)^2
         stds = np.sqrt(squared_sums / class_counts - means ** 2)
 
-    print 'bbox target means:'
-    print means
-    print means[1:, :].mean(axis=0)  # ignore bg class
-    print 'bbox target stdevs:'
-    print stds
-    print stds[1:, :].mean(axis=0)  # ignore bg class
+    print('bbox target means:')
+    print(means)
+    print(means[1:, :].mean(axis=0))  # ignore bg class
+    print('bbox target stdevs:')
+    print(stds)
+    print(stds[1:, :].mean(axis=0))  # ignore bg class
 
 
     # normalized targets

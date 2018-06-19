@@ -1,3 +1,4 @@
+from __future__ import print_function
 # ---------------------------------------------------------------
 # SNIPER: Efficient Multi-scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
@@ -89,16 +90,16 @@ class IMDB(object):
 
             print('Done!')
         else:
-            print rpn_file
-            print 'Loading {}....'.format(rpn_file)
+            print(rpn_file)
+            print('Loading {}....'.format(rpn_file))
             assert os.path.exists(rpn_file), 'rpn data not found at {}'.format(rpn_file)
             with open(rpn_file, 'rb') as f:
                 box_list = cPickle.load(f)
-            print 'Done!'
+            print('Done!')
             ttboxes = []
             boxes = []
             maps = []
-            print 'Applying NMS...'
+            print('Applying NMS...')
             nms = py_nms_wrapper(0.7)
 
             for i in range(len(box_list)):
@@ -135,7 +136,7 @@ class IMDB(object):
         """
         self.cfg = cfg
         if append_gt:
-            print 'appending ground truth annotations'
+            print('appending ground truth annotations')
             rpn_roidb = self.load_rpn_roidb(gt_roidb,proposal_path)
             roidb = IMDB.merge_roidbs(gt_roidb, rpn_roidb)
         else:
@@ -223,7 +224,7 @@ class IMDB(object):
             flipped_poly[::2] = width - np.array(poly[::2]) - 1
             return flipped_poly.tolist()
         
-        print 'append flipped images to roidb'
+        print('append flipped images to roidb')
         tmp = roidb[0]['boxes'].copy()
         entries = len(roidb)
         self.num_images = len(roidb)
@@ -320,10 +321,10 @@ class IMDB(object):
         total_counts = float(sum(area_counts))
         for area_name, area_count in zip(area_names[1:], area_counts):
             log_info = 'percentage of {} {}'.format(area_name, area_count / total_counts)
-            print log_info
+            print(log_info)
             all_log_info += log_info
         log_info = 'average number of proposal {}'.format(total_counts / self.num_images)
-        print log_info
+        print(log_info)
         all_log_info += log_info
         for area_name, area_range in zip(area_names, area_ranges):
             gt_overlaps = np.zeros(0)
@@ -385,11 +386,11 @@ class IMDB(object):
 
             # print results
             log_info = 'average recall for {}: {:.3f}'.format(area_name, ar)
-            print log_info
+            print(log_info)
             all_log_info += log_info
             for threshold, recall in zip(thresholds, recalls):
                 log_info = 'recall @{:.2f}: {:.3f}'.format(threshold, recall)
-                print log_info
+                print(log_info)
                 all_log_info += log_info
 
         return all_log_info

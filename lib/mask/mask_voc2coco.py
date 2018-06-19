@@ -9,6 +9,12 @@ import numpy as np
 import cv2
 from dataset.pycocotools.mask import encode as encodeMask_c
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
+
 def encodeMask(M):
     """
     Encode binary mask M using run-length encoding.

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
@@ -9,7 +11,7 @@ import mxnet as mx
 import numpy as np
 from nms.nms import nms_wrapper
 from data_utils.mask_utils import crop_polys, poly_encoder
-from generate_anchor import generate_anchors
+from .generate_anchor import generate_anchors
 from bbox.bbox_transform import *
 import numpy.random as npr
 from chips.chip_generator import chip_generator
@@ -31,9 +33,9 @@ def _unpickle_method(func_name, obj, cls):
 
 
 def _pickle_method(method):
-    func_name = method.im_func.__name__
-    obj = method.im_self
-    cls = method.im_class
+    func_name = method.__func__.__name__
+    obj = method.__self__
+    cls = method.__self__.__class__
     return _unpickle_method, (func_name, obj, cls)
 
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
@@ -77,7 +79,7 @@ class im_worker(object):
         try:
             im = cv2.resize(im, None, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
         except:
-            print 'Image Resize Failed!'
+            print('Image Resize Failed!')
 
         rim = np.zeros((3, max_size[0], max_size[1]), dtype=np.float32)
         d1m = min(im.shape[0], max_size[0])

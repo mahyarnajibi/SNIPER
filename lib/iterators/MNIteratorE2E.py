@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
@@ -8,7 +10,7 @@
 import matplotlib.pyplot as plt
 import mxnet as mx
 import numpy as np
-from MNIteratorBase import MNIteratorBase
+from .MNIteratorBase import MNIteratorBase
 from multiprocessing import Pool
 from data_utils.data_workers import anchor_worker, im_worker, chip_worker
 import math
@@ -91,7 +93,7 @@ class MNIteratorE2E(MNIteratorBase):
 
         self.epiter = self.epiter + 1
         self.size = len(self.inds)
-        print 'Done!'
+        print('Done!')
 
     def get_batch(self):
         if self.cur_i >= self.size:

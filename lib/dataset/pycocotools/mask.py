@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 __author__ = 'tsungyi'
 
-import _mask as _mask
+from . import _mask as _mask
 
 # Interface for manipulating masks stored in RLE format.
 #

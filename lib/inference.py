@@ -1,21 +1,23 @@
+from __future__ import print_function
+from __future__ import absolute_import
 #------------------------------------------------------------------
 # Licensed under The Apache-2.0 License [see LICENSE for details]
 # Inference module for performing detection and proposal extraction
 # Written by Mahyar Najibi
 # -----------------------------------------------------------------
 import numpy as np
-from bbox.bbox_transform import bbox_pred, clip_boxes
-from iterators.PrefetchingIter import PrefetchingIter
+from .bbox.bbox_transform import bbox_pred, clip_boxes
+from .iterators.PrefetchingIter import PrefetchingIter
 import os
 import time
 import cPickle
-from data_utils.data_workers import nms_worker
-from data_utils.visualization import visualize_dets
+from .data_utils.data_workers import nms_worker
+from .data_utils.visualization import visualize_dets
 from tqdm import tqdm
 import math
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
-from iterators.MNIteratorTest import MNIteratorTest
+from .iterators.MNIteratorTest import MNIteratorTest
 import mxnet as mx
 
 

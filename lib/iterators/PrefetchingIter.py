@@ -1,3 +1,4 @@
+from __future__ import print_function
 # --------------------------------------------------------
 # Deformable Convolutional Networks
 # Copyright (c) 2016 by Contributors
@@ -43,7 +44,7 @@ class PrefetchingIter(mx.io.DataIter):
         self.rename_data = rename_data
         self.rename_label = rename_label
         self.batch_size = len(self.provide_data) * self.provide_data[0][0][1][0]
-        print self.batch_size
+        print(self.batch_size)
         self.data_ready = [threading.Event() for i in range(self.n_iter)]
         self.data_taken = [threading.Event() for i in range(self.n_iter)]
         for e in self.data_taken:
@@ -58,7 +59,7 @@ class PrefetchingIter(mx.io.DataIter):
                 if not self.started:
                     break
                 try:
-                    self.next_batch[i] = self.iters[i].next()
+                    self.next_batch[i] = next(self.iters[i])
                 except StopIteration:
                     self.next_batch[i] = None
                 self.data_taken[i].clear()

@@ -1,9 +1,10 @@
+from __future__ import absolute_import
 # --------------------------------------------------------------
 # SNIPER: Efficient Multi-Scale Training
 # Licensed under The Apache-2.0 License [see LICENSE for details]
 # by Mahyar Najibi and Bharat Singh
 # --------------------------------------------------------------
-import chips
+from . import chips
 from bbox.bbox_transform import clip_boxes, ignore_overlaps
 import numpy as np
 
