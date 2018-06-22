@@ -4,10 +4,10 @@
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
  </p>
 
-SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
+SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation. 
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
-Due to its memeory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
+Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
 [SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
 <pre>
