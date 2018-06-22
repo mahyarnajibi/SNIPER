@@ -112,7 +112,7 @@ You can also run the detector on an arbitrary image by providing its path to the
 ```
 python demo.py --im_path [PATH to the image]
 ```
-However, if you plan to run the detector on multiple external images, please consider defining a database class (which inherits from the ```imdb``` parent class ) and using the provided multi-process and multi-batch ```inference``` module. 
+However, if you plan to run the detector on multiple images, please consider using the provided multi-process and multi-batch ```main_test``` module. 
 
 <a name="training"></a>
 ### Training a model
