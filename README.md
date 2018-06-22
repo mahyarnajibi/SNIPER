@@ -4,10 +4,10 @@
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
  </p>
 
-SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentataion. 
+SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation. 
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
-Due to its memeory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
+Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
 [SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
 <pre>
@@ -25,7 +25,7 @@ Due to its memeory efficient design, SNIPER can benefit from *Batch Normalizatio
 6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
 ### Results
-Here are the coco test-dev results for SNIPER trained with this repository on the coco trainval set and using only the bounding box annotations.
+Here are the coco test-dev results for SNIPER trained with this repository on the *coco trainval* set and using only the bounding box annotations.
 
 |                                 | <sub>pre-trained dataset</sub> | <sub>network structure</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|
@@ -108,10 +108,11 @@ python demo.py
 ```
 If everything goes well, the sample detections would be saved as ```data/demo/demo_detections.png```.
 
-You can also run the detector on an arbitary image by providing its path to the script:
+You can also run the detector on an arbitrary image by providing its path to the script:
 ```
 python demo.py --im_path [PATH to the image]
 ```
+However, if you plan to run the detector on multiple external images, please consider defining a database class (which inherits from the ```imdb``` parent class ) and using the provided multi-process and multi-batch ```inference``` module. 
 
 <a name="training"></a>
 ### Training a model
@@ -193,7 +194,7 @@ This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detecto
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
 
 #### SSH Face Detector (Comming Soon)
-The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
+The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you can use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
 
 <p align="center">
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/ssh_detections.jpg" width="650px"/>
