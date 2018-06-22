@@ -4,7 +4,7 @@
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
  </p>
 
-SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation. 
+SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation.
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
 Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
@@ -162,14 +162,14 @@ The repository provides a set of pre-trained SNIPER models which can be download
 ```
 bash download_sniper_detector.sh
 ```
-This script downloads the model weights and extracts them into the expected directory. 
+This script downloads the model weights and extracts them into the expected directory.
 To evaluate these models on coco test-dev with the default configuration, you can run the following script:
 
 ```
 python main_test.py
 ```
 The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
-(See the ```configs``` folder for examples). 
+(See the ```configs``` folder for examples).
 
 Please note that the evaluation is performed in a multi-image per batch and parallel model forward setting. In case of lower GPU memory, please consider reducing the batch size for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
 
@@ -185,7 +185,7 @@ By default, this would produce a ```json``` file containing the detections on th
 <a name="others"></a>
 ## Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)
 #### R-FCN-3K
-This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
+This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector.
 <p align="center">
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/rfcn_3k.jpg" width="600px"/>
 </p>
@@ -200,5 +200,5 @@ The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this
 </p>
 
 #### OpenImagesV4
-This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
+This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html).
 Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/openimages2) branch for specific instructions.
