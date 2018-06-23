@@ -133,7 +133,8 @@ class Tester(object):
         print(print_str)
         if self.logger: self.logger.info(print_str)
 
-    def aggregate(self, scale_cls_dets, vis=False, cache_name='cache', vis_path=None, vis_name=None, pre_nms_db_divide=10):
+    def aggregate(self, scale_cls_dets, vis=False, cache_name='cache', vis_path=None, vis_name=None,
+                  pre_nms_db_divide=10, vis_ext='.png'):
         n_scales = len(scale_cls_dets)
         assert n_scales == len(self.cfg.TEST.VALID_RANGES), 'A valid range should be specified for each test scale'
         all_boxes = [[[] for _ in range(self.num_images)] for _ in range(self.num_classes)]
@@ -194,8 +195,8 @@ class Tester(object):
                                [[]] + [all_boxes[j][i] for j in range(1, self.num_classes)],
                                1.0,
                                self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
-                               save_path=os.path.join(visualization_path, '{}.png'.format(vis_name if vis_name else i)),
-                               transform=False)
+                               save_path=os.path.join(visualization_path, '{}{}'.format(vis_name if vis_name else i,
+                                                                                         vis_ext)), transform=False)
 
         if cache_name:
             cache_path = os.path.join(self.result_path, cache_name)
@@ -207,7 +208,8 @@ class Tester(object):
                 cPickle.dump(all_boxes, detfile)
         return all_boxes
 
-    def get_detections(self, cls_thresh=1e-3, cache_name= 'cache', evaluate= False, vis=False, vis_path=None):
+    def get_detections(self, cls_thresh=1e-3, cache_name= 'cache', evaluate= False, vis=False, vis_path=None,
+                       vis_ext='.png'):
         all_boxes = [[[] for _ in range(self.num_images)] for _ in range(self.num_classes)]
         data_counter = 0
         detect_time, post_time = 0, 0
@@ -263,7 +265,7 @@ class Tester(object):
                     visualize_dets(batch.data[0][i].asnumpy(),
                                    [[]]+[all_boxes[j][im_id] for j in range(1, self.num_classes)], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, self.class_names, threshold=0.5,
-                                   save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
+                                   save_path=os.path.join(visualization_path,'{}{}'.format(im_id, vis_ext)))
 
             data_counter += self.test_iter.get_batch_size()
             post_time += time.time() - stime
@@ -276,7 +278,7 @@ class Tester(object):
 
         return all_boxes
 
-    def extract_proposals(self, n_proposals=300, cache_name= 'cache', vis=False):
+    def extract_proposals(self, n_proposals=300, cache_name= 'cache', vis=False, vis_ext='.png'):
         all_boxes = [[] for _ in range(self.num_images)]
         data_counter = 0
         detect_time, post_time = 0, 0
@@ -304,7 +306,7 @@ class Tester(object):
                     visualize_dets(batch.data[0][i].asnumpy(),
                                    [[]]+[cls_dets], im_info[i, 2],
                                    self.cfg.network.PIXEL_MEANS, ['__background__','object'], threshold=0.5,
-                                   save_path=os.path.join(visualization_path,'{}.png'.format(im_id)))
+                                   save_path=os.path.join(visualization_path,'{}{}'.format(im_id, vis_ext)))
                 all_boxes[im_id] = cls_dets
             data_counter += self.test_iter.get_batch_size()
             post_time += time.time() - stime

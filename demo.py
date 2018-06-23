@@ -105,8 +105,9 @@ def main():
 
     # Aggregate results from multiple scales and perform NMS
     tester = Tester(None, db_info, roidb, None, cfg=config, batch_size=1)
+    file_name, out_extension = os.path.splitext(os.path.basename(args.im_path))
     all_detections = tester.aggregate(all_detections, vis=True, cache_name=None, vis_path='./data/demo/',
-                                          vis_name='demo_detections')
+                                          vis_name='{}_detections'.format(file_name), vis_ext=out_extension)
     return all_detections
 
 if __name__ == '__main__':

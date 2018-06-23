@@ -106,7 +106,7 @@ After downloading the model, the following command would run the SNIPER detector
 ```
 python demo.py
 ```
-If everything goes well, the sample detections would be saved as ```data/demo/demo_detections.png```.
+If everything goes well, the sample detections would be saved as ```data/demo/demo_detections.jpg```.
 
 You can also run the detector on an arbitrary image by providing its path to the script:
 ```
