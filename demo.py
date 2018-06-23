@@ -116,7 +116,7 @@ def main():
         data = pickle.load(f0)
         f0.close()
         for one in data:
-            im_info_list.append(one['im_info'][0])
+            im_info_list.append(one['im_info'])
     else:
         for im_name in image_names_full:
             assert os.path.exists(cur_path + '/demo/image/' + im_name), ('%s does not exist'.format('./extract/' + im_name))
@@ -128,7 +128,7 @@ def main():
             im_tensor = transform(im, config.network.PIXEL_MEANS)
             im_info = np.array([[im_tensor.shape[2], im_tensor.shape[3], im_scale]], dtype=np.float32)
             im_info_list.append(im_info)
-            data.append({'data': im_tensor, 'im_info': im_info[0]}) #, 'im_ids': mx.nd.array([[1]])})
+            data.append({'data': im_tensor, 'im_info': im_info}) #, 'im_ids': mx.nd.array([[1]])})
 
         f0 = open("./demo/cache/images.pkl", 'wb')
         pickle.dump(im_list, f0, protocol=2)
