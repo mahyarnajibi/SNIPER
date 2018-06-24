@@ -10,11 +10,12 @@ This significantly speeds up multi-scale training as it operates on low-resoluti
 Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
 [SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
-<pre>
-<b>SNIPER: Efficient Multi-Scale Training</b>
-<b>Bharat Singh*, Mahyar Najibi*, and Larry S. Davis (* denotes equal contribution)</b>
-<b>arXiv preprint arXiv:1805.09300, 2018.</b>
-</pre>
+
+<b>SNIPER: Efficient Multi-Scale Training</b> <br>
+[Bharat Singh*](https://github.com/bharatsingh430), [Mahyar Najibi*](https://github.com/mahyarnajibi/SNIPER), and Larry S. Davis (* denotes equal contribution) <br>
+arXiv preprint arXiv:1805.09300, 2018.
+
+
 
 ### Features
 1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
@@ -184,7 +185,7 @@ python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 By default, this would produce a ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
 <a name="others"></a>
-## Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)
+## Branches in this repo (SSH face, R-FCN-3K, Soft Sampling)
 #### R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
@@ -193,6 +194,14 @@ This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detecto
 
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
 
+#### OpenImagesV4 with Soft Sampling
+This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
+Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/openimages2) branch for specific instructions. The detector on OpenImagesV4 was trained with [Soft Sampling](https://arxiv.org/abs/1806.06986).
+
+<p align="center">
+<img src="http://www.cs.umd.edu/~bharat/ss.jpg" width="650px"/>
+</p>
+
 #### SSH Face Detector (Comming Soon)
 The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you can use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
 
@@ -200,6 +209,4 @@ The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/ssh_detections.jpg" width="650px"/>
 </p>
 
-#### OpenImagesV4
-This repo also contains modules to train on the [open-images dataset](https://storage.googleapis.com/openimages/web/index.html). 
-Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/openimages2) branch for specific instructions.
+
