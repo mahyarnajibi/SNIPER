@@ -11,11 +11,11 @@ Due to its memory efficient design, SNIPER can benefit from *Batch Normalization
 
 [SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
 
-<b>SNIPER: Efficient Multi-Scale Training</b> <br>
-[Bharat Singh*](https://github.com/bharatsingh430), [Mahyar Najibi*](https://github.com/mahyarnajibi/SNIPER), and Larry S. Davis (* denotes equal contribution) <br>
+<div class="highlight highlight-html"><pre>
+<b>SNIPER: Efficient Multi-Scale Training
+<a href=https://github.com/bharatsingh430>Bharat Singh*</a>, <a href=https://github.com/mahyarnajibi>Mahyar Najibi*</a>, and Larry S. Davis (* denotes equal contribution)</b>
 arXiv preprint arXiv:1805.09300, 2018.
-
-
+</pre></div>
 
 ### Features
 1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
@@ -208,5 +208,3 @@ The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this
 <p align="center">
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/ssh_detections.jpg" width="650px"/>
 </p>
-
-
