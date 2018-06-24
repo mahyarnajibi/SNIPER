@@ -10,11 +10,10 @@ With generalized objectness detection, we demonstrate that it is possible to lea
 
 [R-FCN-3k](https://arxiv.org/abs/1712.01802) is described in the following paper:
 
-```
-R-FCN-3000 at 30fps: Decoupling Detection and Classification
-Bharat Singh*, Hengduo Li*, Abhishek Sharma, Larry S. Davis (* denotes equal contribution)
-CVPR, 2018.
-```
+<b>R-FCN-3000 at 30fps: Decoupling Detection and Classification</b> <br>
+[Bharat Singh*](https://github.com/bharatsingh430), [Hengduo Li*](https://github.com/henrylee2570), Abhishek Sharma and Larry S. Davis (* denotes equal contribution) <br>
+CVPR 2018.
+
 
 
 ## Demo
