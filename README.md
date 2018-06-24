@@ -4,7 +4,7 @@
 <img src="http://www.cs.umd.edu/~bharat/ss.jpg" />
 </p>
 
-Soft Sampling re-weights the gradients of RoIs as a function of overlap with positive instances for training robust object detectors with missing labels. This ensures that the uncertain background regions are given a smaller weight compared to the hardnegatives.
+Soft Sampling re-weights the gradients of RoIs as a function of overlap with positive instances for training robust object detectors with missing labels. This ensures that the uncertain background regions are given a smaller weight compared to hard-negatives.
 
 [Soft Sampling](https://arxiv.org/abs/1806.06986) is described in the following paper:
 
