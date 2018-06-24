@@ -1,6 +1,5 @@
 import mxnet as mx
 from symbols.symbol import Symbol
-from operator_py.box_annotator_ohem import *
 import numpy as np
 
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
