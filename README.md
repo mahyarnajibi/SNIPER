@@ -30,4 +30,4 @@ python main_chips_open.py
 
 The model we trained on OpenImagesV4 used Soft-Sampling which is implemented in [multi_proposal_target_layer.cu](https://github.com/mahyarnajibi/SNIPER-mxnet/blob/SNIPER-mxnet-open/src/operator/multi_proposal_target.cu) in the [SNIPER-mxnet-open](https://github.com/mahyarnajibi/SNIPER-mxnet/tree/SNIPER-mxnet-open/) branch.
 
-Please note that while the branch is able to reproduce the results, it is out of sync with the master branch and would be updated soon.
+Please note that while the branch is able to reproduce the results, it is out of sync with the master branch and would be updated soon. The experiments conducted in the soft-sampling paper were part of an internal repo which was much slower for training object detectors and the research was conducted when SNIPER was under development.
