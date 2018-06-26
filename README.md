@@ -59,7 +59,7 @@ SNIPER is released under Apache license. See LICENSE for details.
 2. [Running the demo](#demo)
 3. [Training a model with SNIPER](#training)
 4. [Evaluting a trained model](#evaluating)
-5. [Other methods and branches in this repo (SSH face, R-FCN-3K, open-images)](#others)
+5. [Other methods and branches in this repo (SSH Face Detector, R-FCN-3K, open-images)](#others)
 
 <a name="install"> </a>
 ### Installation
@@ -68,26 +68,28 @@ SNIPER is released under Apache license. See LICENSE for details.
 git clone --recursive https://github.com/mahyarnajibi/SNIPER.git
 ```
 
-2. Compile the provided mxnet fork in the repository:
+2. Compile the provided MXNet fork in the repository. 
+
+You need to install *CUDA*, *CuDNN*, *OpenCV*, and *OpenBLAS*. These libraries are set to be used by default in the provided ```config.mk``` file in the ```SNIPER-mxnet``` repository. You can use the ```make``` command to build the MXNet library:
 ```
 cd SNIPER-mxnet
-mkdir build
-cd build
-cmake ..
-make
+make -j [NUM_OF_PROCESS] USE_CUDA_PATH=[PATH_TO_THE_CUDA_FOLDER]
 ```
+
+If you plan to train models on multiple GPUs, it is optional but recommended to install *NCCL* and build MXNet with the *NCCL* support as instructed below:
+```
+make -j [NUM_OF_PROCESS] USE_CUDA_PATH=[PATH_TO_THE_CUDA_FOLDER] USE_NCCL=1 
+```
+In this case, you may also need to set the ```USE_NCCL_PATH``` variable in the above command to point to your *NCCL* installation path.
+
+If you need more information on how to compile MXNet please see [*here*](https://mxnet.incubator.apache.org/install/build_from_source.html).
 
 3. Compile the C++ files in the lib directory. The following script compiles them all:
 ```
 bash scripts/compile.sh
 ```
 
-4. Add mxnet to the ```PYTHONPATH```:
-```
-export PYTHONPATH=SNIPER-mxnet/python:$PYTHONPATH
-```
-
-5. Install the required python packages:
+4. Install the required python packages:
 ```
 pip install -r requirements.txt
 ```
@@ -185,7 +187,7 @@ python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 By default, this would produce a ```json``` file containing the detections on the ```test-dev``` which can be zipped and uploaded to the COCO evaluation server.
 
 <a name="others"></a>
-## Branches in this repo (SSH face, R-FCN-3K, Soft Sampling)
+## Branches in this repo (SSH Face Detector, R-FCN-3K, Soft Sampling)
 #### R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
@@ -202,7 +204,7 @@ Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/o
 <img src="http://www.cs.umd.edu/~bharat/ss.jpg" width="650px"/>
 </p>
 
-#### SSH Face Detector (Comming Soon)
+#### SSH Face Detector
 The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you can use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
 
 <p align="center">
