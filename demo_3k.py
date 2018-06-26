@@ -116,6 +116,8 @@ def main():
         boxes = boxes.astype('f')
         mul_scores = mul_scores.astype('f')
         dets_nms = []
+        t = toc()
+
         for j in range(1, mul_scores.shape[1]):
             cls_scores = mul_scores[:, j, np.newaxis]
             cls_boxes = boxes[:, 0:4]
@@ -125,7 +127,7 @@ def main():
             cls_dets = cls_dets[cls_dets[:, -1] > float(args.thresh), :]
             dets_nms.append(cls_dets)
 
-        print 'testing {} {:.4f}s'.format(im_name, toc())
+        print 'testing {} time spent before post-processing: {:.4f}s'.format(im_name, t)
         # visualize
         im = cv2.cvtColor(im_list[idx].astype(np.uint8), cv2.COLOR_BGR2RGB)
         vis_boxes(im_name, im, dets_nms, im_info_list[idx][0][2], config, args.thresh, index2words)
