@@ -25,49 +25,9 @@ from demo.vis_boxes import vis_boxes
 from demo.image import resize, transform
 from demo.load_model import load_param
 from demo.tictoc import tic, toc
+from demo.nms import nms
 import pickle
 from symbols.faster.resnet_mx_101_e2e_3k_demo import resnet_mx_101_e2e_3k_demo, checkpoint_callback
-
-
-def nms(dets, thresh):
-    """
-    greedily select boxes with high confidence and overlap with current maximum <= thresh
-    rule out overlap >= thresh
-    :param dets: [[x1, y1, x2, y2 score]]
-    :param thresh: retain overlap < thresh
-    :return: indexes to keep
-    """
-    if dets.shape[0] == 0:
-        return []
-
-    x1 = dets[:, 0]
-    y1 = dets[:, 1]
-    x2 = dets[:, 2]
-    y2 = dets[:, 3]
-    scores = dets[:, 4]
-
-    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
-    order = scores.argsort()[::-1]
-
-    keep = []
-    while order.size > 0:
-        i = order[0]
-        keep.append(i)
-        xx1 = np.maximum(x1[i], x1[order[1:]])
-        yy1 = np.maximum(y1[i], y1[order[1:]])
-        xx2 = np.minimum(x2[i], x2[order[1:]])
-        yy2 = np.minimum(y2[i], y2[order[1:]])
-
-        w = np.maximum(0.0, xx2 - xx1 + 1)
-        h = np.maximum(0.0, yy2 - yy1 + 1)
-        inter = w * h
-        ovr = inter / (areas[i] + areas[order[1:]] - inter)
-
-        inds = np.where(ovr <= thresh)[0]
-        order = order[inds + 1]
-
-    return keep
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Demo')
@@ -77,7 +37,7 @@ def parse_args():
 
 args = parse_args()
 
-def process_tencls_scores(scores, xcls_scores):
+def process_mul_scores(scores, xcls_scores):
     """
     Do multiplication of objectness score and classification score to obtain the final detection score.
     """
@@ -236,8 +196,8 @@ def main():
 
             roipooled_features.append(pooled_feat.reshape((pooled_feat.shape[0], -1)).asnumpy())
             roi_this = bbox_pred(mod.get_outputs()[0].asnumpy().reshape((-1, 5))[:, 1:], np.array([0.1, 0.1, 0.2, 0.2]) * mod.get_outputs()[2].asnumpy()[0])
-            roi_this = clip_boxes(roi_this, im_info_list_eval[idx][:2])
-            roi_this = roi_this / im_info_list_eval[idx][2]
+            roi_this = clip_boxes(roi_this, im_info_list_eval[idx][0][:2])
+            roi_this = roi_this / im_info_list_eval[idx][0][2]
             rois.append(roi_this)
             objectness_scores.append(mod.get_outputs()[1].asnumpy())
 
@@ -260,7 +220,7 @@ def main():
 
     for idx in range(len(rois)):
         im_name = image_names_eval[idx]
-        xcls_scores = process_tencls_scores(objectness_scores[idx][0], rois_cls[idx])
+        xcls_scores = process_mul_scores(objectness_scores[idx][0], rois_cls[idx])
         boxes = rois[idx].astype('f')
         xcls_scores = xcls_scores.astype('f')
         dets_nms = []
@@ -276,7 +236,7 @@ def main():
         print 'testing {}'.format(im_name)
         # visualize
         im = cv2.cvtColor(eval_im_list[idx].astype(np.uint8), cv2.COLOR_BGR2RGB)
-        vis_boxes(im_name, im, dets_nms, im_info_list_eval[idx][2], config, args.thresh, dir_names)
+        vis_boxes(im_name, im, dets_nms, im_info_list_eval[idx][0][2], config, args.thresh, dir_names)
 
     print('Done')
 

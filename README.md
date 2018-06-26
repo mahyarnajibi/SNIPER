@@ -16,7 +16,7 @@ CVPR 2018.
 
 
 
-## Demo
+## Demo for Detection on New Classes
 
 With the trained universal objectness detector, you can obtain a new detector simply by training a light linear classifier in seconds!
 
@@ -29,13 +29,24 @@ SNIPER/output/chips_resnet101_3k/res101_mx_3k/fall11_whole/
 
 3. Run `python demo.py` to extract features and train the classifier on new classes. Visualization of detection results on evaluation images are saved in `vis_result`.
 
-4. You can use your own data to train the classifier and obtain a detector. Simply put image folders under `demo/images/` (like demo/images/cat/xxx.jpg) and run `python demo.py`. You may need to change train eval split strategy and hyper-parameters based on your own data and purpose.
+4. You can use your own data to train the classifier and obtain a detector. Simply put image folders under `demo/image/` (like demo/images/cat/xxx.jpg) and run `python demo.py`. You may need to change train eval split strategy and hyper-parameters based on your own data and purpose.
+
+## Demo for R-FCN-3k
+
+With trained R-FCN-3k detector, you can detect up to 3,000 classes.
+
+1. Please follow previous instruction to get trained R-FCN-3k model.
+
+2. Download the modified ILSVRC2014_devkit [[GoogleDrive]](https://drive.google.com/open?id=1hEG-GmMrvp--hWRU41RMBLB3gL-IdXs9)[[BaiduYun]](https://pan.baidu.com/s/1b4CygPofSTEGR03Ny6_3VQ) and put it in `data`.
+
+3. Run `python demo_3k.py` to detect with R-FCN-3k. Source images should be put in `demo/image_3k/`. Visulization are saved in `vis_result`.
+
 
 ## Training
 
 1. Please download [ImageNet Full Fall 2011 Release](http://academictorrents.com/details/564a77c1e1119da199ff32622a1609431b9f1c47/tech&dllist=1) and [ILSVRC2013_DET](http://www.image-net.org/challenges/LSVRC/2013/download-images-rpa) validation images, together with the [bounding boxes](http://image-net.org/download-bboxes).
 
-2. Download the modified ILSVRC2014_devkit [[GoogleDrive]](https://drive.google.com/open?id=1hEG-GmMrvp--hWRU41RMBLB3gL-IdXs9)[[BaiduYun]](https://pan.baidu.com/s/1wEku413rss02YQ_R39gNGA) which contains essential files for training and evaluation. Please make them look like this:
+2. Download the modified ILSVRC2014_devkit [[GoogleDrive]](https://drive.google.com/open?id=1hEG-GmMrvp--hWRU41RMBLB3gL-IdXs9)[[BaiduYun]](https://pan.baidu.com/s/1b4CygPofSTEGR03Ny6_3VQ) which contains essential files for training and evaluation. Please make them look like this:
 
 ```
     data
