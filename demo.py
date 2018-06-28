@@ -16,49 +16,20 @@ from PIL import Image
 from iterators.MNIteratorTest import MNIteratorTest
 from easydict import EasyDict
 from inference import Tester
-from multiprocessing import Pool
 from symbols.faster import *
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
+
+
 def parser():
     arg_parser = ArgumentParser('Faster R-CNN training module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
     							default='configs/faster/sniper_res101_e2e.yml',type=str)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
                             default='SNIPER', type=str)
-    arg_parser.add_argument('--model_weights', dest='weight_path', help='Path to the trained model weights', type=str,
-                            default='output/sniper_res101_bn/sniper_res101_e2e/train2014_val2014/')
     arg_parser.add_argument('--im_path', dest='im_path', help='Path to the image', type=str,
                             default='data/demo/demo.jpg')
-    arg_parser.add_argument('--vis', dest='vis', help='Whether to visualize the detections',
-                            action='store_true')
     return arg_parser.parse_args()
 
-
-# Create a model for a specific scale and
-# perform detection in parallel for multi-scale settings
-def scale_worker(arguments):
-    [scale, context, config, sym_def, \
-     roidb, imdb, arg_params, aux_params] = arguments
-
-    # Create the module and initialize the weights
-    sym_inst = sym_def(n_proposals=400, test_nbatch=1)
-    sym = sym_inst.get_symbol_rcnn(config, is_train=False)
-    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=1, nGPUs=1, threads=1,
-                               pad_rois_to=400, crop_size=None, test_scale=scale, num_classes = imdb.num_classes)
-    # Create the module
-    shape_dict = dict(test_iter.provide_data_single)
-    sym_inst.infer_shape(shape_dict)
-    mod = mx.mod.Module(symbol=sym,
-                        context=context,
-                        data_names=[k[0] for k in test_iter.provide_data_single],
-                        label_names=None)
-    mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
-    mod.init_params(arg_params=arg_params, aux_params=aux_params)
-
-    tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=1)
-    return tester.get_detections(vis=False,
-                                 evaluate=False,
-                                 cache_name=None)
 
 def main():
     args = parser()
@@ -79,14 +50,6 @@ def main():
     # Creating the Logger
     logger, output_path = create_logger(config.output_path, args.cfg, config.dataset.image_set)
 
-    # Create the model and initialize the weights
-    model_prefix = os.path.join(output_path, args.save_prefix)
-    arg_params, aux_params = load_param(model_prefix, config.TEST.TEST_EPOCH,
-                                        convert=True, process=True)
-
-    # Get the symbol definition
-    sym_def = eval('{}.{}'.format(config.symbol, config.symbol))
-
     # Pack db info
     db_info = EasyDict()
     db_info.name = 'coco'
@@ -106,16 +69,46 @@ def main():
                        u'clock', u'vase', u'scissors', u'teddy bear', u'hair\ndrier', u'toothbrush']
     db_info.num_classes = len(db_info.classes)
 
-    # Perform detection for each scale in parallel
-    p_args = []
-    for s in config.TEST.SCALES:
-        p_args.append([s, context, config, sym_def, roidb, db_info, arg_params, aux_params])
-    pool = Pool(len(config.TEST.SCALES))
-    all_detections = pool.map(scale_worker, p_args)
+    # Create the model
+    sym_def = eval('{}.{}'.format(config.symbol, config.symbol))
+    sym_inst = sym_def(n_proposals=400, test_nbatch=1)
+    sym = sym_inst.get_symbol_rcnn(config, is_train=False)
+    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=1, nGPUs=1, threads=1,
+                               crop_size=None, test_scale=config.TEST.SCALES[0],
+                               num_classes=db_info.num_classes)
+    # Create the module
+    shape_dict = dict(test_iter.provide_data_single)
+    sym_inst.infer_shape(shape_dict)
+    mod = mx.mod.Module(symbol=sym,
+                        context=context,
+                        data_names=[k[0] for k in test_iter.provide_data_single],
+                        label_names=None)
+    mod.bind(test_iter.provide_data, test_iter.provide_label, for_training=False)
 
+    # Initialize the weights
+    model_prefix = os.path.join(output_path, args.save_prefix)
+    arg_params, aux_params = load_param(model_prefix, config.TEST.TEST_EPOCH,
+                                        convert=True, process=True)
+    mod.init_params(arg_params=arg_params, aux_params=aux_params)
+
+    # Create the tester
+    tester = Tester(mod, db_info, roidb, test_iter, cfg=config, batch_size=1)
+
+    # Sequentially do detection over scales
+    # NOTE: if you want to perform detection on multiple images consider using main_test which is parallel and faster
+    all_detections= []
+    for s in config.TEST.SCALES:
+        # Set tester scale
+        tester.set_scale(s)
+        # Perform detection
+        all_detections.append(tester.get_detections(vis=False, evaluate=False, cache_name=None))
+
+    # Aggregate results from multiple scales and perform NMS
     tester = Tester(None, db_info, roidb, None, cfg=config, batch_size=1)
+    file_name, out_extension = os.path.splitext(os.path.basename(args.im_path))
     all_detections = tester.aggregate(all_detections, vis=True, cache_name=None, vis_path='./data/demo/',
-                                          vis_name='demo_detections')
+                                          vis_name='{}_detections'.format(file_name), vis_ext=out_extension)
+    return all_detections
 
 if __name__ == '__main__':
     main()

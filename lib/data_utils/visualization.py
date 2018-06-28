@@ -18,10 +18,22 @@ def transform_im(im, pixel_means):
     return im.astype(np.uint8)
 
 
-def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, save_path='debug.png', transform=True):
+def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, save_path='debug.png',
+                   transform=True, dpi=80):
     if transform:
         im = transform_im(im, np.array(pixel_means)[[2, 1, 0]])
-    plt.imshow(im)
+
+    # Create a canvas the same size of the image
+    height, width, _ = im.shape
+    out_size = width/float(dpi), height/float(dpi)
+    fig = plt.figure(figsize=out_size)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis('off')
+
+    # Display the image
+    ax.imshow(im, interpolation='nearest')
+
+    # Display Detections
     for j, name in enumerate(class_names):
         if name == '__background__': continue
         color = (random.random(), random.random(), random.random())
@@ -34,17 +46,19 @@ def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, sav
                                  bbox[2] - bbox[0],
                                  bbox[3] - bbox[1], fill=False,
                                  edgecolor=color, linewidth=3.5)
-            plt.gca().add_patch(rect)
-            plt.gca().text(bbox[0], bbox[1] - 2,
-                           '{:s} {:.1f}'.format(name, score),
-                           bbox=dict(facecolor=color, alpha=0.5), fontsize=10, color='white')
-    plt.axis('off')
-    plt.savefig(save_path)
+            ax.add_patch(rect)
+            ax.text(bbox[0], bbox[1] - 2 if bbox[1]-2 > 15 else bbox[1]+15, '{:s} {:.1f}'.format(name, score),
+                    bbox=dict(facecolor=color, alpha=0.5), fontsize=10, color='white')
+
+    ax.set(xlim=[0, width], ylim=[height, 0], aspect=1)
+    fig.savefig(save_path, dpi=dpi, transparent=True)
     plt.cla()
     plt.clf()
     plt.close()
 
+
 def vis_polys(polys, im_path, crop, scale):
+    import scipy.misc as misc
     im = misc.imread(im_path)
     im = im[:, ::-1, :]
     for obj in range(len(polys)):
