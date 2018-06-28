@@ -153,9 +153,15 @@ python main_train.py
 ```
 
 The default settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
-The path to the configuration file can be passed as an argument to the above script using the ```--cfg``` flag .
+The path to the configuration file can be passed as an argument to the above script using the ```--cfg``` flag.
+It is also possible to set individual configuration key-values by passing ```--set``` as the last argument to the module 
+followed by the desired key-values (*i.e.* ```--set key1 value1 key2 value2 ...```).
 
-Please note that the default config file has the same settings used to train the released models. If you are using a GPU with less amount of memory, please consider reducing the training batch size (by setting ```TRAIN.BATCH_IMAGES``` in the config file). Also, multi-processing is used to process the data. For lower amounts of memory, you may need to reduce the number of processes and number of threads according to your system (by setting ```TRAIN.NUM_PROCESS``` and ```TRAIN.NUM_THREAD```).
+Please note that the default config file has the same settings used to train the released models. 
+If you are using a GPU with less amount of memory, please consider reducing the training batch size 
+(by setting ```TRAIN.BATCH_IMAGES``` in the config file or passing ```--set TRAIN.BATCH_IMAGES [DISIRED_VALUE]``` as the last argument to the module).
+ Also, multi-processing is used to process the data. For smaller amounts of memory, you may need to reduce the number of 
+ processes and number of threads according to your system (by setting ```TRAIN.NUM_PROCESS``` and ```TRAIN.NUM_THREAD``` respectively).
 
 
 <a name="evaluating"></a>
@@ -173,7 +179,8 @@ To evaluate these models on coco test-dev with the default configuration, you ca
 python main_test.py
 ```
 The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
-(See the ```configs``` folder for examples). 
+(See the ```configs``` folder for examples). It is also possible to set individual configuration key-values by passing ```--set``` as the last argument to the module 
+followed by the desired key-values (*i.e.* ```--set key1 value1 key2 value2 ...```).
 
 Please note that the evaluation is performed in a multi-image per batch and parallel model forward setting. In case of lower GPU memory, please consider reducing the batch size for different scales (by setting ```TEST.BATCH_IMAGES```) or reducing the number of parallel jobs (by setting ```TEST.CONCURRENT_JOBS``` in the config file).
 
