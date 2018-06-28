@@ -26,7 +26,7 @@ arXiv preprint arXiv:1805.09300, 2018.
 6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
 ### Results
-Here are the coco test-dev results for SNIPER trained with this repository on the *coco trainval* set and using only the bounding box annotations.
+Here are the *COCO* results for SNIPER trained using this repository. The models are trained on the *trainval* set (using only the bounding box annotations) and evaluated on the *test-dev* set.
 
 |                                 | <sub>pre-trained dataset</sub> | <sub>network structure</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|
