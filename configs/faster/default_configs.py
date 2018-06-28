@@ -190,3 +190,25 @@ def update_config(config_file):
             else:
                 raise ValueError("key must exist in config.py")
 
+
+def update_config_from_list(cfg_list):
+    """Set config keys via list (e.g., from command line)."""
+    from ast import literal_eval
+    assert len(cfg_list) % 2 == 0
+    for k, v in zip(cfg_list[0::2], cfg_list[1::2]):
+        key_list = k.split('.')
+        d = config
+        for subkey in key_list[:-1]:
+            assert d.has_key(subkey)
+            d = d[subkey]
+        subkey = key_list[-1]
+        assert d.has_key(subkey)
+        try:
+            value = literal_eval(v)
+        except:
+            # handle the case when v is a string literal
+            value = v
+        assert type(value) == type(d[subkey]), \
+            'type {} does not match original type {}'.format(
+                type(value), type(d[subkey]))
+        d[subkey] = value

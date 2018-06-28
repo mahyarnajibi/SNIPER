@@ -7,9 +7,9 @@
 import init
 import matplotlib
 matplotlib.use('Agg')
-from configs.faster.default_configs import config, update_config
+from configs.faster.default_configs import config, update_config, update_config_from_list
 import mxnet as mx
-from argparse import ArgumentParser
+import argparse
 from train_utils.utils import create_logger, load_param
 import os
 from PIL import Image
@@ -21,19 +21,23 @@ os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
 
 
 def parser():
-    arg_parser = ArgumentParser('Faster R-CNN training module')
+    arg_parser = argparse.ArgumentParser('SNIPER demo module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
     							default='configs/faster/sniper_res101_e2e.yml',type=str)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
                             default='SNIPER', type=str)
     arg_parser.add_argument('--im_path', dest='im_path', help='Path to the image', type=str,
                             default='data/demo/demo.jpg')
+    arg_parser.add_argument('--set', dest='set_cfg_list', help='Set the configuration fields from command line',
+                            default=None, nargs=argparse.REMAINDER)
     return arg_parser.parse_args()
 
 
 def main():
     args = parser()
     update_config(args.cfg)
+    if args.set_cfg_list:
+        update_config_from_list(args.set_cfg_list)
 
     # Use just the first GPU for demo
     context = [mx.gpu(int(config.gpus[0]))]

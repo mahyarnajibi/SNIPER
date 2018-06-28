@@ -8,23 +8,25 @@ import init
 import matplotlib
 matplotlib.use('Agg')
 from symbols.faster import *
-from configs.faster.default_configs import config, update_config
+from configs.faster.default_configs import config, update_config, update_config_from_list
 from data_utils.load_data import load_proposal_roidb
 import mxnet as mx
-from argparse import ArgumentParser
+import argparse
 from train_utils.utils import create_logger, load_param
 from inference import imdb_detection_wrapper
 from inference import imdb_proposal_extraction_wrapper
 import os
 
 def parser():
-    arg_parser = ArgumentParser('Faster R-CNN training module')
+    arg_parser = argparse.ArgumentParser('SNIPER test module')
     arg_parser.add_argument('--cfg', dest='cfg', help='Path to the config file',
     							default='configs/faster/sniper_res101_e2e.yml',type=str)
     arg_parser.add_argument('--save_prefix', dest='save_prefix', help='Prefix used for snapshotting the network',
                             default='SNIPER', type=str)
     arg_parser.add_argument('--vis', dest='vis', help='Whether to visualize the detections',
                             action='store_true')
+    arg_parser.add_argument('--set', dest='set_cfg_list', help='Set the configuration fields from command line',
+                            default=None, nargs=argparse.REMAINDER)
     return arg_parser.parse_args()
 
 
@@ -32,6 +34,9 @@ def parser():
 def main():
     args = parser()
     update_config(args.cfg)
+    if args.set_cfg_list:
+        update_config_from_list(args.set_cfg_list)
+
     context = [mx.gpu(int(gpu)) for gpu in config.gpus.split(',')]
 
     if not os.path.isdir(config.output_path):
