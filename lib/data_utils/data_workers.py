@@ -475,4 +475,4 @@ class chip_worker(object):
         if self.use_neg_chips:
             return props_in_chips, final_neg_chips, final_neg_props_in_chips
         else:
-            return props_in_chips
+            return [props_in_chips]

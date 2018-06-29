@@ -245,8 +245,9 @@ class IMDB(object):
                      'gt_overlaps': roidb[i]['gt_overlaps'],
                      'max_classes': roidb[i]['max_classes'],
                      'max_overlaps': roidb[i]['max_overlaps'],
-                     'flipped': True,
-                     'proposal_scores': roidb[i]['proposal_scores']}
+                     'flipped': True}
+            if 'proposal_scores' in roidb[i]:
+                     entry['proposal_scores'] = roidb[i]['proposal_scores']
 
             # if roidb has mask
             if 'cache_seg_inst' in roi_rec:
@@ -413,5 +414,6 @@ class IMDB(object):
             a[i]['gt_overlaps'] = np.vstack((a[i]['gt_overlaps'], b[i]['gt_overlaps']))
             a[i]['max_classes'] = np.hstack((a[i]['max_classes'], b[i]['max_classes']))
             a[i]['max_overlaps'] = np.hstack((a[i]['max_overlaps'], b[i]['max_overlaps']))
-            a[i]['proposal_scores'] = np.hstack((a[i]['proposal_scores'], b[i]['proposal_scores']))
+            if 'proposal_scores' in a or 'proposal_scores' in b:
+                a[i]['proposal_scores'] = np.hstack((a[i]['proposal_scores'], b[i]['proposal_scores']))
         return a

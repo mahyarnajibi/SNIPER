@@ -60,7 +60,7 @@ if __name__ == '__main__':
         config.dataset.dataset_path,
         proposal=config.dataset.proposal, append_gt=True, flip=config.TRAIN.FLIP,
         result_path=config.output_path,
-        proposal_path=config.proposal_path, load_mask=config.TRAIN.WITH_MASK)
+        proposal_path=config.proposal_path, load_mask=config.TRAIN.WITH_MASK, only_gt=not config.TRAIN.USE_NEG_CHIPS)
         for image_set in image_sets]
 
     roidb = merge_roidb(roidbs)

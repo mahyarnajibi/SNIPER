@@ -27,10 +27,12 @@ def load_proposal_roidb(dataset_name, image_set_name, root_path, dataset_path, r
     imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path,load_mask=load_mask)
 
     roidb = imdb.gt_roidb()
-
     if not only_gt:
         roidb = eval('imdb.' + proposal + '_roidb')(roidb, append_gt,proposal_path=proposal_path)
-
+    else:
+        # Make sure boxes are converted to float
+        for r in roidb:
+            r['boxes'] = r['boxes'].astype(np.float32)
     if flip:
         roidb = imdb.append_flipped_images(roidb)
 
