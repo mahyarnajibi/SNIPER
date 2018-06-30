@@ -119,23 +119,17 @@ However, if you plan to run the detector on multiple images, please consider usi
 
 <a name="training"></a>
 ### Training a model
-For training SNIPER on COCO, you would need to download the pre-trained models, the pre-computed proposals used for negative chip mining (you can also use any other set of proposals), and configure the dataset as described below.
 
-*Downloading pre-trained models*
+For training SNIPER on COCO, you first need to download the pre-trained models and configure the dataset as described below.
+
+##### Downloading pre-trained models
 
 Running the following script downloads and extracts the pre-trained models into the default path (```data/pretrained_model```):
 ```
 bash download_pretrained_models.sh
 ```
 
-*Downloading pre-computed proposals for negative chip mining*
-
-Running the following script downloads and extract the pre-computed proposals into the default path (```data/proposals```):
-```
-bash download_sniper_neg_props.sh
-```
-
-*Configuring the COCO dataset*
+##### Configuring the COCO dataset
 
 Please follow the [official COCO dataset website](http://cocodataset.org/#download) to download the dataset. After downloading
 the dataset you should have the following directory structure:
@@ -147,12 +141,31 @@ data
             |--images
 ```
 
-To train a model with SNIPER and default parameters you can call the following script:
+##### Training the SNIPER detector
+
+You can train the SNIPER detector with or without negative chip mining as described below.
+
+###### Training with Negative Chip Mining:
+
+Negative chip mining results in a relative improvement in AP (please refer to the [paper](https://arxiv.org/pdf/1805.09300.pdf) for the details). To determine the candidate hard negative regions, SNIPER uses pre-computed proposals. It is possible to use any set of proposals for this purpose. However, for COCO, we also provide the pre-computed proposals extracted from a network trained with SNIPER and a short training schedule (*i.e.* trained for two epochs as described in the paper). The following script downloads the pre-computed proposals and extracts them into the default path (```data/proposals```):
+
+```
+bash download_sniper_neg_props.sh
+```
+
+After downloading the proposals, you can train the model with SNIPER and default parameters by calling the following script:
 ```
 python main_train.py
 ```
 
-The default settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
+###### Training without Negative Chip Mining:
+
+You can disable the negative chip mining by setting the ```TRAIN.USE_NEG_CHIPS``` to ```False```. This is especially useful if you plan to try SNIPER on a new dataset or want to shorten the training cycle. In this case, there is no need for using any pre-computed proposals and the training can be started by calling the following command:
+```
+python main_train.py --set TRAIN.USE_NEG_CHIPS False
+```
+
+In any case, the default training settings can be overwritten by passing a configuration file (see the ```configs``` folder for example configuration files).
 The path to the configuration file can be passed as an argument to the above script using the ```--cfg``` flag.
 It is also possible to set individual configuration key-values by passing ```--set``` as the last argument to the module 
 followed by the desired key-values (*i.e.* ```--set key1 value1 key2 value2 ...```).
