@@ -195,9 +195,9 @@ class resnet_mx_101_e2e(Symbol):
                                                 name="rpn_cls_prob", grad_scale=grad_scale)
 
             conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
-            conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
-
-            rois, label, bbox_target, bbox_weight = mx.sym.MultiProposalTarget(cls_prob=rpn_cls_prob, bbox_pred=rpn_bbox_pred, im_info=im_info, gt_boxes=gt_boxes, valid_ranges=valid_ranges, crowd_boxes=crowd_boxes, batch_size=cfg.TRAIN.BATCH_IMAGES, scales=cfg.network.ANCHOR_SCALES, name='multi_proposal_target')
+            conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')            
+            rois, label, bbox_target, bbox_weight, label_weight = mx.sym.MultiProposalTarget(cls_prob=rpn_cls_prob, bbox_pred=rpn_bbox_pred, im_info=im_info, gt_boxes=gt_boxes, valid_ranges=valid_ranges, crowd_boxes=crowd_boxes, batch_size=cfg.TRAIN.BATCH_IMAGES, scales=cfg.network.ANCHOR_SCALES, name='multi_proposal_target')
+            label_weight = mx.sym.tile(data=label_weight, reps=(num_classes,))
             label = mx.symbol.Reshape(data=label, shape=(-1,), name='label_reshape')
             offset_t = mx.contrib.sym.DeformablePSROIPooling(name='offset_t', data=conv_new_1_relu, rois=rois, group_size=1, pooled_size=7,
                                                              sample_per_part=4, no_trans=True, part_size=7, output_dim=256, spatial_scale=0.0625)
@@ -223,7 +223,9 @@ class resnet_mx_101_e2e(Symbol):
             else:
                 grad_scale = 1.0
 
-            cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, use_ignore=True, ignore_label=-1, grad_scale=grad_scale / (300.0*16.0))
+            cls_probt = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, use_ignore=True, ignore_label=-1, grad_scale=grad_scale / (300.0*16.0))
+            cls_prob = mx.sym.MakeLoss(name='cls_loss', data=label_weight * cls_probt, grad_scale = 1.0)
+            
             bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                         data=(bbox_pred - bbox_target))
             bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=grad_scale / (300.0*16.0))
@@ -232,6 +234,8 @@ class resnet_mx_101_e2e(Symbol):
             # reshape output
             cls_prob = mx.sym.Reshape(data=cls_prob, shape=(cfg.TRAIN.BATCH_IMAGES, -1, num_classes),
                                       name='cls_prob_reshape')
+            label_weight = mx.sym.Reshape(data=label_weight, shape=(cfg.TRAIN.BATCH_IMAGES, -1, num_classes),
+                                      name='label_weight_reshape')            
             bbox_loss = mx.sym.Reshape(data=bbox_loss, shape=(cfg.TRAIN.BATCH_IMAGES, -1, 4 * num_reg_classes),
                                        name='bbox_loss_reshape')
             
@@ -242,7 +246,7 @@ class resnet_mx_101_e2e(Symbol):
             rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_,
                                             grad_scale=3 * grad_scale / float(
                                                 cfg.TRAIN.BATCH_IMAGES * cfg.TRAIN.RPN_BATCH_SIZE))
-            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label)])
+            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label), mx.sym.BlockGrad(label_weight)])
         else:
             # ROI Proposal
             rpn_cls_score_reshape = mx.sym.Reshape(
