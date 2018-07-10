@@ -21,19 +21,21 @@ arXiv preprint arXiv:1805.09300, 2018.
 1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
 2. NO PYTHON LAYERS (Every layer is optimized for large batch sizes in CUDA/C++)
 3. HALF PRECISION TRAINING with no loss in accuracy
-4. 5 Images/second during inference on a single V100 GPU, 47.6/68.5 on COCO without training on segmentation masks
-5. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet. This branch also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
-6. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
+4. 5 Images/second during inference on a single V100 GPU, 47.8/68.2 on COCO using ResNet-101 and without training on segmentation masks
+5. Use the lightweight MobileNetV2 model trained with SNIPER to get 34.3/54.5 on COCO without training on segmentation masks
+6. The R-FCN-3K branch is also powered by SNIPER. Now 21% better than YOLO-9000 on ImageNetDet. This branch also supports on-the-fly training (in seconds) with very few samples (no bounding boxes needed!)
+7. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
 ### Results
 Here are the *COCO* results for SNIPER trained using this repository. The models are trained on the *trainval* set (using only the bounding box annotations) and evaluated on the *test-dev* set.
 
-|                                 | <sub>pre-trained dataset</sub> | <sub>network structure</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
+|                                 | <sub>network architecture</sub> | <sub>pre-trained dataset</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|
-| <sub>SNIPER </sub>           | <sub>ImageNet</sub> | <sub>ResNet101</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4  | 
-| <sub>SNIPER</sub> | <sub>OpenImages</sub> | <sub>ResNet101</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
+| <sub>SNIPER </sub>           | <sub>ResNet-101</sub> | <sub>ImageNet</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4  | 
+| <sub>SNIPER</sub> |<sub>ResNet-101</sub>  | <sub>OpenImagesV4</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
+| <sub>SNIPER</sub> | <sub>MobileNetV2</sub> | <sub>ImageNet</sub> | 34.3 |  54.4   | 37.9   | 18.5  | 36.9  | 46.4  |
 
-You can download the OpenImages pre-trained model and the SNIPER detector by running ```bash scripts/download_pretrained_models.sh``` and ```bash scripts/download_sniper_detector.sh``` respectively.
+You can download the OpenImages pre-trained model by running ```bash scripts/download_pretrained_models.sh```. The SNIPER detectors based on both *ResNet-101* and *MobileNetV2* can be downloaded by running ```bash scripts/download_sniper_detector.sh```.
 
 ### License
 SNIPER is released under Apache license. See LICENSE for details.
@@ -116,6 +118,11 @@ You can also run the detector on an arbitrary image by providing its path to the
 python demo.py --im_path [PATH to the image]
 ```
 However, if you plan to run the detector on multiple images, please consider using the provided multi-process and multi-batch ```main_test``` module. 
+
+You can also test the provided SNIPER model based on the ```MobileNetV2``` architecture by passing the provided config file as follows:
+```
+python demo.py --cfg configs/faster/sniper_mobilenetv2_e2e.yml
+```
 
 <a name="training"></a>
 ### Training a model
