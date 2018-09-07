@@ -9,12 +9,12 @@ Instead of processing all pixels in an image pyramid, SNIPER selectively process
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
 Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
-[SNIPER](https://arxiv.org/abs/1805.09300) is described in the following paper:
+[SNIPER](https://arxiv.org/abs/1805.09300) is initially described in the following paper published at NIPS 2018:
 
 <div class="highlight highlight-html"><pre>
 <b>SNIPER: Efficient Multi-Scale Training
 <a href=https://github.com/bharatsingh430>Bharat Singh*</a>, <a href=https://github.com/mahyarnajibi>Mahyar Najibi*</a>, and Larry S. Davis (* denotes equal contribution)</b>
-arXiv preprint arXiv:1805.09300, 2018.
+NIPS, 2018.
 </pre></div>
 
 ### Features
@@ -45,7 +45,7 @@ SNIPER is released under Apache license. See LICENSE for details.
 @article{sniper2018,
   title={{SNIPER}: Efficient Multi-Scale Training},
   author={Singh, Bharat and Najibi, Mahyar and Davis, Larry S},
-  journal={arXiv preprint arXiv:1805.09300},
+  journal={NIPS},
   year={2018}
 }
 @article{analysissnip2017,
