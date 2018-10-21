@@ -19,10 +19,15 @@ class MNIteratorE2E(MNIteratorBase):
         self.num_classes = roidb[0]['gt_overlaps'].shape[1]
         self.bbox_means = np.tile(np.array(config.TRAIN.BBOX_MEANS), (self.num_classes, 1))
         self.bbox_stds = np.tile(np.array(config.TRAIN.BBOX_STDS), (self.num_classes, 1))
-        self.data_name = ['data', 'valid_ranges', 'im_info']
-        self.label_name = ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
+
+        self.data_name = ['data'] if config.TRAIN.ONLY_PROPOSAL else \
+            ['data', 'valid_ranges', 'im_info']
+        self.label_name = ['label', 'bbox_target', 'bbox_weight'] if config.TRAIN.ONLY_PROPOSAL else \
+            ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
+
         if config.TRAIN.WITH_MASK:
             self.label_name.append('gt_masks')
+
         self.pool = Pool(config.TRAIN.NUM_PROCESS)
         self.epiter = 0
         self.im_worker = im_worker(crop_size=self.crop_size[0], cfg=config)
@@ -51,7 +56,7 @@ class MNIteratorE2E(MNIteratorBase):
         all_props_in_chips = []
         for i in range(self.cfg.TRAIN.CHIPS_DB_PARTS):
             all_props_in_chips += self.pool.map(self.chip_worker.box_assigner,
-                                   self.roidb[i*n_per_part:min((i+1)*n_per_part, len(self.roidb))])
+                                                self.roidb[i*n_per_part:min((i+1)*n_per_part, len(self.roidb))])
 
         for ps, cur_roidb in zip(all_props_in_chips, self.roidb):
             cur_roidb['props_in_chips'] = ps[0]
@@ -195,8 +200,12 @@ class MNIteratorE2E(MNIteratorBase):
         for i in range(len(processed_list)):
             im_tensor[i] = processed_list[i]
 
-        self.data = [im_tensor, mx.nd.array(srange), mx.nd.array(chipinfo)]
-        self.label = [labels, bbox_targets, bbox_weights, gt_boxes]
+        self.data = [im_tensor] if self.cfg.TRAIN.ONLY_PROPOSAL else \
+            [im_tensor, mx.nd.array(srange), mx.nd.array(chipinfo)]
+
+        self.label = [labels, bbox_targets, bbox_weights] if self.cfg.TRAIN.ONLY_PROPOSAL else \
+            [labels, bbox_targets, bbox_weights, gt_boxes]
+
         if self.cfg.TRAIN.WITH_MASK:
             self.label.append(mx.nd.array(encoded_masks))
         # self.visualize(im_tensor, gt_boxes)
