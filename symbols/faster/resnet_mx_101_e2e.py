@@ -5,14 +5,15 @@ import numpy as np
 
 def checkpoint_callback(bbox_param_names, prefix, means, stds):
     def _callback(iter_no, sym, arg, aux):
-        weight = arg[bbox_param_names[0]]
-        bias = arg[bbox_param_names[1]]
-        stds = np.array([0.1, 0.1, 0.2, 0.2])
-        arg[bbox_param_names[0]+'_test'] = (weight.T * mx.nd.array(stds)).T
-        arg[bbox_param_names[1]+'_test'] =bias * mx.nd.array(stds)
-        mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
-        arg.pop(bbox_param_names[0]+'_test')
-        arg.pop(bbox_param_names[1]+'_test')
+        if bbox_param_names[0] in arg:
+            weight = arg[bbox_param_names[0]]
+            bias = arg[bbox_param_names[1]]
+            stds = np.array([0.1, 0.1, 0.2, 0.2])
+            arg[bbox_param_names[0]+'_test'] = (weight.T * mx.nd.array(stds)).T
+            arg[bbox_param_names[1]+'_test'] =bias * mx.nd.array(stds)
+            mx.model.save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
+            arg.pop(bbox_param_names[0]+'_test')
+            arg.pop(bbox_param_names[1]+'_test')
     return _callback
 
 
@@ -161,9 +162,6 @@ class resnet_mx_101_e2e(Symbol):
             rpn_label = mx.sym.Variable(name='label')
             rpn_bbox_target = mx.sym.Variable(name='bbox_target')
             rpn_bbox_weight = mx.sym.Variable(name='bbox_weight')
-            gt_boxes = mx.sym.Variable(name='gt_boxes')
-            valid_ranges = mx.sym.Variable(name='valid_ranges')
-            im_info = mx.sym.Variable(name='im_info')
         else:
             data = mx.sym.Variable(name="data")
             im_info = mx.sym.Variable(name='im_info')
