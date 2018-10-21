@@ -314,13 +314,6 @@ class Tester(object):
                                                                                self.num_images,
                                                                                detect_time / data_counter,
                                                                                post_time / data_counter ))
-        cache_path = os.path.join(self.result_path, cache_name)
-        if not os.path.isdir(cache_path):
-            os.makedirs(cache_path)
-        cache_path=os.path.join(cache_path,'proposals.pkl')
-        self.show_info('Done! Saving detections into: {}'.format(cache_path))
-        with open(cache_path, 'wb') as detfile:
-            cPickle.dump(all_boxes, detfile)
         return all_boxes
 
 
@@ -449,6 +442,16 @@ def imdb_proposal_extraction_wrapper(sym_def, config, imdb, roidb, context, arg_
             tmp_props = []
             for prop in proposal_list:
                 tmp_props += prop
+
+            # Cache proposals...
+            cache_path = os.path.join(imdb.result_path, 'props_scale_{}x{}'.format(scale[0],scale[1]))
+            if not os.path.isdir(cache_path):
+                os.makedirs(cache_path)
+            cache_path = os.path.join(cache_path, 'proposals.pkl')
+            print('Done! Saving proposals into: {}'.format(cache_path))
+            with open(cache_path, 'wb') as detfile:
+                cPickle.dump(tmp_props, detfile)
+
             proposals.append(tmp_props)
         pool.close()
 
@@ -461,7 +464,7 @@ def imdb_proposal_extraction_wrapper(sym_def, config, imdb, roidb, context, arg_
         for i in range(len(proposals[0])):
             for j in range(1, len(proposals)):
                 final_proposals[i] = np.vstack((final_proposals[i], proposals[j][i]))
-    save_path = os.path.join(config.TEST.PROPOSAL_SAVE_PATH, '{}_{}_rpn.pkl'.format(config.dataset.dataset,
+    save_path = os.path.join(config.TEST.PROPOSAL_SAVE_PATH, '{}_{}_rpn.pkl'.format(config.dataset.dataset.upper(),
                                                                                         config.dataset.test_image_set))
     with open(save_path, 'wb') as file:
          cPickle.dump(final_proposals, file)    
