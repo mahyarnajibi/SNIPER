@@ -152,34 +152,24 @@ data
 
 You can train the SNIPER detector with or without negative chip mining as described below.
 
-###### Training with Negative Chip Mining using the Provided Pre-Computed Proposals:
+###### Training with Negative Chip Mining:
 
-Negative chip mining results in a relative improvement in AP (please refer to the [paper](https://arxiv.org/pdf/1805.09300.pdf) for the details). To determine the candidate hard negative regions, SNIPER uses pre-computed proposals. It is possible to use any set of proposals for this purpose (See instructions [below](#neg_chip_mining) on how to generate these proposals for a new dataset). However, for COCO, we also provide the pre-computed proposals extracted from a network trained with SNIPER and a short training schedule (*i.e.* trained for two epochs as described in the paper). The following script downloads the pre-computed proposals and extracts them into the default path (```data/proposals```):
+Negative chip mining results in a relative improvement in AP (please refer to the [paper](https://arxiv.org/pdf/1805.09300.pdf) for the details). To determine the candidate hard negative regions, SNIPER uses proposals extracted from a proposal network trained for a short training schedule. 
 
+For the COCO dataset, we provide the pre-computed proposals. The following commands download the pre-computed proposals, extracts them into the default path (```data/proposals```), and trains the SNIPER detector with the default parameters:
 ```
 bash download_sniper_neg_props.sh
-```
-
-After downloading the proposals, you can train the model with SNIPER and default parameters by calling the following script:
-```
 python main_train.py
 ```
 
-<a name="neg_chip_mining"> </a>
-###### Training with Negative Chip Mining from Scratch:
-
-Alternatively, you can use the repository to generate your own set of proposals for negative chip mining (e.g. on a new dataset). We provided an all-in-one sample script which performs all the required steps. For training SNIPER from scratch on COCO you can simply run the following command:
-
+However, it is also possible to extract the required proposals using this repository (e.g. if you plan to train SNIPER on a new dataset). We provided an all-in-one script which performs all the required steps for training SNIPER with Negative Chip Mining. Running the following script trains a proposal network for a short cycle (i.e. 2 epochs), extract the proposals, and train the SNIPER detector with Negative Chip Mining:
 ```
-bash train_neg_props_and_sniper.sh
+bash train_neg_props_and_sniper.sh --cfg [PATH_TO_CFG_FILE]
 ```
-
-This script trains a proposal network for a short cycle (for 2 epochs), extract the proposals, and train the SNIPER detector with negative chip mining based on the extracted proposals.
-
 
 ###### Training without Negative Chip Mining:
 
-You can disable the negative chip mining by setting the ```TRAIN.USE_NEG_CHIPS``` to ```False```. This is especially useful if you plan to try SNIPER on a new dataset or want to shorten the training cycle. In this case, there is no need for using any pre-computed proposals and the training can be started by calling the following command:
+You can disable the negative chip mining by setting the ```TRAIN.USE_NEG_CHIPS``` to ```False```. This is useful if you plan to try SNIPER on a new dataset or want to shorten the training cycle. In this case, the training can be started by calling the following command:
 ```
 python main_train.py --set TRAIN.USE_NEG_CHIPS False
 ```
