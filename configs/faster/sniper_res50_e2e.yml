@@ -95,7 +95,7 @@ TRAIN:
   SHUFFLE: true
   # whether use OHEM
   ENABLE_OHEM: true
-  # size of images for each device, 2 for rcnn, 1 for rpn and e2e
+  # Number of images per GPU
   BATCH_IMAGES: 16
   # e2e changes behavior of anchor loader and metric
   END2END: true
