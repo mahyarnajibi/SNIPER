@@ -54,6 +54,14 @@ if __name__ == '__main__':
     if not os.path.isdir(config.output_path):
         os.mkdir(config.output_path)
 
+    # The following is just to make sure the code reproduces
+    # results in the paper after default scale settings are changed to resolution-based
+    # However, new scale settings should lead to similar results
+    if config.dataset.dataset=='coco' and config.dataset.NUM_CLASSES==81:
+        # Change the scales to what we used in the paper for reproducibility
+        config.TRAIN.SCALES = (3.0, 1.667, 512.0)
+
+
     # Create roidb
     image_sets = [iset for iset in config.dataset.image_set.split('+')]
     roidbs = [load_proposal_roidb(config.dataset.dataset, image_set, config.dataset.root_path,
