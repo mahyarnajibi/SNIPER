@@ -309,6 +309,12 @@ class chip_worker(object):
         self.chip_stride = np.random.randint(56, 60)
         self.chip_generator = chip_generator(chip_stride=self.chip_stride, use_cpp=self.use_cpp)
         self.use_neg_chips = cfg.TRAIN.USE_NEG_CHIPS
+        self.res_based = type(cfg.TRAIN.SCALES[0])==list or type(cfg.TRAIN.SCALES[0])==tuple
+        for s in cfg.TRAIN.SCALES:
+            if self.res_based:
+                assert type(s)==tuple or type(s)==list, 'In resolution-based mode, all scales should be tuples'
+            else:
+                assert type(s)==float, 'In scale-based mode, all scales should be float'
 
     def reset(self):
         self.chip_stride = np.random.randint(56, 60)
@@ -318,6 +324,7 @@ class chip_worker(object):
         width = r['width']
         height = r['height']
         im_size_max = max(width, height)
+        im_size_min = min(width, height)
 
         gt_boxes = r['boxes'][np.where(r['max_overlaps'] == 1)[0], :]
 
@@ -327,10 +334,28 @@ class chip_worker(object):
         ms = np.maximum(ws, hs)
 
         chip_ar = []
+
         for i, im_scale in enumerate(self.scales):
+            if self.res_based:
+                # Compute im_scale based on pixel-wise resolution bounds
+                min_target_size = im_scale[0]
+                max_target_size = im_scale[1]
+
+                if min_target_size > 0:
+                    scale = float(min_target_size) / float(im_size_min)
+                    if max_target_size > 0 and np.round(scale * im_size_max) > max_target_size:
+                        scale = float(max_target_size) / float(im_size_max)
+                else:
+                    scale = float(max_target_size) / float(im_size_max)
+                im_scale = scale
+            else:
+                # In the scaling factor mode the last resolution should be the max side of the image in pixels
+                # So convert it to scaling factor
+                if i == len(self.scales)-1:
+                    im_scale /= float(im_size_max)
+
             if i == len(self.scales)-1:
                 # The coarsest (or possibly the only scale)
-                im_scale /= float(im_size_max)
                 ids = np.where((area >= self.valid_ranges[i][0]))[0]
             elif i == 0:
                 # The finest scale (but not the only scale)
@@ -346,32 +371,55 @@ class chip_worker(object):
             cur_chips = np.array(cur_chips) / im_scale
             if i != len(self.scales) - 1:
                 for chip in cur_chips:
-                    chip_ar.append([chip, im_scale, self.chip_size, self.chip_size])
+                    chip_ar.append([chip, im_scale, self.chip_size, self.chip_size, i])
             else:
                 for chip in cur_chips:
-                    chip_ar.append([chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale)])
+                    chip_ar.append([chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale), i])
 
         return chip_ar
 
     def box_assigner(self, r):
+        width = r['width']
+        height = r['height']
+        im_size_max = max(width, height)
+        im_size_min = min(width, height)
+
         props_in_chips = [[] for _ in range(len(r['crops']))]
         widths = (r['boxes'][:, 2] - r['boxes'][:, 0]).astype(np.int32)
         heights = (r['boxes'][:, 3] - r['boxes'][:, 1]).astype(np.int32)
         max_sizes = np.maximum(widths, heights)
-        width = r['width']
-        height = r['height']
+
         area = np.sqrt(widths * heights)
-        im_size_max = max(width, height)
+
+
+        # Compute im_scales
+        cim_scales = []
+        for scalei, im_scale in enumerate(self.scales):
+            # If we are in the resolution-based mode compute scaling factors based on min and max sizes
+            if self.res_based:
+                min_target_size = im_scale[0]
+                max_target_size = im_scale[1]
+                if min_target_size > 0:
+                    scale = float(min_target_size) / float(im_size_min)
+                    if max_target_size > 0 and np.round(scale * im_size_max) > max_target_size:
+                        scale = float(max_target_size) / float(im_size_max)
+                else:
+                    scale = float(max_target_size) / float(im_size_max)
+                cim_scales.append(scale)
+            # Else we already have the scaling factors
+            else:
+                # Just the coarsest scale is in pixels
+                if scalei == len(self.scales)-1:
+                    im_scale /= float(im_size_max)
+                cim_scales.append(im_scale)
+
 
         # ** Distribute chips based on the scales
-        all_chips = [[] for _ in self.scales]
-        all_chip_ids = [[] for _ in self.scales]
+        all_chips = [[] for _ in cim_scales]
+        all_chip_ids = [[] for _ in cim_scales]
         for ci, crop in enumerate(r['crops']):
-            for scale_i, s in enumerate(self.scales):
-                if (scale_i == len(self.scales) - 1) or s == crop[1]:
-                    all_chips[scale_i].append(crop[0])
-                    all_chip_ids[scale_i].append(ci)
-                    break
+            all_chips[crop[4]].append(crop[0])
+            all_chip_ids[crop[4]].append(ci)
 
         # All chips in each of the scales:
         all_chips = [np.array(chips) for chips in all_chips]
@@ -380,8 +428,8 @@ class chip_worker(object):
 
         # ** Find valid boxes in each scale
         valid_ids = []
-        for scale_i, im_scale in enumerate(self.scales):
-            if scale_i == len(self.scales) - 1:
+        for scale_i, im_scale in enumerate(cim_scales):
+            if scale_i == len(cim_scales) - 1:
                 # The coarsest scale (or the only scale)
                 ids = np.where((area >= self.valid_ranges[scale_i][0]))[0]
             else:
@@ -405,7 +453,7 @@ class chip_worker(object):
                     x1, x2, y1, y2 = max(cur_chip[0], cur_box[0]), min(cur_chip[2], cur_box[2]), \
                                      max(cur_chip[1], cur_box[1]), min(cur_chip[3], cur_box[3])
                     area = math.sqrt(abs((x2 - x1) * (y2 - y1)))
-                    if scale_i == len(self.scales) - 1:
+                    if scale_i == len(cim_scales) - 1:
                         # The coarsest scale (or the only scale)
                         if x2 - x1 >= 1 and y2 - y1 >= 1 and area >= self.valid_ranges[scale_i][0]:
                             props_in_chips[all_chip_ids[scale_i][cid]].append(valid_ids[scale_i][pi])
@@ -416,14 +464,12 @@ class chip_worker(object):
                             covered_boxes[scale_i][pi] = True
         if self.use_neg_chips:
             # ** Generate negative chips based on remaining boxes
-            rem_valid_boxes = [valid_boxes[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
+            rem_valid_boxes = [valid_boxes[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(cim_scales))]
             neg_chips = []
             neg_props_in_chips = []
             first_available_chip_id = 0
             neg_chip_ids = []
-            for scale_i, im_scale in enumerate(self.scales):
-                if scale_i == len(self.scales) - 1:
-                    im_scale /= float(im_size_max)
+            for scale_i, im_scale in enumerate(cim_scales):
                 chips = self.chip_generator.generate(rem_valid_boxes[scale_i] * im_scale, int(r['width'] * im_scale),
                                             int(r['height'] * im_scale), self.chip_size)
                 neg_chips.append(np.array(chips, dtype=np.float) / im_scale)
@@ -432,8 +478,8 @@ class chip_worker(object):
                 first_available_chip_id += len(chips)
 
             # ** Assign remaining boxes to negative chips based on max overlap
-            neg_ids = [valid_ids[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(self.scales))]
-            for scale_i in range(len(self.scales)):
+            neg_ids = [valid_ids[i][np.where(covered_boxes[i] == False)[0]] for i in range(len(cim_scales))]
+            for scale_i in range(len(cim_scales)):
                 if neg_chips[scale_i].shape[0]>0:
                     overlaps = ignore_overlaps(neg_chips[scale_i], rem_valid_boxes[scale_i])
                     max_ids = overlaps.argmax(axis=0)
@@ -443,7 +489,7 @@ class chip_worker(object):
                         x1, x2, y1, y2 = max(cur_chip[0], cur_box[0]), min(cur_chip[2], cur_box[2]), \
                                          max(cur_chip[1], cur_box[1]), min(cur_chip[3], cur_box[3])
                         area = math.sqrt(abs((x2 - x1) * (y2 - y1)))
-                        if scale_i == len(self.scales) - 1:
+                        if scale_i == len(cim_scales) - 1:
                             if x2 - x1 >= 1 and y2 - y1 >= 1 and area >= self.valid_ranges[scale_i][0]:
                                 neg_props_in_chips[neg_chip_ids[scale_i][cid]].append(neg_ids[scale_i][pi])
                         else:
@@ -455,17 +501,16 @@ class chip_worker(object):
             final_neg_props_in_chips = []
             chip_counter = 0
             for scale_i, chips in enumerate(neg_chips):
-                im_scale = self.scales[scale_i] / float(im_size_max) if scale_i == len(self.scales) - 1 else \
-                           self.scales[scale_i]
+                im_scale = cim_scales[scale_i]
                 for chip in chips:
                     if len(neg_props_in_chips[chip_counter]) > 25 or (
                                     len(neg_props_in_chips[chip_counter]) > 10 and scale_i != 0):
                         final_neg_props_in_chips.append(np.array(neg_props_in_chips[chip_counter], dtype=int))
-                        if scale_i != len(self.scales) - 1:
-                            final_neg_chips.append([chip, im_scale, self.chip_size, self.chip_size])
+                        if scale_i != len(cim_scales) - 1:
+                            final_neg_chips.append([chip, im_scale, self.chip_size, self.chip_size, scale_i])
                         else:
                             final_neg_chips.append(
-                                [chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale)])
+                                [chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale), scale_i])
                         chip_counter += 1
 
             r['neg_chips'] = final_neg_chips
