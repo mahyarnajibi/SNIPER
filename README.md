@@ -29,6 +29,7 @@ For faster inference, please feel free to check out our more recent work [AutoFo
 7. Train on OpenImagesV4 (14x bigger than COCO) with ResNet-101 in 3 days on a p3.x16.large AWS instance! 
 
 ### Results
+#### COCO dataset
 Here are the *COCO* results for SNIPER trained using this repository. The models are trained on the *trainval* set (using only the bounding box annotations) and evaluated on the *test-dev* set.
 
 |                                 | <sub>network architecture</sub> | <sub>pre-trained dataset</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
@@ -36,6 +37,11 @@ Here are the *COCO* results for SNIPER trained using this repository. The models
 | <sub>SNIPER </sub>           | <sub>ResNet-101</sub> | <sub>ImageNet</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4  | 
 | <sub>SNIPER</sub> |<sub>ResNet-101</sub>  | <sub>OpenImagesV4</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
 | <sub>SNIPER</sub> | <sub>MobileNetV2</sub> | <sub>ImageNet</sub> | 34.3 |  54.4   | 37.9   | 18.5  | 36.9  | 46.4  |
+
+#### PASCAL VOC dataset
+|                              | <sub>network architecture</sub> | <sub>pre-trained dataset</sub>  | <sub>training-set</sub>  | <sub>test-set</sub> | <sub>mAP@0.5</sub>| <sub>mAP@0.7</sub> |
+|------------------------------|-----------------------|-------------------------|----------------------------|-------------------------|---------|-------|
+| <sub>SNIPER </sub>           | <sub>ResNet-101</sub> | <sub>OpenImagesV4</sub> | <sub>07+12 trainval</sub> | <sub>07 test</sub>|   86.9  | 81.1  |
 
 You can download the OpenImages pre-trained model by running ```bash scripts/download_pretrained_models.sh```. The SNIPER detectors based on both *ResNet-101* and *MobileNetV2* can be downloaded by running ```bash scripts/download_sniper_detector.sh```.
 
