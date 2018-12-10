@@ -69,12 +69,26 @@ TRAIN:
   WITH_MASK: false
 
   # Training scales
-  # The last scale (or the only scale) should be the desired max resolution in pixels
-  # Other scales should be scaling coefficients
+  # The scales should be sorted in descending order based on size 
+  # (the first scale is the highest resolution and the last scale is the lowest one)
+  # Two types of scale definition are supported
   SCALES:
-  - 3.0
-  - 1.667
-  - 512.0
+  # 1) You can define scale based on resolutions in pixels
+  # [min_resolution, max_resolution]
+  # The shortest side of the image is resized to min_resolution while the 
+  # longest side is kept less than max_resolution
+  # -1 indicates no constraint on min/max resolution
+  - !!python/tuple [1400, 2000]
+  - !!python/tuple [800, 1280]
+  - !!python/tuple [-1, 512]
+  
+  # 2) Alternatively you can define the scaling factor as below:
+  # In this case, the lowest resolution should be the maximum side of image
+  # in pixels and all other scales should be defined as a float scaling factor
+  # The following are the scales we used in the paper for COCO dataset
+  # - 3.0
+  # - 1.667
+  # - 512.0
 
   # Valid ranges in each scale
   VALID_RANGES:
@@ -98,8 +112,6 @@ TRAIN:
   FLIP: true
   # whether shuffle image
   SHUFFLE: true
-  # whether use OHEM
-  ENABLE_OHEM: true
   # Number of images per GPU
   BATCH_IMAGES: 42
   # e2e changes behavior of anchor loader and metric

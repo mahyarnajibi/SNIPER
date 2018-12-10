@@ -72,7 +72,7 @@ TRAIN:
   # [min_resolution, max_resolution]
   # The shortest side of the image is resized to min_resolution while the 
   # longest side is kept less than max_resolution
-  # -1 indicates no constrained on min/max resolution
+  # -1 indicates no constraint on min/max resolution
   - !!python/tuple [1400, 2000]
   - !!python/tuple [800, 1280]
   - !!python/tuple [-1, 512]
@@ -107,8 +107,6 @@ TRAIN:
   FLIP: true
   # whether shuffle image
   SHUFFLE: true
-  # whether use OHEM
-  ENABLE_OHEM: true
   # Number of images per GPU
   BATCH_IMAGES: 16
   # e2e changes behavior of anchor loader and metric
