@@ -24,7 +24,7 @@ from pascal_voc_eval import voc_eval, voc_eval_sds
 from ds_utils import unique_boxes, filter_small_boxes
 
 class PascalVOC(IMDB):
-    def __init__(self, image_set, root_path, devkit_path, result_path=None, mask_size=-1, binary_thresh=None):
+    def __init__(self, image_set, root_path, devkit_path, result_path=None, mask_size=-1, binary_thresh=None, load_mask=None):
         """
         fill basic information to initialize imdb
         :param image_set: 2007_trainval, 2007_test, etc
@@ -34,7 +34,7 @@ class PascalVOC(IMDB):
         """
         year = image_set.split('_')[0]
         image_set = image_set[len(year) + 1 : len(image_set)]
-        super(PascalVOC, self).__init__('voc_' + year, image_set, root_path, devkit_path, result_path)  # set self.name
+        super(PascalVOC, self).__init__('PASCALVOC_' + year, image_set, root_path, devkit_path, result_path)  # set self.name
 
         self.year = year
         self.root_path = root_path
