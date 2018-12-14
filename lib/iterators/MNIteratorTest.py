@@ -55,10 +55,10 @@ class MNIteratorTest(MNIteratorBase):
         vert_inds = np.where(widths<heights)[0]
         if horz_inds.shape[0]%self.batch_size>0:
             extra_horz = self.batch_size - (horz_inds.shape[0] % self.batch_size)
-            horz_inds = np.hstack((horz_inds, horz_inds[0:extra_horz]))
+            horz_inds = np.hstack((horz_inds, horz_inds[np.zeros(extra_horz,dtype='int')]))
         if vert_inds.shape[0]%self.batch_size>0:
             extra_vert = self.batch_size - (vert_inds.shape[0]%self.batch_size)
-            vert_inds = np.hstack((vert_inds, vert_inds[0:extra_vert]))
+            vert_inds = np.hstack((vert_inds, vert_inds[np.zeros(extra_vert,dtype='int')]))
         inds = np.hstack((horz_inds, vert_inds))
         extra = inds.shape[0] % self.batch_size
         assert extra==0,'The number of samples here should be divisible by batch size'
