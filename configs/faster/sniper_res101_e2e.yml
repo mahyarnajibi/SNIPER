@@ -85,21 +85,30 @@ TRAIN:
   # - 1.667
   # - 512.0
 
-  # Valid ranges in each scale
+
+
+  # Valid ranges in each scale (boxes which the square root of their area
+  # lie in each range are marked as valid in that scale).
+  # Values indicate the square root of the area of boxes in
+  # the **original** image resolution (before any scaling).
+  # If the resolution of the images in your dataset is higher than COCO,
+  # you can consider increasing these values based on the area distribution of
+  # small, medium and large objects in the original resolution of your dataset.
+  # -1 indicates having no constraint.
   VALID_RANGES:
   - !!python/tuple [-1,80]
   - !!python/tuple [32,150]
   - !!python/tuple [120,-1]
 
 
-  lr: 0.015 #0.002 #0.0005
+  lr: 0.015 
   lr_step: '5.33'
   warmup: true
   fp16: true
-  warmup_lr: 0.0005 #0.00005
+  warmup_lr: 0.0005 
   wd: 0.0001
   scale: 100.0
-  warmup_step: 1000 #4000 #1000
+  warmup_step: 1000
   begin_epoch: 0
   end_epoch: 7
 
@@ -184,11 +193,14 @@ TEST:
   # concurrent jobs to increase throughput
   CONCURRENT_JOBS: 2
 
-  # Ranges to specify valid proposal length
-  # in each of the test scale, square area
-  # would be computed based on the lengths
-  # to invalidate, -1 means unbounded, use
-  # -1 everywhere if you want to have all proposals
+  # Valid ranges in each scale (boxes which the square root of their area
+  # lie in each range are marked as valid in that scale).
+  # Values indicate the square root of the area of boxes in
+  # the **original** image resolution (before any scaling).
+  # If the resolution of the images in your dataset is higher than COCO,
+  # you can consider increasing these values based on the area distribution of
+  # small, medium and large objects in the original resolution of your dataset.
+  # -1 indicates having no constraint.
   VALID_RANGES:
   - !!python/tuple [-1,90]
   - !!python/tuple [32,180]
