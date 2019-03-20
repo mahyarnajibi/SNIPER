@@ -17,8 +17,6 @@ Due to its memory efficient design, SNIPER can benefit from *Batch Normalization
 NIPS, 2018.
 </pre></div>
 
-For faster inference, please feel free to check out our more recent work [AutoFocus: Efficient Multi-Scale Inference](https://arxiv.org/abs/1812.01600).
-
 ### Features
 1. Train with a batch size of 160 images with a ResNet-101 backbone on 8 V100 GPUs
 2. NO PYTHON LAYERS (Every layer is optimized for large batch sizes in CUDA/C++)
