@@ -1,3 +1,5 @@
+# Taken from https://github.com/halhenke/docker-sniper/blob/master/docker-master/Dockerfile
+
 FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04
 
 USER root
