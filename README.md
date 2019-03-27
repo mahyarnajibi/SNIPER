@@ -36,11 +36,6 @@ Here are the *COCO* results for SNIPER trained using this repository. The models
 | <sub>SNIPER</sub> |<sub>ResNet-101</sub>  | <sub>OpenImagesV4</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
 | <sub>SNIPER</sub> | <sub>MobileNetV2</sub> | <sub>ImageNet</sub> | 34.3 |  54.4   | 37.9   | 18.5  | 36.9  | 46.4  |
 
-#### PASCAL VOC dataset
- 
-|                              | <sub>network architecture</sub> | <sub>pre-trained dataset</sub>  | <sub>training-set</sub>  | <sub>test-set</sub> | <sub>mAP@0.5</sub>| <sub>mAP@0.7</sub> |
-|:------------------------------:|:-----------------------:|:-------------------------:|:----------------------------:|:-------------------------:|:---------:|:---------:|
-| <sub>SNIPER </sub>           | <sub>ResNet-101</sub> | <sub>OpenImagesV4</sub> | <sub>07+12 trainval</sub> | <sub>07 test</sub>|   86.9  | 81.1  |
 
 You can download the OpenImages pre-trained model by running ```bash scripts/download_pretrained_models.sh```. The SNIPER detectors trained on both COCO (*ResNet-101* and *MobileNetV2*) and PASCAL VOC datasets can be downloaded by running ```bash scripts/download_sniper_detector.sh```.
 
