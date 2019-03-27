@@ -40,7 +40,7 @@ RUN apt-get update && \
     libopencv-dev \
     libopenblas-dev \
     gcc-5 \
-    g++-5
+    g++-5 \
   && rm -rf /var/lib/apt/lists/*
 
 # Not using any extra processes because it would always blow up due to memory usage
