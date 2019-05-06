@@ -152,7 +152,7 @@ class IMDB(object):
         self.num_images = len(gt_roidb)
         assert len(box_list) == self.num_images, 'number of boxes matrix must match number of images'
         roidb = []
-        stats = np.zeros(81)
+        stats = np.zeros(self.num_classes)
         for i in range(self.num_images):
             roi_rec = dict()
             roi_rec['image'] = gt_roidb[i]['image']
