@@ -511,7 +511,7 @@ class chip_worker(object):
                         else:
                             final_neg_chips.append(
                                 [chip, im_scale, int(r['height'] * im_scale), int(r['width'] * im_scale), scale_i])
-                        chip_counter += 1
+                    chip_counter += 1
 
             r['neg_chips'] = final_neg_chips
             r['neg_props_in_chips'] = final_neg_props_in_chips
