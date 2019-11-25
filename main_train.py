@@ -4,23 +4,16 @@
 # Training Module
 # by Mahyar Najibi and Bharat Singh
 # --------------------------------------------------------------
+
 import init
-import matplotlib
-matplotlib.use('Agg')
 import os
-os.environ['PYTHONUNBUFFERED'] = '1'
-os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '2'
-#os.environ['MXNET_ENABLE_GPU_P2P'] = '1'
 from iterators.MNIteratorE2E import MNIteratorE2E
-import sys
-sys.path.insert(0, 'lib')
 from symbols.faster import *
 from configs.faster.default_configs import config, update_config, update_config_from_list
 import mxnet as mx
 from train_utils import metric
 from train_utils.utils import get_optim_params, get_fixed_param_names, create_logger, load_param
 from iterators.PrefetchingIter import PrefetchingIter
-
 from data_utils.load_data import load_proposal_roidb, merge_roidb, filter_roidb
 from bbox.bbox_regression import add_bbox_regression_targets
 import argparse
@@ -97,7 +90,8 @@ if __name__ == '__main__':
                         context=context,
                         data_names=[k[0] for k in train_iter.provide_data_single],
                         label_names=[k[0] for k in train_iter.provide_label_single],
-                        fixed_param_names=fixed_param_names)
+                        fixed_param_names=fixed_param_names,
+                        logger=logger)
 
     shape_dict = dict(train_iter.provide_data_single + train_iter.provide_label_single)
     sym_inst.infer_shape(shape_dict)
