@@ -5,8 +5,6 @@
 # by Mahyar Najibi and Bharat Singh
 # --------------------------------------------------------------
 import init
-import matplotlib
-matplotlib.use('Agg')
 from symbols.faster import *
 from configs.faster.default_configs import config, update_config, update_config_from_list
 from data_utils.load_data import load_proposal_roidb
