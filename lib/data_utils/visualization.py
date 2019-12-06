@@ -24,7 +24,7 @@ def visualize_dets(im, dets, scale, pixel_means, class_names, threshold=0.5, sav
         im = transform_im(im, np.array(pixel_means)[[2, 1, 0]])
 
     # Create a canvas the same size of the image
-    height, width, _ = im.shape
+    height, width = im.shape[0], im.shape[1]
     out_size = width/float(dpi), height/float(dpi)
     fig = plt.figure(figsize=out_size)
     ax = fig.add_axes([0, 0, 1, 1])
