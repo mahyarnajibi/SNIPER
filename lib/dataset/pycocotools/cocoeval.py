@@ -424,6 +424,7 @@ class COCOeval:
         self.stats[9]  = _summarize(0,areaRng='small')
         self.stats[10] = _summarize(0,areaRng='medium')
         self.stats[11] = _summarize(0,areaRng='large')
+        return self.stats
 
     def __str__(self):
         self.summarize()

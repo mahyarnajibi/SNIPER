@@ -269,8 +269,8 @@ class coco(IMDB):
         res_file = os.path.join(res_folder, 'detections_%s_results.json' % self.image_set)
         self._write_coco_results(detections, res_file, ann_type, all_masks)
         if 'test' not in self.image_set:
-            info_str = self._do_python_eval(res_file, res_folder, ann_type)
-            return info_str
+            info_str, stats = self._do_python_eval(res_file, res_folder, ann_type)
+            return stats
 
     def evaluate_sds(self, all_boxes, all_masks):
         info_str = self.evaluate_detections(all_boxes, 'segm', all_masks)
@@ -326,14 +326,14 @@ class coco(IMDB):
         coco_eval.params.useSegm = (ann_type == 'segm')
         coco_eval.evaluate()
         coco_eval.accumulate()
-        info_str = self._print_detection_metrics(coco_eval)
+        info_str, stats = self._print_detection_metrics(coco_eval)
 
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
         with open(eval_file, 'w') as f:
             cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
         print 'coco eval results saved to %s' % eval_file
         info_str +=  'coco eval results saved to %s\n' % eval_file
-        return info_str
+        return info_str, stats
 
     def _print_detection_metrics(self, coco_eval):
         info_str = ''
@@ -370,6 +370,6 @@ class coco(IMDB):
             info_str +=  '%-15s %5.1f\n' % (cls, 100 * ap)
 
         print '~~~~ Summary metrics ~~~~'
-        coco_eval.summarize()
+        stats = coco_eval.summarize()
 
-        return info_str
+        return info_str, stats
