@@ -156,6 +156,11 @@ config.TEST.PROPOSAL_PRE_NMS_TOP_N = 20000
 config.TEST.PROPOSAL_POST_NMS_TOP_N = 2000
 config.TEST.PROPOSAL_MIN_SIZE = config.network.RPN_FEAT_STRIDE
 
+ # Disable AutoFocus by default
+config.TEST.DO_PRUNING = [False, False, False]
+config.TEST.CHIP_HYPERPARAMS = [(-1, -1, -1), (-1, -1, -1), (-1, -1, -1)]
+config.TEST.USE_CACHE = [False, False, False]
+
 # RCNN nms
 config.TEST.NMS = 0.3
 
