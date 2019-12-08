@@ -241,6 +241,7 @@ class resnet_mx_50_e2e(Symbol):
             data = mx.sym.Variable(name="data")
             im_info = mx.sym.Variable(name='im_info')
             im_ids = mx.sym.Variable(name='im_ids')
+            chip_ids = mx.sym.Variable(name='chip_ids')
         # shared convolutional layers
         conv_feat = self.resnetc4(data, fp16=cfg.TRAIN.fp16)
         # res5
@@ -364,7 +365,7 @@ class resnet_mx_50_e2e(Symbol):
             bbox_pred = mx.sym.Reshape(data=bbox_pred, shape=(self.test_nbatch, -1, 4 * num_reg_classes),
                                        name='bbox_pred_reshape')
 
-            group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids])
+            group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids, im_info, chip_ids])
 
         self.sym = group
         return group

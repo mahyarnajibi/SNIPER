@@ -268,6 +268,8 @@ class resnext_mx_101(Symbol):
             rois = mx.symbol.Variable(name='rois')
             # reshape input
             rois = mx.symbol.Reshape(data=rois, shape=(-1, 5), name='rois_reshape')
+            im_ids = mx.sym.Variable(name='im_ids')
+            chip_ids = mx.sym.Variable(name='chip_ids')
 
         # if cfg.TRAIN.fp16:
         #     data = mx.sym.Cast(data=data, dtype=np.float16)   
@@ -354,7 +356,7 @@ class resnext_mx_101(Symbol):
                                       name='cls_prob_reshape')
             bbox_pred = mx.sym.Reshape(data=bbox_pred, shape=(cfg.TEST.BATCH_IMAGES, -1, 4 * num_reg_classes),
                                        name='bbox_pred_reshape')
-            group = mx.sym.Group([rois, cls_prob, bbox_pred])
+            group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids, im_info, chip_ids])
 
         self.sym = group
         return group
