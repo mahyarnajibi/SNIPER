@@ -48,6 +48,35 @@ class im_worker(object):
         else:
             self.target_size = target_size
 
+    def worker_autofocus(self, data):
+        imp = data[0]
+        max_size = data[1]
+        flipped = data[2]
+        crop = data[3]
+        scale = data[4]
+        pixel_means = self.cfg.network.PIXEL_MEANS
+        im = cv2.imread(imp, cv2.IMREAD_COLOR)
+
+        if crop is not None:
+            im = im[max(int(crop[1]), 0):min(int(crop[3]), im.shape[0]),
+             max(int(crop[0]), 0):min(int(crop[2]), im.shape[1]), :]
+        
+        # Resize the cropped image
+        try:
+            im = cv2.resize(im, None, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+        except:
+            print 'Image Resize Failed!'
+
+        # Pad if necessary
+        rim = np.zeros((3, max_size[0], max_size[1]), dtype=np.float32)
+        d1m = min(im.shape[0], max_size[0])
+        d2m = min(im.shape[1], max_size[1])
+
+        for j in range(3):
+            rim[j, :d1m, :d2m] = im[:d1m, :d2m, 2 - j] - pixel_means[2 - j]
+
+        return mx.nd.array(rim, dtype='float32'), scale, (im.shape[0],im.shape[1]) 
+
     def worker(self, data):
         imp = data[0]
         flipped = data[2]
