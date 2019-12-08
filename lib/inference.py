@@ -3,6 +3,7 @@
 # Inference module for performing detection and proposal extraction
 # Written by Mahyar Najibi
 # -----------------------------------------------------------------
+import gc
 import numpy as np
 from bbox.bbox_transform import bbox_pred, clip_boxes
 from iterators.PrefetchingIter import PrefetchingIter
@@ -73,7 +74,7 @@ class Tester(object):
     def get_proposals(self, batch, scales):
         data = dict(zip(self.data_names, batch.data))
         outputs = self.forward(batch)
-        scores, preds, maps = [], [], []
+        scores, preds, rois = [], [], []
         im_ids = np.array([], dtype=int)
         chip_ids = np.array([], dtype=int)
 
@@ -169,10 +170,7 @@ class Tester(object):
                     for c in range(len(all_cls_dets[j][i])):
                         # Get detections for the first chip
                         cls_dets = all_cls_dets[j][i][c]
-                        try:
-                            heights = cls_dets[:, 2] - cls_dets[:, 0]
-                        except:
-                            import pdb;pdb.set_trace()
+                        heights = cls_dets[:, 2] - cls_dets[:, 0]
                         widths = cls_dets[:, 3] - cls_dets[:, 1]
                         areas = widths * heights
                         lvalid_ids = np.where(areas > valid_range[0]*valid_range[0])[0] if valid_range[0] > 0 else \
@@ -205,7 +203,7 @@ class Tester(object):
                     for j in range(1, self.num_classes):
                         keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                         all_boxes[j][i] = all_boxes[j][i][keep, :]
-            if vis and i in vis_id_list:
+            if vis:
                 visualization_path = vis_path if vis_path else os.path.join(self.cfg.TEST.VISUALIZATION_PATH,
                                                                             cache_name)
                 if not os.path.isdir(visualization_path):
@@ -229,7 +227,7 @@ class Tester(object):
                 cPickle.dump(all_boxes, detfile)
         return all_boxes
 
-    def get_detections(self, cls_thresh=1e-3, cache_name= 'cache', evaluate= False, vis=False, vis_path=None, do_pruning=False, autofocus=False,
+    def get_detections(self, cls_thresh=1e-3, cache_name= 'cache', evaluate= False, vis=False, vis_path=None, do_pruning=False, 
                        vis_ext='.png'):
 
         def check_valid(det, chip, im_width, im_height, delta=10):
@@ -320,7 +318,7 @@ class Tester(object):
                         for j in range(1, self.num_classes):
                             keep = np.where(all_boxes[j][im_id][chip_id][:, -1] >= image_thresh)[0]
                             all_boxes[j][im_id][chip_id] = all_boxes[j][im_id][chip_id][keep, :]
-                if vis and ((im_id in vis_id_list) or (im_id+2500 in vis_id_list)):
+                if vis:
                     import datetime
                     if not os.path.isdir(visualization_path):
                         os.makedirs(visualization_path)
@@ -428,8 +426,11 @@ def detect_scale_worker(arguments):
     mod.init_params(arg_params=arg_params, aux_params=aux_params)
     # Create Tester
     tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)
-    return tester.get_detections(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
-     evaluate=False, cache_name='dets_scale_{}x{}'.format(scale[0],scale[1]), do_pruning=config.TEST.DO_PRUNING[scale_i])
+    detection_list = tester.get_detections(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
+        evaluate=False, cache_name='dets_scale_{}x{}'.format(scale[0],scale[1]), do_pruning=config.TEST.DO_PRUNING[scale_i])
+    del mod
+    gc.collect()
+    return detection_list
 
 
 def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, aux_params, vis):

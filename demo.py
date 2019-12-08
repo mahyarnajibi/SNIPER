@@ -5,16 +5,15 @@
 # by Mahyar Najibi
 # --------------------------------------------------------------
 import init
-import matplotlib
-matplotlib.use('Agg')
+import os
+import numpy as np
+from PIL import Image
+from easydict import EasyDict
 from configs.faster.default_configs import config, update_config, update_config_from_list
 import mxnet as mx
 import argparse
 from train_utils.utils import create_logger, load_param
-import os
-from PIL import Image
-from iterators.MNIteratorTest import MNIteratorTest
-from easydict import EasyDict
+from iterators.MNIteratorTestAutoFocus import MNIteratorTestAutoFocus
 from inference import Tester
 from symbols.faster import *
 os.environ['MXNET_CUDNN_AUTOTUNE_DEFAULT'] = '0'
@@ -49,7 +48,8 @@ def main():
     width, height = Image.open(args.im_path).size
 
     # Pack image info
-    roidb = [{'image': args.im_path, 'width': width, 'height': height, 'flipped': False}]
+    roidb = [{'image': args.im_path, 'width': width, 'height': height, 'flipped': False,
+              'inference_crops': np.array([[0, 0, width, height]])}]
 
     # Creating the Logger
     logger, output_path = create_logger(config.output_path, args.cfg, config.dataset.image_set)
@@ -77,7 +77,7 @@ def main():
     sym_def = eval('{}.{}'.format(config.symbol, config.symbol))
     sym_inst = sym_def(n_proposals=400, test_nbatch=1)
     sym = sym_inst.get_symbol_rcnn(config, is_train=False)
-    test_iter = MNIteratorTest(roidb=roidb, config=config, batch_size=1, nGPUs=1, threads=1,
+    test_iter = MNIteratorTestAutoFocus(roidb=roidb, config=config, batch_size=1, nGPUs=1, threads=1,
                                crop_size=None, test_scale=config.TEST.SCALES[0],
                                num_classes=db_info.num_classes)
     # Create the module
@@ -105,7 +105,8 @@ def main():
         # Set tester scale
         tester.set_scale(s)
         # Perform detection
-        all_detections.append(tester.get_detections(vis=False, evaluate=False, cache_name=None))
+        cdets, _ = tester.get_detections(vis=False, evaluate=False, cache_name=None)
+        all_detections.append(cdets)
 
     # Aggregate results from multiple scales and perform NMS
     tester = Tester(None, db_info, roidb, None, cfg=config, batch_size=1)
