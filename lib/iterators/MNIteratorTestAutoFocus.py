@@ -63,7 +63,7 @@ class MNIteratorTestAutoFocus(MNIteratorBase):
             ims.append([roidb[i]['image'], max_size ,roidb[i]['flipped'], chips[i],scales[i]])
         im_info = np.zeros((n_batch, 3))
 
-        processed_list = self.thread_pool.map(self.im_worker.worker_fast_inference, ims)
+        processed_list = self.thread_pool.map(self.im_worker.worker_autofocus, ims)
 
 
         im_tensor = mx.nd.zeros((n_batch, 3, max_size[0], max_size[1]), dtype=np.float32)
