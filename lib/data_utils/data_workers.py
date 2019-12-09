@@ -143,13 +143,13 @@ class anchor_worker(object):
 
 
         # Initializing anchors
-        base_anchors = generate_anchors(base_size=feat_stride, ratios=list(self.ratios),
+        base_anchors = generate_anchors(base_size=self.feat_stride, ratios=list(self.ratios),
                                              scales=list(self.scales))
         self.num_anchors = base_anchors.shape[0]
         self.feat_width = chip_size / cfg.network.RPN_FEAT_STRIDE
         self.feat_height = chip_size / cfg.network.RPN_FEAT_STRIDE
-        shift_x = np.arange(0, self.feat_width) * feat_stride
-        shift_y = np.arange(0, self.feat_height) * feat_stride
+        shift_x = np.arange(0, self.feat_width) * self.feat_stride
+        shift_y = np.arange(0, self.feat_height) * self.feat_stride
         shift_x, shift_y = np.meshgrid(shift_x, shift_y)
         shifts = np.vstack((shift_x.ravel(), shift_y.ravel(), shift_x.ravel(), shift_y.ravel())).transpose()
         self.K = shifts.shape[0]
