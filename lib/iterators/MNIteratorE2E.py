@@ -25,6 +25,9 @@ class MNIteratorE2E(MNIteratorBase):
         self.label_name = ['label', 'bbox_target', 'bbox_weight'] if config.TRAIN.ONLY_PROPOSAL else \
             ['label', 'bbox_target', 'bbox_weight', 'gt_boxes']
 
+        if config.TRAIN.AUTO_FOCUS:
+            self.label_name.append('scale_label')
+
         if config.TRAIN.WITH_MASK:
             self.label_name.append('gt_masks')
 
@@ -176,6 +179,9 @@ class MNIteratorE2E(MNIteratorBase):
         bbox_weights = mx.nd.zeros((n_batch, self.cfg.network.NUM_ANCHORS * 4, feat_height, feat_width), mx.cpu(0))
         gt_boxes = -mx.nd.ones((n_batch, 100, 5))
 
+        if self.cfg.TRAIN.AUTO_FOCUS:
+            scale_label = mx.nd.zeros((n_batch, feat_height*feat_width), mx.cpu(0))
+
         if self.cfg.TRAIN.WITH_MASK:
             encoded_masks = -mx.nd.ones((n_batch,100,500))
 
@@ -186,8 +192,12 @@ class MNIteratorE2E(MNIteratorBase):
                 bbox_targets[i][pids[0], pids[1], pids[2]] = all_labels[i][1]
                 bbox_weights[i][pids[0], pids[1], pids[2]] = 1.0
             gt_boxes[i] = all_labels[i][3]
+
+            if self.cfg.TRAIN.AUTO_FOCUS:
+                scale_label[i] = all_labels[i][4]
+
             if self.cfg.TRAIN.WITH_MASK:
-                encoded_masks[i] = all_labels[i][4]
+                encoded_masks[i] = all_labels[i][5]
 
         im_tensor = mx.nd.zeros((n_batch, 3, self.crop_size[0], self.crop_size[1]), dtype=np.float32)
         processed_list = processed_list.get()
@@ -199,6 +209,9 @@ class MNIteratorE2E(MNIteratorBase):
 
         self.label = [labels, bbox_targets, bbox_weights] if self.cfg.TRAIN.ONLY_PROPOSAL else \
             [labels, bbox_targets, bbox_weights, gt_boxes]
+
+        if self.cfg.TRAIN.AUTO_FOCUS:
+            self.label.append(mx.nd.array(scale_label))
 
         if self.cfg.TRAIN.WITH_MASK:
             self.label.append(mx.nd.array(encoded_masks))
