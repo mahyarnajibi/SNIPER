@@ -133,9 +133,14 @@ class anchor_worker(object):
     def __init__(self, cfg, chip_size, max_n_gts=100, max_poly_len=500):
         self.scales = np.array(cfg.network.ANCHOR_SCALES, dtype=np.float32)
         self.ratios = cfg.network.ANCHOR_RATIOS
-        feat_stride = cfg.network.RPN_FEAT_STRIDE
+        self.feat_stride = cfg.network.RPN_FEAT_STRIDE
         self.max_n_gts = max_n_gts
         self.max_poly_len = max_poly_len
+        self.auto_focus = cfg.TRAIN.AUTO_FOCUS
+        self.auto_focus_dontcare_low = cfg.TRAIN.AUTO_FOCUS_DC_LOW
+        self.auto_focus_dontcare_high = cfg.TRAIN.AUTO_FOCUS_DC_HIGH
+        self.auto_focus_small_thresh = cfg.TRAIN.AUTO_FOCUS_SMALL_THRESH
+
 
         # Initializing anchors
         base_anchors = generate_anchors(base_size=feat_stride, ratios=list(self.ratios),
@@ -157,6 +162,35 @@ class anchor_worker(object):
         self.num_fg = int(self.batch_size * cfg.TRAIN.RPN_FG_FRACTION)
 
     def worker(self, data):
+        def gen_mask(gt_boxes):
+            'Generates FocusPixel GTs for AutoFocus'
+            cmask = np.zeros((self.feat_height, self.feat_width), dtype=np.float32)
+            for i in range(len(gt_boxes)):
+                area = np.sqrt((gt_boxes[i][2] - gt_boxes[i][0]) * (gt_boxes[i][3] - gt_boxes[i][1]))
+
+                x1 = int(gt_boxes[i][0]/self.feat_stride)
+                y1 = int(gt_boxes[i][1]/self.feat_stride)
+                x2 = int(math.ceil(gt_boxes[i][2]/self.feat_stride))
+                y2 = int(math.ceil(gt_boxes[i][3]/self.feat_stride))
+
+                flag = 0
+
+                if area > self.auto_focus_dontcare_low and area < self.auto_focus_small_thresh:
+                    flag = 1
+                elif area >= self.auto_focus_small_thresh and area < self.auto_focus_dontcare_high:
+                    flag = -1
+                elif area <= self.auto_focus_dontcare_low:
+                    flag = -1
+
+                for p1 in range(int(x1), min(int(x2)+1, self.feat_width)):
+                    for p2 in range(int(y1), min(int(y2)+1, self.feat_height)):
+                        if flag == 1:
+                            cmask[p2][p1] = 1.0
+                        elif flag == -1:
+                            cmask[p2][p1] = -1.0
+
+            return cmask.reshape(self.feat_height*self.feat_width)
+
         im_info, cur_crop, im_scale, nids, gtids, gt_boxes, boxes, classes = data[0:8]
         has_mask = True if len(data) > 8 else False
 
@@ -184,6 +218,9 @@ class anchor_worker(object):
         vgt_boxes[:, 3] -= cur_crop[1]
 
         gt_boxes = clip_boxes(np.round(gt_boxes * im_scale), im_info[:2])
+        if self.auto_focus:
+            mask_scale = gen_mask(gt_boxes)
+
         vgt_boxes = clip_boxes(np.round(vgt_boxes * im_scale), im_info[:2])
 
         ids = filter_boxes(gt_boxes, 10)
@@ -324,8 +361,13 @@ class anchor_worker(object):
             fgt_boxes[:min(len(agt_boxes), 100), :] = np.hstack((agt_boxes, classes))
 
         rval = [mx.nd.array(labels, dtype='float16'), bbox_targets, mx.nd.array(pids), mx.nd.array(fgt_boxes)]
+
+        if self.auto_focus:
+            rval.append(mx.nd.array(mask_scale))
+
         if has_mask:
             rval.append(mx.nd.array(encoded_polys))
+
         return rval
 
 
