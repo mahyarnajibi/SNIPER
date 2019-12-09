@@ -266,6 +266,8 @@ class resnet_mx_101_e2e_mask(Symbol):
             valid_ranges = mx.sym.Variable(name='valid_ranges')
             im_info = mx.sym.Variable(name='im_info')
             gt_masks = mx.sym.Variable(name='gt_masks')
+            if cfg.TRAIN.AUTO_FOCUS:
+                scale_label = mx.sym.Variable(name='scale_label')
 
         else:
             data = mx.sym.Variable(name="data")
@@ -346,6 +348,9 @@ class resnet_mx_101_e2e_mask(Symbol):
 
             cls_prob = mx.sym.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='valid', use_ignore=True, ignore_label=-1, 
                                             grad_scale=grad_scale)
+            if cfg.TRAIN.AUTO_FOCUS:
+                scale_prob = mx.sym.SoftmaxOutput(name='cls_scale_prob', data=conv_new_out_reshape, label=scale_label, normalization='valid',
+                                                  multi_output=True, use_ignore=True, ignore_label=-1, grad_scale=grad_scale)
 
             bbox_loss_ = bbox_weight * mx.sym.smooth_l1(name='bbox_loss_', scalar=1.0,
                                                         data=(bbox_pred - bbox_target))
@@ -398,9 +403,12 @@ class resnet_mx_101_e2e_mask(Symbol):
             mask_prob = mx.sym.SoftmaxOutput(data=fmask_pred, label=mask_targets, multi_output=True,
                                              normalization='valid', use_ignore=True, ignore_label=-1,
                                              name="mask_cls_prob", grad_scale=grad_scale)
-
-            group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label),
-            mask_prob, mx.sym.BlockGrad(mask_targets)])
+            if cfg.TRAIN.AUTO_FOCUS:
+                group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, scale_prob, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label),
+                                      mask_prob, mx.sym.BlockGrad(mask_targets)])
+            else:
+                group = mx.sym.Group([rpn_cls_prob, rpn_bbox_loss, cls_prob, bbox_loss, mx.sym.BlockGrad(rcnn_label),
+                                      mask_prob, mx.sym.BlockGrad(mask_targets)])
         else:
             # ROI Proposal
             rpn_cls_prob = mx.sym.SoftmaxActivation(
@@ -549,6 +557,14 @@ class resnet_mx_101_e2e_mask(Symbol):
         
         arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
         arg_params['conv_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bias'])
+
+        arg_params['conv_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_2_weight'])
+        arg_params['conv_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_2_bias'])
+        arg_params['conv_new_3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_3_weight'])
+        arg_params['conv_new_3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_3_bias'])
+        arg_params['conv_new_out_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_out_weight'])
+        arg_params['conv_new_out_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_out_bias'])
+
         arg_params['offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_weight'])
         arg_params['offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_bias'])
         arg_params['fc_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['fc_new_1_weight'])
