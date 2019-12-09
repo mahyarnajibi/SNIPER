@@ -4,21 +4,23 @@
 # Written by Mahyar Najibi
 # -----------------------------------------------------------------
 import gc
-import numpy as np
-from bbox.bbox_transform import bbox_pred, clip_boxes
-from iterators.PrefetchingIter import PrefetchingIter
 import os
 import time
-import cPickle
-from data_utils.data_workers import nms_worker
-from data_utils.visualization import visualize_dets
-from tqdm import tqdm
 import math
+import cPickle
+import numpy as np
+import mxnet as mx
+from tqdm import tqdm
 from multiprocessing import Pool
 from multiprocessing.pool import ThreadPool
+
+from bbox.bbox_transform import bbox_pred, clip_boxes
+from iterators.PrefetchingIter import PrefetchingIter
+from data_utils.data_workers import nms_worker
+from data_utils.visualization import visualize_dets
 from iterators.MNIteratorTest import MNIteratorTest
 from iterators.MNIteratorTestAutoFocus import MNIteratorTestAutoFocus
-import mxnet as mx
+from chips.chips_inference import add_chips
 
 
 class Tester(object):
@@ -228,7 +230,7 @@ class Tester(object):
         return all_boxes
 
     def get_detections(self, cls_thresh=1e-3, cache_name= 'cache', evaluate= False, vis=False, vis_path=None, do_pruning=False, 
-                       vis_ext='.png'):
+                       autofocus=False, vis_ext='.png'):
 
         def check_valid(det, chip, im_width, im_height, delta=10):
             dx1, dy1, dx2, dy2 = det[0], det[1], det[2], det[3]
@@ -285,7 +287,7 @@ class Tester(object):
             for i, (cscores, cboxes, im_id, chip_id) in enumerate(zip(scores, boxes, im_ids, chip_ids)):
                 parallel_nms_args = []
 
-                if do_pruning:
+                if autofocus:
                     cmap = maps[i]
                     all_maps[im_id][chip_id] = cmap
 
@@ -427,7 +429,8 @@ def detect_scale_worker(arguments):
     # Create Tester
     tester = Tester(mod, imdb, roidb, test_iter, cfg=config, batch_size=nbatch)
     detection_list = tester.get_detections(vis=(vis and config.TEST.VISUALIZE_INTERMEDIATE_SCALES),
-        evaluate=False, cache_name='dets_scale_{}x{}'.format(scale[0],scale[1]), do_pruning=config.TEST.DO_PRUNING[scale_i])
+        evaluate=False, cache_name='dets_scale_{}x{}'.format(scale[0],scale[1]), do_pruning=config.TEST.DO_PRUNING[scale_i],
+        autofocus=config.TEST.AUTO_FOCUS)
     del mod
     gc.collect()
     return detection_list
@@ -499,7 +502,7 @@ def imdb_detection_wrapper(sym_def, config, imdb, roidb, context, arg_params, au
             # Generating the chips for the next scale if necessary
             if scale_i+1 < len(config.TEST.SCALES) and config.TEST.DO_PRUNING[scale_i+1]:
                 print 'Generating chips for the next scale'
-                add_chips(roidb, tmp_maps, scale_i, config, vis=True)
+                add_chips(roidb, tmp_maps, scale_i, config)
 
             # Cache detections and maps...
             if not config.TEST.USE_CACHE[scale_i]:
