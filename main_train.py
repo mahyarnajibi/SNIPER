@@ -114,10 +114,17 @@ if __name__ == '__main__':
     eval_metrics.add(eval_metric)
     eval_metrics.add(cls_metric)
     eval_metrics.add(bbox_metric)
+
     if not config.TRAIN.ONLY_PROPOSAL:
         eval_metrics.add(rceval_metric)
         eval_metrics.add(rccls_metric)
         eval_metrics.add(rcbbox_metric)
+
+    if config.TRAIN.AUTO_FOCUS:
+        auto_focus_eval_metric = metric.AutoFocusLogLossMetric()
+        auto_focus_acc_metric = metric.AutoFocusAccMetric()
+        eval_metrics.add(auto_focus_acc_metric)
+        eval_metrics.add(auto_focus_eval_metric)  
 
     if config.TRAIN.WITH_MASK:
         mask_metric = metric.MaskLogLossMetric(config)
