@@ -47,6 +47,7 @@ config.TRAIN.CPP_CHIPS = False
 config.TRAIN.USE_NEG_CHIPS = True
 config.TRAIN.CHIPS_DB_PARTS = 20
 config.TRAIN.WITH_MASK = False
+config.TRAIN.AUTO_FOCUS = False
 config.TRAIN.lr = 0
 config.TRAIN.VALID_RANGES = ((-1, 80), (32, 150), (120, -1))
 config.TRAIN.SCALES = (3.0, 1.667, 512.0)
@@ -157,6 +158,7 @@ config.TEST.PROPOSAL_POST_NMS_TOP_N = 2000
 config.TEST.PROPOSAL_MIN_SIZE = config.network.RPN_FEAT_STRIDE
 
  # Disable AutoFocus by default
+config.TEST.AUTO_FOCUS = False
 config.TEST.DO_PRUNING = [False, False, False]
 config.TEST.CHIP_HYPERPARAMS = [(-1, -1, -1), (-1, -1, -1), (-1, -1, -1)]
 config.TEST.USE_CACHE = [False, False, False]

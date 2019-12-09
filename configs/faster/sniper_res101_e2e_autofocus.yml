@@ -63,6 +63,9 @@ TRAIN:
   # Whether to train with segmentation mask
   WITH_MASK: false
 
+  # Whether to train with the AutoFocus prediction branch
+  AUTO_FOCUS: True
+
   # Training scales
   # The scales should be sorted in descending order based on size 
   # (the first scale is the highest resolution and the last scale is the lowest one)
@@ -99,6 +102,9 @@ TRAIN:
   - !!python/tuple [-1,80]
   - !!python/tuple [32,150]
   - !!python/tuple [120,-1]
+
+  # Whether to train with the AutoFocus prediction branch
+  AUTO_FOCUS: True
 
 
   lr: 0.015 
@@ -206,7 +212,10 @@ TEST:
   - !!python/tuple [32,180]
   - !!python/tuple [-1,75]
 
- # Determining to which scales AutoFocus should be applied
+  # Whether to apply AutoFocus during inference
+  AUTO_FOCUS: True
+  
+  # Determining to which scales AutoFocus should be applied
   DO_PRUNING:
   - False
   - True

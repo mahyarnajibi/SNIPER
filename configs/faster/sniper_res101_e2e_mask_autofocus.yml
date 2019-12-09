@@ -3,7 +3,6 @@
 # Licensed under The Apache-2.0 License [see LICENSE for details]
 # by Mahyar Najibi, Bharat Singh
 # --------------------------------------------------------------
----
 MXNET_VERSION: "mxnet"
 output_path: "./output/sniper_res_101_bn_mask_autofocus"
 symbol: resnet_mx_101_e2e_mask
@@ -42,9 +41,9 @@ dataset:
   NUM_CLASSES: 81
   dataset: coco
   dataset_path: "./data/coco"
-  image_set: train2014+val2014
+  image_set: train2014+valminusminival2014
   root_path: "./data"
-  test_image_set: test-dev2015
+  test_image_set: minival2014
   proposal: rpn
 
 TRAIN:
@@ -63,7 +62,10 @@ TRAIN:
   # Whether to train with segmentation mask
   WITH_MASK: true
 
- # Training scales
+  # Whether to train with the AutoFocus prediction branch
+  AUTO_FOCUS: true
+
+  # Training scales
   # The scales should be sorted in descending order based on size 
   # (the first scale is the highest resolution and the last scale is the lowest one)
   # Two types of scale definition are supported
@@ -204,9 +206,12 @@ TEST:
   # small, medium and large objects in the original resolution of your dataset.
   # -1 indicates having no constraint.
   VALID_RANGES:
- - !!python/tuple [75,-1]
+  - !!python/tuple [75,-1]
   - !!python/tuple [32,180]
   - !!python/tuple [-1,75]
+
+  # Whether to apply AutoFocus during inference
+  AUTO_FOCUS: True
 
   # Determining to which scales AutoFocus should be applied
   DO_PRUNING:
