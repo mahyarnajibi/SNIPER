@@ -65,6 +65,18 @@ TRAIN:
   # Whether to train with the AutoFocus prediction branch
   AUTO_FOCUS: true
 
+  # Threshold used to define FocusPixels
+  AUTO_FOCUS_SMALL_THRESH: 64
+
+  # AutoFocus Dont Care Threshold Low
+  # Objects with a square root of area less than this threshold are ignored
+  AUTO_FOCUS_DC_LOW: 5
+
+  # AutoFocus Dont Care Threshold High
+  # Objects with a square root of area less than this threshold and larger
+  # than AUTO_FOCUS_SMALL_THRESH are ignored during AutoFocus training
+  AUTO_FOCUS_DC_HIGH: 90
+
   # Training scales
   # The scales should be sorted in descending order based on size 
   # (the first scale is the highest resolution and the last scale is the lowest one)
