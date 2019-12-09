@@ -285,6 +285,16 @@ class resnet_mx_101_e2e_mask(Symbol):
         conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
         conv_new_1_relu = mx.sym.Activation(data=conv_new_1, act_type='relu', name='conv_new_1_relu')
 
+        if cfg.TRAIN.AUTO_FOCUS or cfg.TEST.AUTO_FOCUS:
+            conv_new_2 = mx.sym.Convolution(data=relu1, kernel=(3, 3), pad=(1, 1), num_filter=256, name="conv_new_2")
+            conv_new_2_relu = mx.sym.Activation(data=conv_new_2, act_type='relu', name='conv_new_2_relu')
+
+            conv_new_3 = mx.sym.Convolution(data=conv_new_2_relu, kernel=(1, 1), num_filter=256, name="conv_new_3")
+            conv_new_3_relu = mx.sym.Activation(data=conv_new_3, act_type='relu', name='conv_new_3_relu')
+
+            conv_new_out = mx.sym.Convolution(data=conv_new_3_relu, kernel=(1, 1), num_filter=2, name="conv_new_out")        
+            conv_new_out_reshape = mx.sym.Reshape(data=conv_new_out, shape=(0, 2, -1), name="conv_new_out_reshape")
+
         rpn_cls_score_reshape = mx.sym.Reshape(data=rpn_cls_score, shape=(0, 2, -1, 0),
                                                name="rpn_cls_score_reshape")
 
@@ -438,8 +448,11 @@ class resnet_mx_101_e2e_mask(Symbol):
                                       name='cls_prob_reshape')
             bbox_pred = mx.sym.Reshape(data=bbox_pred, shape=(self.test_nbatch, -1, 4 * num_reg_classes),
                                        name='bbox_pred_reshape')
-
-            group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids, im_info, chip_ids])
+            if cfg.TEST.AUTO_FOCUS:
+                scale_prob = mx.sym.SoftmaxActivation(name='scale_prob', data=conv_new_out, mode='channel')
+                group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids, scale_prob, im_info, chip_ids])
+            else:
+                group = mx.sym.Group([rois, cls_prob, bbox_pred, im_ids, im_info, chip_ids])
 
         self.sym = group
         return group
