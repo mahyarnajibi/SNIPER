@@ -1,20 +1,31 @@
-# SNIPER: Efficient Multi-Scale Training
+# SNIPER / AutoFocus: Efficient Multi-Scale Training / Inference
 
 <p align="center">
 <img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
  </p>
 
-SNIPER is an efficient multi-scale training approach for instance-level recognition tasks like object detection and instance-level segmentation. 
+SNIPER is an efficient multi-scale *training* approach for instance-level recognition tasks like object detection and instance-level segmentation. 
 Instead of processing all pixels in an image pyramid, SNIPER selectively processes context regions around the ground-truth objects (a.k.a *chips*).
 This significantly speeds up multi-scale training as it operates on low-resolution chips. 
-Due to its memory efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
+Due to its memory-efficient design, SNIPER can benefit from *Batch Normalization* during training and it makes larger batch-sizes possible for instance-level recognition tasks on a single GPU. Hence, we do not need to synchronize batch-normalization statistics across GPUs and we can train object detectors similar to the way we do image classification!
 
-[SNIPER](https://arxiv.org/abs/1805.09300) is initially described in the following paper published at NIPS 2018:
+AutoFocus, on the other hand, is an efficient multi-scale *inference* algorithm for deep-learning based object detectors. Instead of processing an entire image pyramid, AutoFocus adopts a coarse to fine approach and only processes regions that are likely to contain small objects at finer scales. This is achieved by predicting category agnostic segmentation maps for small objects at coarser scales, called FocusPixels. FocusPixels can be predicted with high recall, and in many cases, they only cover a small fraction of the entire image. To make efficient use of FocusPixels, an algorithm is proposed which generates compact rectangular FocusChips which enclose FocusPixels. The detector is while processing finer scales.
+
+
+[SNIPER](https://arxiv.org/abs/1805.09300) is initially described in the following paper published at NeurIPS 2018:
 
 <div class="highlight highlight-html"><pre>
 <b>SNIPER: Efficient Multi-Scale Training
 <a href=https://github.com/bharatsingh430>Bharat Singh*</a>, <a href=https://github.com/mahyarnajibi>Mahyar Najibi*</a>, and Larry S. Davis (* denotes equal contribution)</b>
-NIPS, 2018.
+NeurIPS, 2018.
+</pre></div>
+
+[AutoFocus](https://arxiv.org/abs/1812.01600) is initially described in the following paper published at ICCV 2019:
+
+<div class="highlight highlight-html"><pre>
+<b>AutoFocus: Efficient Multi-Scale Inference
+<a href=https://github.com/mahyarnajibi>Mahyar Najibi*</a>, <a href=https://github.com/bharatsingh430>Bharat Singh*</a>, and Larry S. Davis (* denotes equal contribution)</b>
+ICCV, 2019.
 </pre></div>
 
 ### Features
@@ -30,24 +41,32 @@ NIPS, 2018.
 #### COCO dataset
 Here are the *COCO* results for SNIPER trained using this repository. The models are trained on the *trainval* set (using only the bounding box annotations) and evaluated on the *test-dev* set.
 
-|                                 | <sub>network architecture</sub> | <sub>pre-trained dataset</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
-|:---------------------------------:|:---------------:|:---------------:|:------:|:---------:|:---------:|:-------:|:-------:|:-------:|
-| <sub>SNIPER </sub>           | <sub>ResNet-101</sub> | <sub>ImageNet</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4 | 
-| <sub>SNIPER</sub> |<sub>ResNet-101</sub>  | <sub>OpenImagesV4</sub> | 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
-| <sub>SNIPER</sub> | <sub>MobileNetV2</sub> | <sub>ImageNet</sub> | 34.3 |  54.4   | 37.9   | 18.5  | 36.9  | 46.4  |
+|                                 | <sub>network architecture</sub> | <sub>pre-trained dataset</sub> | <sub>test dataset</sub> | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> |
+|:---------------------------------:|:---------------:|:---------------:|:------:|:---------:|:---------:|:-------:|:-------:|:-------:|:-------:|
+| <sub>SNIPER </sub>| <sub>ResNet-101</sub> | <sub>ImageNet</sub> | <sub>test-dev15</sub> | 46.5 | 67.5    |   52.2  | 30.0  | 49.4  | 58.4 | 
+| <sub>SNIPER</sub> |<sub>ResNet-101</sub>  | <sub>OpenImagesV4</sub> | <sub>test-dev15</sub>| 47.8 |  68.2   | 53.6   | 31.5  | 50.4  | 59.8  |
+| <sub>SNIPER</sub> | <sub>MobileNetV2</sub> | <sub>ImageNet</sub> | <sub>test-dev15</sub>| 34.3 |  54.4   | 37.9   | 18.5  | 36.9  | 46.4  |
+|                   |                        |                     |                      |      |        |         |        |       |      |
+| <sub>AutoFocus</sub> | <sub>ResNet-101</sub> | <sub>OpenImagesV4</sub> | <sub>val-2017</sub>| 47.5 |  67.7   | 53.2   | 33.3  | 51.2  | 60.8  |
 
 
-You can download the OpenImages pre-trained model by running ```bash scripts/download_pretrained_models.sh```. The SNIPER detectors trained on both COCO (*ResNet-101* and *MobileNetV2*) and PASCAL VOC datasets can be downloaded by running ```bash scripts/download_sniper_detector.sh```.
+You can download the OpenImages pre-trained model by running ```bash scripts/download_pretrained_models.sh```. The SNIPER detectors trained on both COCO (*ResNet-101* and *MobileNetV2*) and PASCAL VOC datasets and the AutoFocus model trained on the COCO dataset (*ResNet-101*) can be downloaded by running ```bash scripts/download_sniper_autofocus_detectors.sh```. 
 
 ### License
 SNIPER is released under Apache license. See LICENSE for details.
 
 ### Citing
 ```
+@article{najibi2019autofocus,
+  title={{AutoFocus}: Efficient Multi-Scale Inference},
+  author={Najibi, Mahyar and Singh, Bharat and Davis, Larry S},
+  journal={ICCV},
+  year={2019}
+}
 @article{sniper2018,
   title={{SNIPER}: Efficient Multi-Scale Training},
   author={Singh, Bharat and Najibi, Mahyar and Davis, Larry S},
-  journal={NIPS},
+  journal={NeurIPS},
   year={2018}
 }
 @article{analysissnip2017,
@@ -61,8 +80,8 @@ SNIPER is released under Apache license. See LICENSE for details.
 ### Contents
 1. [Installation](#install)
 2. [Running the demo](#demo)
-3. [Training a model with SNIPER](#training)
-4. [Evaluting a trained model](#evaluating)
+3. [Training a model with SNIPER / AutoFocus](#training)
+4. [Evaluting SNIPER / AutoFocus models](#evaluating)
 5. [Other methods and branches in this repo (SSH Face Detector, R-FCN-3K, open-images)](#others)
 
 <a name="install"> </a>
@@ -107,7 +126,7 @@ pip install -r requirements.txt
 
 For running the demo, you need to download the provided SNIPER models. The following script downloads SNIPER models and extracts them into the default location:
 ```
-bash download_sniper_detector.sh
+bash download_sniper_autofocus_detectors.sh
 ```
 After downloading the model, the following command would run the SNIPER detector trained on the COCO dataset with the default configs on the provided sample image:
 ```
@@ -127,9 +146,9 @@ python demo.py --cfg configs/faster/sniper_mobilenetv2_e2e.yml
 ```
 
 <a name="training"></a>
-### Training a model
+### Training a model with SNIPER / AutoFocus
 
-For training SNIPER, you first need to download the pre-trained models and configure the datasets as described below.
+For training SNIPER/AutoFocus, you first need to download the pre-trained models and configure the datasets as described below.
 
 ##### Downloading pre-trained models
 
@@ -175,7 +194,7 @@ python main_train.py
 ```
 For training on Pascal VOC with the provided pre-computed proposals, you can run ```python main_train.py --cfg configs/faster/sniper_res101_e2e_pascal_voc.yml```.
 
-However, it is also possible to extract the required proposals using this repository (e.g. if you plan to train SNIPER on a new dataset). We provided an all-in-one script which performs all the required steps for training SNIPER with Negative Chip Mining. Running the following script trains a proposal network for a short cycle (i.e. 2 epochs), extract the proposals, and train the SNIPER detector with Negative Chip Mining:
+However, it is also possible to extract the required proposals using this repository (e.g. if you plan to train SNIPER on a new dataset). We provided an all-in-one script that performs all the required steps for training SNIPER with Negative Chip Mining. Running the following script trains a proposal network for a short cycle (i.e. 2 epochs), extract the proposals, and train the SNIPER detector with Negative Chip Mining:
 ```
 bash train_neg_props_and_sniper.sh --cfg [PATH_TO_CFG_FILE]
 ```
@@ -198,9 +217,12 @@ If you are using a GPU with less amount of memory, please consider reducing the 
  Also, multi-processing is used to process the data. For smaller amounts of memory, you may need to reduce the number of 
  processes and number of threads according to your system (by setting ```TRAIN.NUM_PROCESS``` and ```TRAIN.NUM_THREAD``` respectively).
 
+##### Training the SNIPER detector with AutoFocus
 
+For training SNIPER with the AutoFocus FocusPixel prediction branch, you can pass the AutoFocus config files (*e.g.* ``` configs/faster/sniper_res101_e2e_autofocus.yml``` and ``` configs/faster/sniper_res101_e2e_mask_autofocus.yml```) to the ```main_train.py``` script. The default AutoFocus training hyper-parameters (for defining positive, negative, or don't care FocusPixels) can be modified through the config files. Please refer to the [paper](https://arxiv.org/abs/1812.01600) for more details.
+ 
 <a name="evaluating"></a>
-### Evaluating a trained model
+### Evaluting SNIPER / AutoFocus models
 *Evaluating the provided SNIPER models*
 
 The repository provides a set of pre-trained SNIPER models which can be downloaded by running the following script:
@@ -214,9 +236,15 @@ To evaluate these models on COCO test-dev with the default configuration, you ca
 python main_test.py
 ```
 
-For the COCO dataset, this would produce a ```json``` file containing the detections on the ```test-dev``` by default which can be zipped and uploaded to the COCO evaluation server.
+For performing inference with AutoFocus, you can run the ```main_test.py``` script by passing the AutoFocus config file:
+```
+python main_test.py --cfg sniper_res101_e2e_mask_autofocus.py
+```
+It is possible to modify the AutoFocus default hyper-parameters through the config file to control the speed-accuracy tradeoff. Please see the [paper](https://arxiv.org/abs/1812.01600) for more details.
 
-The default settings can be overwritten by passing the path to a configuration file with the ```--cfg``` flag 
+If inference is performed on the COCO test-dev set, a ```json``` file containing the detections on the ```test-dev``` is produced which can be zipped and uploaded to the COCO evaluation server.
+
+The default SNIPER settings can be also overwritten by passing the path to a configuration file with the ```--cfg``` flag 
 (See the ```configs``` folder for examples). It is also possible to set individual configuration key-values by passing ```--set``` as the last argument to the module followed by the desired key-values (*i.e.* ```--set key1 value1 key2 value2 ...```).
 
 As an example, for evaluating the provided PASCAL VOC pre-trained model on the VOC 2007 test-set you can pass the provided PASCAL config file to the script:
