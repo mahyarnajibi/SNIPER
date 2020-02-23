@@ -557,13 +557,14 @@ class resnet_mx_101_e2e_mask(Symbol):
         
         arg_params['conv_new_1_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_1_weight'])
         arg_params['conv_new_1_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_1_bias'])
-
-        arg_params['conv_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_2_weight'])
-        arg_params['conv_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_2_bias'])
-        arg_params['conv_new_3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_3_weight'])
-        arg_params['conv_new_3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_3_bias'])
-        arg_params['conv_new_out_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_out_weight'])
-        arg_params['conv_new_out_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_out_bias'])
+        
+        if cfg.TRAIN.AUTO_FOCUS:
+            arg_params['conv_new_2_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_2_weight'])
+            arg_params['conv_new_2_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_2_bias'])
+            arg_params['conv_new_3_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_3_weight'])
+            arg_params['conv_new_3_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_3_bias'])
+            arg_params['conv_new_out_weight'] = mx.random.normal(0, 0.01, shape=self.arg_shape_dict['conv_new_out_weight'])
+            arg_params['conv_new_out_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['conv_new_out_bias'])
 
         arg_params['offset_weight'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_weight'])
         arg_params['offset_bias'] = mx.nd.zeros(shape=self.arg_shape_dict['offset_bias'])
