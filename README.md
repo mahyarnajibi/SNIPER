@@ -1,7 +1,7 @@
 # SNIPER / AutoFocus: Efficient Multi-Scale Training / Inference
 
 <p align="center">
-<img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper.gif" />
+<img src="https://mahyarnajibi.github.io/github_readme_data/sniper_object_detector.gif" />
  </p>
 
 SNIPER is an efficient multi-scale *training* approach for instance-level recognition tasks like object detection and instance-level segmentation. 
@@ -121,7 +121,7 @@ pip install -r requirements.txt
 ### Running the demo
 
 <p align="center">
-<img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/sniper_detections.jpg" width="700px"/>
+<img src="https://mahyarnajibi.github.io/github_readme_data/sniper_object_detector_detections.jpg" width="700px"/>
 </p>
 
 For running the demo, you need to download the provided SNIPER models. The following script downloads SNIPER models and extracts them into the default location:
@@ -268,7 +268,7 @@ python main_test.py --cfg [PATH TO THE CONFIG FILE USED FOR TRAINING]
 #### R-FCN-3K
 This repo also contains the [R-FCN-3k](https://arxiv.org/abs/1712.01802) detector. 
 <p align="center">
-<img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/rfcn_3k.jpg" width="600px"/>
+<img src="https://mahyarnajibi.github.io/github_readme_data/rfcn_3k.jpg" width="600px"/>
 </p>
 
 Please switch to the [R-FCN-3k](https://github.com/mahyarnajibi/SNIPER/tree/cvpr3k) branch for specific instructions.
@@ -285,5 +285,5 @@ Please switch to the [openimages2](https://github.com/mahyarnajibi/SNIPER/tree/o
 The [SSH](https://arxiv.org/abs/1708.03979) face detector would be added to this repository soon. In the meanwhile, you can use the code available at the original [SSH repository](https://github.com/mahyarnajibi/SSH).
 
 <p align="center">
-<img src="http://legacydirs.umiacs.umd.edu/~najibi/github_readme_files/ssh_detections.jpg" width="650px"/>
+<img src="https://mahyarnajibi.github.io/github_readme_data/ssh_detections.jpg" width="650px"/>
 </p>
