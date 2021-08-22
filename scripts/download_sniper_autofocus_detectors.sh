@@ -3,8 +3,6 @@
 # Script to download the trained detectors with SNIPER
 #-----------------------------------------------------
 #!/bin/bash
-url="legacydirs.umiacs.umd.edu/~najibi/download.php"
-method_name="sniper_detector"
 file_name="sniper_models.tar.gz"
 cur_dir=${PWD##*/}
 target_dir="./"
@@ -13,9 +11,9 @@ if [ $cur_dir = "scripts" ]; then
    target_dir="../"
 fi
 
-if [ ! -f ${file_name} ]; then
+if [ ! -f "${target_dir}${file_name}" ]; then
    echo "Downloading ${file_name}..."
-   wget "${url}?name=${method_name}" -O "${target_dir}${file_name}"
+   curl -LA "github `date`" https://bit.ly/3j6mAXJ --output "${target_dir}${file_name}"
    echo "Done!"
 else
    echo "File already exists!"
